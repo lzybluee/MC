@@ -1,5 +1,7 @@
 package net.minecraft.world.timeline;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderGetter;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.Identifier;
@@ -11,12 +13,15 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.attribute.modifier.BooleanModifier;
 import net.minecraft.world.attribute.modifier.ColorModifier;
 import net.minecraft.world.attribute.modifier.FloatModifier;
+import net.minecraft.world.clock.ClockTimeMarkers;
+import net.minecraft.world.clock.WorldClock;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.dimension.DimensionType;
 
 public interface Timelines {
-   ResourceKey<Timeline> DAY = key("day");
+   ResourceKey<Timeline> OVERWORLD_DAY = key("day");
    ResourceKey<Timeline> MOON = key("moon");
    ResourceKey<Timeline> VILLAGER_SCHEDULE = key("villager_schedule");
    ResourceKey<Timeline> EARLY_GAME = key("early_game");
@@ -29,14 +34,22 @@ public interface Timelines {
    int NIGHT_CLOUD_COLOR_MULTIPLIER = ARGB.colorFromFloat(1.0F, 0.1F, 0.1F, 0.15F);
 
    static void bootstrap(final BootstrapContext<Timeline> context) {
+      HolderGetter<WorldClock> clocks = context.lookup(Registries.WORLD_CLOCK);
+      Holder.Reference<WorldClock> overworldClock = clocks.getOrThrow(WorldClocks.OVERWORLD);
       EasingType skyAngleEase = EasingType.symmetricCubicBezier(0.362F, 0.241F);
       int nightStart = 12600;
       int nightEnd = 23401;
       int noon = 6000;
       context.register(
-         DAY,
-         Timeline.builder()
+         OVERWORLD_DAY,
+         Timeline.builder(overworldClock)
             .setPeriodTicks(24000)
+            .addTimeMarker(ClockTimeMarkers.DAY, 1000, true)
+            .addTimeMarker(ClockTimeMarkers.NOON, 6000, true)
+            .addTimeMarker(ClockTimeMarkers.NIGHT, 13000, true)
+            .addTimeMarker(ClockTimeMarkers.MIDNIGHT, 18000, true)
+            .addTimeMarker(ClockTimeMarkers.WAKE_UP_FROM_SLEEP, 0)
+            .addTimeMarker(ClockTimeMarkers.ROLL_VILLAGE_SIEGE, 18000)
             .addTrack(EnvironmentAttributes.SUN_ANGLE, track -> track.setEasing(skyAngleEase).addKeyframe(6000, 360.0F).addKeyframe(6000, 0.0F))
             .addTrack(EnvironmentAttributes.MOON_ANGLE, track -> track.setEasing(skyAngleEase).addKeyframe(6000, 540.0F).addKeyframe(6000, 180.0F))
             .addTrack(EnvironmentAttributes.STAR_ANGLE, track -> track.setEasing(skyAngleEase).addKeyframe(6000, 360.0F).addKeyframe(6000, 0.0F))
@@ -144,23 +157,26 @@ public interface Timelines {
             .addModifierTrack(EnvironmentAttributes.MONSTERS_BURN, BooleanModifier.OR, track -> track.addKeyframe(12542, false).addKeyframe(23460, true))
             .build()
       );
-      Timeline.Builder moonPhases = Timeline.builder().setPeriodTicks(24000 * MoonPhase.COUNT).addTrack(EnvironmentAttributes.MOON_PHASE, track -> {
-         for (MoonPhase phase : MoonPhase.values()) {
-            track.addKeyframe(phase.startTick(), phase);
-         }
-      }).addModifierTrack(EnvironmentAttributes.SURFACE_SLIME_SPAWN_CHANCE, FloatModifier.MAXIMUM, track -> {
-         track.setEasing(EasingType.CONSTANT);
+      Timeline.Builder moonPhases = Timeline.builder(overworldClock)
+         .setPeriodTicks(24000 * MoonPhase.COUNT)
+         .addTrack(EnvironmentAttributes.MOON_PHASE, track -> {
+            for (MoonPhase phase : MoonPhase.values()) {
+               track.addKeyframe(phase.startTick(), phase);
+            }
+         })
+         .addModifierTrack(EnvironmentAttributes.SURFACE_SLIME_SPAWN_CHANCE, FloatModifier.MAXIMUM, track -> {
+            track.setEasing(EasingType.CONSTANT);
 
-         for (MoonPhase phase : MoonPhase.values()) {
-            track.addKeyframe(phase.startTick(), DimensionType.MOON_BRIGHTNESS_PER_PHASE[phase.index()] * 0.5F);
-         }
-      });
+            for (MoonPhase phase : MoonPhase.values()) {
+               track.addKeyframe(phase.startTick(), DimensionType.MOON_BRIGHTNESS_PER_PHASE[phase.index()] * 0.5F);
+            }
+         });
       context.register(MOON, moonPhases.build());
       int workStartTime = 2000;
       int totalWorkTime = 7000;
       context.register(
          VILLAGER_SCHEDULE,
-         Timeline.builder()
+         Timeline.builder(overworldClock)
             .setPeriodTicks(24000)
             .addTrack(
                EnvironmentAttributes.VILLAGER_ACTIVITY,
@@ -182,7 +198,7 @@ public interface Timelines {
       );
       context.register(
          EARLY_GAME,
-         Timeline.builder()
+         Timeline.builder(overworldClock)
             .addModifierTrack(
                EnvironmentAttributes.CAN_PILLAGER_PATROL_SPAWN, BooleanModifier.AND, track -> track.addKeyframe(0, false).addKeyframe(120000, true)
             )

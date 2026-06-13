@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -13,7 +13,7 @@ public abstract class AbstractMountInventoryScreen<T extends AbstractMountInvent
    protected final int inventoryColumns;
    protected float xMouse;
    protected float yMouse;
-   protected LivingEntity mount;
+   protected final LivingEntity mount;
 
    public AbstractMountInventoryScreen(final T menu, final Inventory inventory, final Component title, final int inventoryColumns, final LivingEntity mount) {
       super(menu, inventory, title);
@@ -22,7 +22,8 @@ public abstract class AbstractMountInventoryScreen<T extends AbstractMountInvent
    }
 
    @Override
-   protected void renderBg(final GuiGraphics graphics, final float a, final int xm, final int ym) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
       int xo = (this.width - this.imageWidth) / 2;
       int yo = (this.height - this.imageHeight) / 2;
       graphics.blit(RenderPipelines.GUI_TEXTURED, this.getBackgroundTextureLocation(), xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
@@ -31,26 +32,25 @@ public abstract class AbstractMountInventoryScreen<T extends AbstractMountInvent
       }
 
       if (this.shouldRenderSaddleSlot()) {
-         this.drawSlot(graphics, xo + 7, yo + 35 - 18);
+         this.extractSlot(graphics, xo + 7, yo + 35 - 18);
       }
 
       if (this.shouldRenderArmorSlot()) {
-         this.drawSlot(graphics, xo + 7, yo + 35);
+         this.extractSlot(graphics, xo + 7, yo + 35);
       }
 
-      InventoryScreen.renderEntityInInventoryFollowsMouse(graphics, xo + 26, yo + 18, xo + 78, yo + 70, 17, 0.25F, this.xMouse, this.yMouse, this.mount);
+      InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, xo + 26, yo + 18, xo + 78, yo + 70, 17, 0.25F, this.xMouse, this.yMouse, this.mount);
    }
 
-   protected void drawSlot(final GuiGraphics graphics, final int x, final int y) {
+   protected void extractSlot(final GuiGraphicsExtractor graphics, final int x, final int y) {
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSlotSpriteLocation(), x, y, 18, 18);
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       this.xMouse = mouseX;
       this.yMouse = mouseY;
-      super.render(graphics, mouseX, mouseY, a);
-      this.renderTooltip(graphics, mouseX, mouseY);
+      super.extractRenderState(graphics, mouseX, mouseY, a);
    }
 
    protected abstract Identifier getBackgroundTextureLocation();

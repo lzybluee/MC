@@ -3,7 +3,7 @@ package net.minecraft.client.gui.components.toasts;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -52,16 +52,16 @@ public class RecipeToast implements Toast {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final Font font, final long fullyVisibleForMs) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs) {
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, 0, 0, this.width(), this.height());
-      graphics.drawString(font, TITLE_TEXT, 30, 7, -11534256, false);
-      graphics.drawString(font, DESCRIPTION_TEXT, 30, 18, -16777216, false);
+      graphics.text(font, TITLE_TEXT, 30, 7, -11534256, false);
+      graphics.text(font, DESCRIPTION_TEXT, 30, 18, -16777216, false);
       RecipeToast.Entry items = this.recipeItems.get(this.displayedRecipeIndex);
       graphics.pose().pushMatrix();
       graphics.pose().scale(0.6F, 0.6F);
-      graphics.renderFakeItem(items.categoryItem(), 3, 3);
+      graphics.fakeItem(items.categoryItem(), 3, 3);
       graphics.pose().popMatrix();
-      graphics.renderFakeItem(items.unlockedItem(), 8, 8);
+      graphics.fakeItem(items.unlockedItem(), 8, 8);
    }
 
    private void addItem(final ItemStack craftingStation, final ItemStack unlockedItem) {

@@ -10,6 +10,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.references.ItemIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
@@ -290,6 +291,7 @@ public class Items {
    public static final Item RED_WOOL = registerBlock(Blocks.RED_WOOL);
    public static final Item BLACK_WOOL = registerBlock(Blocks.BLACK_WOOL);
    public static final Item DANDELION = registerBlock(Blocks.DANDELION);
+   public static final Item GOLDEN_DANDELION = registerBlock(Blocks.GOLDEN_DANDELION);
    public static final Item OPEN_EYEBLOSSOM = registerBlock(Blocks.OPEN_EYEBLOSSOM);
    public static final Item CLOSED_EYEBLOSSOM = registerBlock(Blocks.CLOSED_EYEBLOSSOM);
    public static final Item POPPY = registerBlock(Blocks.POPPY);
@@ -1364,13 +1366,13 @@ public class Items {
    public static final Item BOOK = registerItem("book", new Item.Properties().enchantable(1));
    public static final Item SLIME_BALL = registerItem("slime_ball");
    public static final Item EGG = registerItem(
-      "egg", EggItem::new, new Item.Properties().stacksTo(16).component(DataComponents.CHICKEN_VARIANT, new EitherHolder<>(ChickenVariants.TEMPERATE))
+      "egg", EggItem::new, new Item.Properties().stacksTo(16).delayedHolderComponent(DataComponents.CHICKEN_VARIANT, ChickenVariants.TEMPERATE)
    );
    public static final Item BLUE_EGG = registerItem(
-      "blue_egg", EggItem::new, new Item.Properties().stacksTo(16).component(DataComponents.CHICKEN_VARIANT, new EitherHolder<>(ChickenVariants.COLD))
+      "blue_egg", EggItem::new, new Item.Properties().stacksTo(16).delayedHolderComponent(DataComponents.CHICKEN_VARIANT, ChickenVariants.COLD)
    );
    public static final Item BROWN_EGG = registerItem(
-      "brown_egg", EggItem::new, new Item.Properties().stacksTo(16).component(DataComponents.CHICKEN_VARIANT, new EitherHolder<>(ChickenVariants.WARM))
+      "brown_egg", EggItem::new, new Item.Properties().stacksTo(16).delayedHolderComponent(DataComponents.CHICKEN_VARIANT, ChickenVariants.WARM)
    );
    public static final Item COMPASS = registerItem("compass", CompassItem::new);
    public static final Item RECOVERY_COMPASS = registerItem("recovery_compass", new Item.Properties().rarity(Rarity.UNCOMMON));
@@ -1438,22 +1440,26 @@ public class Items {
    public static final Item INK_SAC = registerItem("ink_sac", InkSacItem::new);
    public static final Item GLOW_INK_SAC = registerItem("glow_ink_sac", GlowInkSacItem::new);
    public static final Item COCOA_BEANS = registerItem("cocoa_beans", createBlockItemWithCustomItemName(Blocks.COCOA));
-   public static final Item WHITE_DYE = registerItem("white_dye", p -> new DyeItem(DyeColor.WHITE, p));
-   public static final Item ORANGE_DYE = registerItem("orange_dye", p -> new DyeItem(DyeColor.ORANGE, p));
-   public static final Item MAGENTA_DYE = registerItem("magenta_dye", p -> new DyeItem(DyeColor.MAGENTA, p));
-   public static final Item LIGHT_BLUE_DYE = registerItem("light_blue_dye", p -> new DyeItem(DyeColor.LIGHT_BLUE, p));
-   public static final Item YELLOW_DYE = registerItem("yellow_dye", p -> new DyeItem(DyeColor.YELLOW, p));
-   public static final Item LIME_DYE = registerItem("lime_dye", p -> new DyeItem(DyeColor.LIME, p));
-   public static final Item PINK_DYE = registerItem("pink_dye", p -> new DyeItem(DyeColor.PINK, p));
-   public static final Item GRAY_DYE = registerItem("gray_dye", p -> new DyeItem(DyeColor.GRAY, p));
-   public static final Item LIGHT_GRAY_DYE = registerItem("light_gray_dye", p -> new DyeItem(DyeColor.LIGHT_GRAY, p));
-   public static final Item CYAN_DYE = registerItem("cyan_dye", p -> new DyeItem(DyeColor.CYAN, p));
-   public static final Item PURPLE_DYE = registerItem("purple_dye", p -> new DyeItem(DyeColor.PURPLE, p));
-   public static final Item BLUE_DYE = registerItem("blue_dye", p -> new DyeItem(DyeColor.BLUE, p));
-   public static final Item BROWN_DYE = registerItem("brown_dye", p -> new DyeItem(DyeColor.BROWN, p));
-   public static final Item GREEN_DYE = registerItem("green_dye", p -> new DyeItem(DyeColor.GREEN, p));
-   public static final Item RED_DYE = registerItem("red_dye", p -> new DyeItem(DyeColor.RED, p));
-   public static final Item BLACK_DYE = registerItem("black_dye", p -> new DyeItem(DyeColor.BLACK, p));
+   public static final Item WHITE_DYE = registerItem("white_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.WHITE));
+   public static final Item ORANGE_DYE = registerItem("orange_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.ORANGE));
+   public static final Item MAGENTA_DYE = registerItem("magenta_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.MAGENTA));
+   public static final Item LIGHT_BLUE_DYE = registerItem(
+      "light_blue_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.LIGHT_BLUE)
+   );
+   public static final Item YELLOW_DYE = registerItem("yellow_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.YELLOW));
+   public static final Item LIME_DYE = registerItem("lime_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.LIME));
+   public static final Item PINK_DYE = registerItem("pink_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.PINK));
+   public static final Item GRAY_DYE = registerItem("gray_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.GRAY));
+   public static final Item LIGHT_GRAY_DYE = registerItem(
+      "light_gray_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.LIGHT_GRAY)
+   );
+   public static final Item CYAN_DYE = registerItem("cyan_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.CYAN));
+   public static final Item PURPLE_DYE = registerItem("purple_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.PURPLE));
+   public static final Item BLUE_DYE = registerItem("blue_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.BLUE));
+   public static final Item BROWN_DYE = registerItem("brown_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.BROWN));
+   public static final Item GREEN_DYE = registerItem("green_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.GREEN));
+   public static final Item RED_DYE = registerItem("red_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.RED));
+   public static final Item BLACK_DYE = registerItem("black_dye", DyeItem::new, new Item.Properties().component(DataComponents.DYE, DyeColor.BLACK));
    public static final Item BONE_MEAL = registerItem("bone_meal", BoneMealItem::new);
    public static final Item BONE = registerItem("bone");
    public static final Item SUGAR = registerItem("sugar");
@@ -1486,8 +1492,8 @@ public class Items {
    );
    public static final Item MELON_SLICE = registerItem("melon_slice", new Item.Properties().food(Foods.MELON_SLICE));
    public static final Item DRIED_KELP = registerItem("dried_kelp", new Item.Properties().food(Foods.DRIED_KELP, Consumables.DRIED_KELP));
-   public static final Item PUMPKIN_SEEDS = registerItem(net.minecraft.references.Items.PUMPKIN_SEEDS, createBlockItemWithCustomItemName(Blocks.PUMPKIN_STEM));
-   public static final Item MELON_SEEDS = registerItem(net.minecraft.references.Items.MELON_SEEDS, createBlockItemWithCustomItemName(Blocks.MELON_STEM));
+   public static final Item PUMPKIN_SEEDS = registerItem(ItemIds.PUMPKIN_SEEDS, createBlockItemWithCustomItemName(Blocks.PUMPKIN_STEM));
+   public static final Item MELON_SEEDS = registerItem(ItemIds.MELON_SEEDS, createBlockItemWithCustomItemName(Blocks.MELON_STEM));
    public static final Item BEEF = registerItem("beef", new Item.Properties().food(Foods.BEEF));
    public static final Item COOKED_BEEF = registerItem("cooked_beef", new Item.Properties().food(Foods.COOKED_BEEF));
    public static final Item CHICKEN = registerItem("chicken", new Item.Properties().food(Foods.CHICKEN, Consumables.CHICKEN));
@@ -1678,7 +1684,7 @@ public class Items {
       new Item.Properties()
          .rarity(Rarity.RARE)
          .component(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
-         .component(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_EXPLOSION))
+         .delayedComponent(DataComponents.DAMAGE_RESISTANT, context -> new DamageResistant(context.getOrThrow(DamageTypeTags.IS_EXPLOSION)))
    );
    public static final Item PUMPKIN_PIE = registerItem("pumpkin_pie", new Item.Properties().food(Foods.PUMPKIN_PIE));
    public static final Item FIREWORK_ROCKET = registerItem(
@@ -1833,14 +1839,14 @@ public class Items {
          .component(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY)
          .repairable(ItemTags.WOODEN_TOOL_MATERIALS)
          .equippableUnswappable(EquipmentSlot.OFFHAND)
-         .component(
+         .delayedComponent(
             DataComponents.BLOCKS_ATTACKS,
-            new BlocksAttacks(
+            context -> new BlocksAttacks(
                0.25F,
                1.0F,
                List.of(new BlocksAttacks.DamageReduction(90.0F, Optional.empty(), 0.0F, 1.0F)),
                new BlocksAttacks.ItemDamageFunction(3.0F, 1.0F, 1.0F),
-               Optional.of(DamageTypeTags.BYPASSES_SHIELD),
+               Optional.of(context.getOrThrow(DamageTypeTags.BYPASSES_SHIELD)),
                Optional.of(SoundEvents.SHIELD_BLOCK),
                Optional.of(SoundEvents.SHIELD_BREAK)
             )
@@ -1851,22 +1857,22 @@ public class Items {
       "wooden_spear", new Item.Properties().spear(ToolMaterial.WOOD, 0.65F, 0.7F, 0.75F, 5.0F, 14.0F, 10.0F, 5.1F, 15.0F, 4.6F)
    );
    public static final Item STONE_SPEAR = registerItem(
-      "stone_spear", new Item.Properties().spear(ToolMaterial.STONE, 0.75F, 0.82F, 0.7F, 4.5F, 10.0F, 9.0F, 5.1F, 13.75F, 4.6F)
+      "stone_spear", new Item.Properties().spear(ToolMaterial.STONE, 0.75F, 0.82F, 0.7F, 4.5F, 13.0F, 9.0F, 5.1F, 13.75F, 4.6F)
    );
    public static final Item COPPER_SPEAR = registerItem(
-      "copper_spear", new Item.Properties().spear(ToolMaterial.COPPER, 0.85F, 0.82F, 0.65F, 4.0F, 9.0F, 8.25F, 5.1F, 12.5F, 4.6F)
+      "copper_spear", new Item.Properties().spear(ToolMaterial.COPPER, 0.85F, 0.82F, 0.65F, 4.0F, 12.0F, 8.25F, 5.1F, 12.5F, 4.6F)
    );
    public static final Item IRON_SPEAR = registerItem(
-      "iron_spear", new Item.Properties().spear(ToolMaterial.IRON, 0.95F, 0.95F, 0.6F, 2.5F, 8.0F, 6.75F, 5.1F, 11.25F, 4.6F)
+      "iron_spear", new Item.Properties().spear(ToolMaterial.IRON, 0.95F, 0.95F, 0.6F, 2.5F, 11.0F, 6.75F, 5.1F, 11.25F, 4.6F)
    );
    public static final Item GOLDEN_SPEAR = registerItem(
-      "golden_spear", new Item.Properties().spear(ToolMaterial.GOLD, 0.95F, 0.7F, 0.7F, 3.5F, 10.0F, 8.5F, 5.1F, 13.75F, 4.6F)
+      "golden_spear", new Item.Properties().spear(ToolMaterial.GOLD, 0.95F, 0.7F, 0.7F, 3.5F, 13.0F, 8.5F, 5.1F, 13.75F, 4.6F)
    );
    public static final Item DIAMOND_SPEAR = registerItem(
-      "diamond_spear", new Item.Properties().spear(ToolMaterial.DIAMOND, 1.05F, 1.075F, 0.5F, 3.0F, 7.5F, 6.5F, 5.1F, 10.0F, 4.6F)
+      "diamond_spear", new Item.Properties().spear(ToolMaterial.DIAMOND, 1.05F, 1.075F, 0.5F, 3.0F, 10.0F, 6.5F, 5.1F, 10.0F, 4.6F)
    );
    public static final Item NETHERITE_SPEAR = registerItem(
-      "netherite_spear", new Item.Properties().spear(ToolMaterial.NETHERITE, 1.15F, 1.2F, 0.4F, 2.5F, 7.0F, 5.5F, 5.1F, 8.75F, 4.6F).fireResistant()
+      "netherite_spear", new Item.Properties().spear(ToolMaterial.NETHERITE, 1.15F, 1.2F, 0.4F, 2.5F, 9.0F, 5.5F, 5.1F, 8.75F, 4.6F).fireResistant()
    );
    public static final Item TOTEM_OF_UNDYING = registerItem(
       "totem_of_undying",
@@ -1986,47 +1992,78 @@ public class Items {
    );
    public static final Item LOOM = registerBlock(Blocks.LOOM);
    public static final Item FLOWER_BANNER_PATTERN = registerItem(
-      "flower_banner_pattern", new Item.Properties().stacksTo(1).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_FLOWER)
+      "flower_banner_pattern",
+      new Item.Properties()
+         .stacksTo(1)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_FLOWER))
    );
    public static final Item CREEPER_BANNER_PATTERN = registerItem(
       "creeper_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_CREEPER)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.UNCOMMON)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_CREEPER))
    );
    public static final Item SKULL_BANNER_PATTERN = registerItem(
       "skull_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.RARE).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_SKULL)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.RARE)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_SKULL))
    );
    public static final Item MOJANG_BANNER_PATTERN = registerItem(
       "mojang_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.RARE).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_MOJANG)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.RARE)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_MOJANG))
    );
    public static final Item GLOBE_BANNER_PATTERN = registerItem(
-      "globe_banner_pattern", new Item.Properties().stacksTo(1).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_GLOBE)
+      "globe_banner_pattern",
+      new Item.Properties()
+         .stacksTo(1)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_GLOBE))
    );
    public static final Item PIGLIN_BANNER_PATTERN = registerItem(
       "piglin_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_PIGLIN)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.UNCOMMON)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_PIGLIN))
    );
    public static final Item FLOW_BANNER_PATTERN = registerItem(
       "flow_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.RARE).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_FLOW)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.RARE)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_FLOW))
    );
    public static final Item GUSTER_BANNER_PATTERN = registerItem(
       "guster_banner_pattern",
-      new Item.Properties().stacksTo(1).rarity(Rarity.RARE).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_GUSTER)
+      new Item.Properties()
+         .stacksTo(1)
+         .rarity(Rarity.RARE)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_GUSTER))
    );
    public static final Item FIELD_MASONED_BANNER_PATTERN = registerItem(
       "field_masoned_banner_pattern",
-      new Item.Properties().stacksTo(1).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_FIELD_MASONED)
+      new Item.Properties()
+         .stacksTo(1)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_FIELD_MASONED))
    );
    public static final Item BORDURE_INDENTED_BANNER_PATTERN = registerItem(
       "bordure_indented_banner_pattern",
-      new Item.Properties().stacksTo(1).component(DataComponents.PROVIDES_BANNER_PATTERNS, BannerPatternTags.PATTERN_ITEM_BORDURE_INDENTED)
+      new Item.Properties()
+         .stacksTo(1)
+         .delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(BannerPatternTags.PATTERN_ITEM_BORDURE_INDENTED))
    );
    public static final Item GOAT_HORN = registerItem(
       "goat_horn",
       InstrumentItem::new,
-      new Item.Properties().rarity(Rarity.UNCOMMON).stacksTo(1).component(DataComponents.INSTRUMENT, new InstrumentComponent(Instruments.PONDER_GOAT_HORN))
+      new Item.Properties()
+         .rarity(Rarity.UNCOMMON)
+         .stacksTo(1)
+         .delayedComponent(DataComponents.INSTRUMENT, context -> new InstrumentComponent(context.getOrThrow(Instruments.PONDER_GOAT_HORN)))
    );
    public static final Item COMPOSTER = registerBlock(Blocks.COMPOSTER);
    public static final Item BARREL = registerBlock(Blocks.BARREL, p -> p.component(DataComponents.CONTAINER, ItemContainerContents.EMPTY));
@@ -2285,19 +2322,19 @@ public class Items {
       );
    }
 
-   public static Item registerBlock(final Block block) {
+   private static Item registerBlock(final Block block) {
       return registerBlock(block, BlockItem::new);
    }
 
-   public static Item registerBlock(final Block block, final Item.Properties properties) {
+   private static Item registerBlock(final Block block, final Item.Properties properties) {
       return registerBlock(block, BlockItem::new, properties);
    }
 
-   public static Item registerBlock(final Block block, final UnaryOperator<Item.Properties> propertiesFunction) {
+   private static Item registerBlock(final Block block, final UnaryOperator<Item.Properties> propertiesFunction) {
       return registerBlock(block, (b, p) -> new BlockItem(b, propertiesFunction.apply(p)));
    }
 
-   public static Item registerBlock(final Block block, final Block... alternatives) {
+   private static Item registerBlock(final Block block, final Block... alternatives) {
       Item item = registerBlock(block);
 
       for (Block alternative : alternatives) {
@@ -2307,35 +2344,39 @@ public class Items {
       return item;
    }
 
-   public static Item registerBlock(final Block block, final BiFunction<Block, Item.Properties, Item> itemFactory) {
+   private static Item registerBlock(final Block block, final BiFunction<Block, Item.Properties, Item> itemFactory) {
       return registerBlock(block, itemFactory, new Item.Properties());
    }
 
-   public static Item registerBlock(final Block block, final BiFunction<Block, Item.Properties, Item> itemFactory, final Item.Properties properties) {
-      return registerItem(blockIdToItemId(block.builtInRegistryHolder().key()), p -> itemFactory.apply(block, p), properties.useBlockDescriptionPrefix());
+   private static Item registerBlock(final Block block, final BiFunction<Block, Item.Properties, Item> itemFactory, final Item.Properties properties) {
+      return registerItem(
+         blockIdToItemId(block.builtInRegistryHolder().key()),
+         p -> itemFactory.apply(block, p),
+         properties.useBlockDescriptionPrefix().requiredFeatures(block.requiredFeatures())
+      );
    }
 
-   public static Item registerItem(final String name, final Function<Item.Properties, Item> itemFactory) {
+   private static Item registerItem(final String name, final Function<Item.Properties, Item> itemFactory) {
       return registerItem(vanillaItemId(name), itemFactory, new Item.Properties());
    }
 
-   public static Item registerItem(final String name, final Function<Item.Properties, Item> itemFactory, final Item.Properties properties) {
+   private static Item registerItem(final String name, final Function<Item.Properties, Item> itemFactory, final Item.Properties properties) {
       return registerItem(vanillaItemId(name), itemFactory, properties);
    }
 
-   public static Item registerItem(final String name, final Item.Properties properties) {
+   private static Item registerItem(final String name, final Item.Properties properties) {
       return registerItem(vanillaItemId(name), Item::new, properties);
    }
 
-   public static Item registerItem(final String name) {
+   private static Item registerItem(final String name) {
       return registerItem(vanillaItemId(name), Item::new, new Item.Properties());
    }
 
-   public static Item registerItem(final ResourceKey<Item> key, final Function<Item.Properties, Item> itemFactory) {
+   private static Item registerItem(final ResourceKey<Item> key, final Function<Item.Properties, Item> itemFactory) {
       return registerItem(key, itemFactory, new Item.Properties());
    }
 
-   public static Item registerItem(final ResourceKey<Item> key, final Function<Item.Properties, Item> itemFactory, final Item.Properties properties) {
+   private static Item registerItem(final ResourceKey<Item> key, final Function<Item.Properties, Item> itemFactory, final Item.Properties properties) {
       Item item = itemFactory.apply(properties.setId(key));
       if (item instanceof BlockItem blockItem) {
          blockItem.registerBlocks(Item.BY_BLOCK, item);

@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -110,18 +110,18 @@ public class RealmsBrokenWorldScreen extends RealmsScreen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int xm, final int ym, final float a) {
-      super.render(graphics, xm, ym, a);
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 17, -1);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+      super.extractRenderState(graphics, xm, ym, a);
+      graphics.centeredText(this.font, this.title, this.width / 2, 17, -1);
 
       for (int i = 0; i < this.message.length; i++) {
-         graphics.drawCenteredString(this.font, this.message[i], this.width / 2, row(-1) + 3 + i * 12, -6250336);
+         graphics.centeredText(this.font, this.message[i], this.width / 2, row(-1) + 3 + i * 12, -6250336);
       }
 
       if (this.serverData != null) {
          for (Entry<Integer, RealmsSlot> entry : this.serverData.slots.entrySet()) {
             if (entry.getValue().options.templateImage != null && entry.getValue().options.templateId != -1L) {
-               this.drawSlotFrame(
+               this.extractSlotFrame(
                   graphics,
                   this.getFramePositionX(entry.getKey()),
                   row(1) + 5,
@@ -135,7 +135,7 @@ public class RealmsBrokenWorldScreen extends RealmsScreen {
                   entry.getValue().options.empty
                );
             } else {
-               this.drawSlotFrame(
+               this.extractSlotFrame(
                   graphics,
                   this.getFramePositionX(entry.getKey()),
                   row(1) + 5,
@@ -227,8 +227,8 @@ public class RealmsBrokenWorldScreen extends RealmsScreen {
       return this.serverData != null && this.serverData.isMinigameActive();
    }
 
-   private void drawSlotFrame(
-      final GuiGraphics graphics,
+   private void extractSlotFrame(
+      final GuiGraphicsExtractor graphics,
       final int x,
       final int y,
       final int xm,
@@ -265,6 +265,6 @@ public class RealmsBrokenWorldScreen extends RealmsScreen {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_FRAME_SPRITE, x, y, 80, 80, color);
       }
 
-      graphics.drawCenteredString(this.font, text, x + 40, y + 66, -1);
+      graphics.centeredText(this.font, text, x + 40, y + 66, -1);
    }
 }

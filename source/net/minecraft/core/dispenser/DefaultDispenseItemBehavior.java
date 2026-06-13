@@ -2,6 +2,7 @@ package net.minecraft.core.dispenser;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.Position;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -37,11 +38,12 @@ public class DefaultDispenseItemBehavior implements DispenseItemBehavior {
       }
 
       ItemEntity itemEntity = new ItemEntity(level, spawnX, spawnY, spawnZ, itemStack);
-      double pow = level.random.nextDouble() * 0.1 + 0.2;
+      RandomSource random = level.getRandom();
+      double pow = random.nextDouble() * 0.1 + 0.2;
       itemEntity.setDeltaMovement(
-         level.random.triangle(direction.getStepX() * pow, 0.0172275 * accuracy),
-         level.random.triangle(0.2, 0.0172275 * accuracy),
-         level.random.triangle(direction.getStepZ() * pow, 0.0172275 * accuracy)
+         random.triangle(direction.getStepX() * pow, 0.0172275 * accuracy),
+         random.triangle(0.2, 0.0172275 * accuracy),
+         random.triangle(direction.getStepZ() * pow, 0.0172275 * accuracy)
       );
       level.addFreshEntity(itemEntity);
    }

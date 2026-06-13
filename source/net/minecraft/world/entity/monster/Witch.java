@@ -60,7 +60,7 @@ public class Witch extends Raider implements RangedAttackMob {
    protected void registerGoals() {
       super.registerGoals();
       this.healRaidersGoal = new NearestHealableRaiderTargetGoal<>(
-         this, Raider.class, true, (target, level) -> this.hasActiveRaid() && target.getType() != EntityType.WITCH
+         this, Raider.class, true, (target, level) -> this.hasActiveRaid() && !target.is(EntityType.WITCH)
       );
       this.attackPlayersGoal = new NearestAttackableWitchTargetGoal<>(this, Player.class, 10, true, false, null);
       this.goalSelector.addGoal(1, new FloatGoal(this));
@@ -244,7 +244,9 @@ public class Witch extends Raider implements RangedAttackMob {
 
          if (this.level() instanceof ServerLevel serverLevel) {
             ItemStack itemStack = PotionContents.createItemStack(Items.SPLASH_POTION, potion);
-            Projectile.spawnProjectileUsingShoot(ThrownSplashPotion::new, serverLevel, itemStack, this, xd, yd + dist * 0.2, zd, 0.75F, 8.0F);
+            Projectile.spawnProjectileUsingShoot(
+               ThrownSplashPotion::new, serverLevel, itemStack, this, xd, yd + dist * 0.2, zd, dist <= 2.0 ? 0.45F : 0.75F, 8.0F
+            );
          }
 
          if (!this.isSilent()) {

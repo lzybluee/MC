@@ -3,15 +3,15 @@ package net.minecraft.client.particle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 
 public class BreakingItemParticle extends SingleQuadParticle {
@@ -44,7 +44,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
       this.quadSize /= 2.0F;
       this.uo = this.random.nextFloat() * 3.0F;
       this.vo = this.random.nextFloat() * 3.0F;
-      this.layer = sprite.atlasLocation().equals(TextureAtlas.LOCATION_BLOCKS) ? SingleQuadParticle.Layer.TERRAIN : SingleQuadParticle.Layer.ITEMS;
+      this.layer = SingleQuadParticle.Layer.bySprite(sprite);
    }
 
    @Override
@@ -84,17 +84,17 @@ public class BreakingItemParticle extends SingleQuadParticle {
          final double zAux,
          final RandomSource random
       ) {
-         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStack(Items.COBWEB), level, random));
+         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.COBWEB), level, random));
       }
    }
 
    public abstract static class ItemParticleProvider<T extends ParticleOptions> implements ParticleProvider<T> {
       private final ItemStackRenderState scratchRenderState = new ItemStackRenderState();
 
-      protected TextureAtlasSprite getSprite(final ItemStack itemStack, final ClientLevel level, final RandomSource random) {
-         Minecraft.getInstance().getItemModelResolver().updateForTopItem(this.scratchRenderState, itemStack, ItemDisplayContext.GROUND, level, null, 0);
-         TextureAtlasSprite icon = this.scratchRenderState.pickParticleIcon(random);
-         return icon != null ? icon : Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.ITEMS).missingSprite();
+      protected TextureAtlasSprite getSprite(final ItemStackTemplate item, final ClientLevel level, final RandomSource random) {
+         Minecraft.getInstance().getItemModelResolver().updateForTopItem(this.scratchRenderState, item.create(), ItemDisplayContext.GROUND, level, null, 0);
+         Material.Baked material = this.scratchRenderState.pickParticleMaterial(random);
+         return material != null ? material.sprite() : Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.ITEMS).missingSprite();
       }
    }
 
@@ -126,7 +126,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
          final double zAux,
          final RandomSource random
       ) {
-         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStack(Items.SLIME_BALL), level, random));
+         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.SLIME_BALL), level, random));
       }
    }
 
@@ -142,7 +142,7 @@ public class BreakingItemParticle extends SingleQuadParticle {
          final double zAux,
          final RandomSource random
       ) {
-         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStack(Items.SNOWBALL), level, random));
+         return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.SNOWBALL), level, random));
       }
    }
 }

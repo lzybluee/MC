@@ -4,32 +4,61 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.item.crafting.display.SmithingRecipeDisplay;
-import org.jspecify.annotations.Nullable;
 
-public class SmithingTransformRecipe implements SmithingRecipe {
+public class SmithingTransformRecipe extends SimpleSmithingRecipe {
+   public static final MapCodec<SmithingTransformRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+      i -> i.group(
+            Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+            Ingredient.CODEC.optionalFieldOf("template").forGetter(o -> o.template),
+            Ingredient.CODEC.fieldOf("base").forGetter(o -> o.base),
+            Ingredient.CODEC.optionalFieldOf("addition").forGetter(o -> o.addition),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+         )
+         .apply(i, SmithingTransformRecipe::new)
+   );
+   public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> STREAM_CODEC = StreamCodec.composite(
+      Recipe.CommonInfo.STREAM_CODEC,
+      o -> o.commonInfo,
+      Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
+      o -> o.template,
+      Ingredient.CONTENTS_STREAM_CODEC,
+      o -> o.base,
+      Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
+      o -> o.addition,
+      ItemStackTemplate.STREAM_CODEC,
+      o -> o.result,
+      SmithingTransformRecipe::new
+   );
+   public static final RecipeSerializer<SmithingTransformRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
    private final Optional<Ingredient> template;
    private final Ingredient base;
    private final Optional<Ingredient> addition;
-   private final TransmuteResult result;
-   private @Nullable PlacementInfo placementInfo;
+   private final ItemStackTemplate result;
 
-   public SmithingTransformRecipe(final Optional<Ingredient> template, final Ingredient base, final Optional<Ingredient> addition, final TransmuteResult result) {
+   public SmithingTransformRecipe(
+      final Recipe.CommonInfo commonInfo,
+      final Optional<Ingredient> template,
+      final Ingredient base,
+      final Optional<Ingredient> addition,
+      final ItemStackTemplate result
+   ) {
+      super(commonInfo);
       this.template = template;
       this.base = base;
       this.addition = addition;
       this.result = result;
    }
 
-   public ItemStack assemble(final SmithingRecipeInput input, final HolderLookup.Provider registries) {
-      return this.result.apply(input.base());
+   public ItemStack assemble(final SmithingRecipeInput input) {
+      return TransmuteRecipe.createWithOriginalComponents(this.result, input.base());
    }
 
    @Override
@@ -49,16 +78,12 @@ public class SmithingTransformRecipe implements SmithingRecipe {
 
    @Override
    public RecipeSerializer<SmithingTransformRecipe> getSerializer() {
-      return RecipeSerializer.SMITHING_TRANSFORM;
+      return SERIALIZER;
    }
 
    @Override
-   public PlacementInfo placementInfo() {
-      if (this.placementInfo == null) {
-         this.placementInfo = PlacementInfo.createFromOptionals(List.of(this.template, Optional.of(this.base), this.addition));
-      }
-
-      return this.placementInfo;
+   protected PlacementInfo createPlacementInfo() {
+      return PlacementInfo.createFromOptionals(List.of(this.template, Optional.of(this.base), this.addition));
    }
 
    @Override
@@ -68,42 +93,9 @@ public class SmithingTransformRecipe implements SmithingRecipe {
             Ingredient.optionalIngredientToDisplay(this.template),
             this.base.display(),
             Ingredient.optionalIngredientToDisplay(this.addition),
-            this.result.display(),
+            new SlotDisplay.ItemStackSlotDisplay(this.result),
             new SlotDisplay.ItemSlotDisplay(Items.SMITHING_TABLE)
          )
       );
-   }
-
-   public static class Serializer implements RecipeSerializer<SmithingTransformRecipe> {
-      private static final MapCodec<SmithingTransformRecipe> CODEC = RecordCodecBuilder.mapCodec(
-         r -> r.group(
-               Ingredient.CODEC.optionalFieldOf("template").forGetter(o -> o.template),
-               Ingredient.CODEC.fieldOf("base").forGetter(o -> o.base),
-               Ingredient.CODEC.optionalFieldOf("addition").forGetter(o -> o.addition),
-               TransmuteResult.CODEC.fieldOf("result").forGetter(o -> o.result)
-            )
-            .apply(r, SmithingTransformRecipe::new)
-      );
-      public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> STREAM_CODEC = StreamCodec.composite(
-         Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
-         r -> r.template,
-         Ingredient.CONTENTS_STREAM_CODEC,
-         r -> r.base,
-         Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
-         r -> r.addition,
-         TransmuteResult.STREAM_CODEC,
-         r -> r.result,
-         SmithingTransformRecipe::new
-      );
-
-      @Override
-      public MapCodec<SmithingTransformRecipe> codec() {
-         return CODEC;
-      }
-
-      @Override
-      public StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> streamCodec() {
-         return STREAM_CODEC;
-      }
    }
 }

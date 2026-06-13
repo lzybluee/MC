@@ -1,14 +1,14 @@
 package net.minecraft.data.recipes;
 
+import java.util.Objects;
 import net.minecraft.advancements.Criterion;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.level.ItemLike;
 import org.jspecify.annotations.Nullable;
 
 public interface RecipeBuilder {
@@ -18,34 +18,42 @@ public interface RecipeBuilder {
 
    RecipeBuilder group(@Nullable String group);
 
-   Item getResult();
+   ResourceKey<Recipe<?>> defaultId();
 
    void save(RecipeOutput output, ResourceKey<Recipe<?>> location);
 
    default void save(final RecipeOutput output) {
-      this.save(output, ResourceKey.create(Registries.RECIPE, getDefaultRecipeId(this.getResult())));
+      this.save(output, this.defaultId());
    }
 
    default void save(final RecipeOutput output, final String id) {
-      Identifier key = getDefaultRecipeId(this.getResult());
-      Identifier resourceId = Identifier.parse(id);
-      if (resourceId.equals(key)) {
+      ResourceKey<Recipe<?>> defaultKey = this.defaultId();
+      ResourceKey<Recipe<?>> overriddenKey = ResourceKey.create(Registries.RECIPE, Identifier.parse(id));
+      if (overriddenKey == defaultKey) {
          throw new IllegalStateException("Recipe " + id + " should remove its 'save' argument as it is equal to default one");
       }
 
-      this.save(output, ResourceKey.create(Registries.RECIPE, resourceId));
+      this.save(output, overriddenKey);
    }
 
-   static Identifier getDefaultRecipeId(final ItemLike itemLike) {
-      return BuiltInRegistries.ITEM.getKey(itemLike.asItem());
-   }
-
-   static CraftingBookCategory determineBookCategory(final RecipeCategory category) {
+   static CraftingBookCategory determineCraftingBookCategory(final RecipeCategory category) {
       return switch (category) {
          case BUILDING_BLOCKS -> CraftingBookCategory.BUILDING;
          case TOOLS, COMBAT -> CraftingBookCategory.EQUIPMENT;
          case REDSTONE -> CraftingBookCategory.REDSTONE;
          default -> CraftingBookCategory.MISC;
       };
+   }
+
+   static Recipe.CommonInfo createCraftingCommonInfo(final boolean showNotification) {
+      return new Recipe.CommonInfo(showNotification);
+   }
+
+   static CraftingRecipe.CraftingBookInfo createCraftingBookInfo(final RecipeCategory category, final @Nullable String group) {
+      return new CraftingRecipe.CraftingBookInfo(determineCraftingBookCategory(category), Objects.requireNonNullElse(group, ""));
+   }
+
+   static ResourceKey<Recipe<?>> getDefaultRecipeId(final ItemInstance result) {
+      return ResourceKey.create(Registries.RECIPE, result.typeHolder().unwrapKey().orElseThrow().identifier());
    }
 }

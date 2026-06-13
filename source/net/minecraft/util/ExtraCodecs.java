@@ -35,6 +35,8 @@ import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.FileSystem;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
@@ -64,6 +66,7 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.joml.AxisAngle4f;
@@ -625,6 +628,31 @@ public class ExtraCodecs {
             return DataResult.error(() -> "No value with id: " + key);
          }
       }, Enum::toString);
+   }
+
+   public static Codec<Path> pathCodec(final Function<String, Path> pathFactory) {
+      return Codec.STRING.xmap(pathFactory, path -> FilenameUtils.separatorsToUnix(path.toString()));
+   }
+
+   public static Codec<Path> relaiveNormalizedSubPathCodec(final Function<String, Path> pathFactory) {
+      return pathCodec(pathFactory)
+         .xmap(Path::normalize, Path::normalize)
+         .validate(
+            path -> {
+               if (path.isAbsolute()) {
+                  return DataResult.error(() -> "Illegal absolute path: " + path);
+               } else {
+                  return !path.startsWith("..") && !path.startsWith(".") && !FileUtil.isEmptyPath(path)
+                     ? DataResult.success(path)
+                     : DataResult.error(() -> "Illegal path traversal: " + path);
+               }
+            }
+         );
+   }
+
+   public static Codec<Path> guardedPathCodec(final Path baseFolder) {
+      FileSystem var1 = baseFolder.getFileSystem();
+      return relaiveNormalizedSubPathCodec(x$0 -> var1.getPath(x$0)).xmap(baseFolder::resolve, baseFolder::relativize);
    }
 
    public static class LateBoundIdMapper<I, V> {

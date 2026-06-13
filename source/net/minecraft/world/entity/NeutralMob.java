@@ -2,6 +2,7 @@ package net.minecraft.world.entity;
 
 import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -55,27 +56,40 @@ public interface NeutralMob {
    }
 
    default void updatePersistentAnger(final ServerLevel level, final boolean stayAngryIfTargetPresent) {
-      LivingEntity target = this.getTarget();
+      LivingEntity previousTarget = this.getTargetUnchecked();
       EntityReference<LivingEntity> persistentAngerTarget = this.getPersistentAngerTarget();
-      if (target != null && target.isDeadOrDying() && persistentAngerTarget != null && persistentAngerTarget.matches(target) && target instanceof Mob) {
+      if (previousTarget != null
+         && previousTarget.isDeadOrDying()
+         && persistentAngerTarget != null
+         && persistentAngerTarget.matches(previousTarget)
+         && previousTarget instanceof Mob) {
          this.stopBeingAngry();
       } else {
+         LivingEntity target = this.getTarget();
          if (target != null) {
-            if (persistentAngerTarget == null || !persistentAngerTarget.matches(target)) {
+            boolean newTarget = persistentAngerTarget == null || !persistentAngerTarget.matches(target);
+            if (newTarget) {
                this.setPersistentAngerTarget(EntityReference.of(target));
             }
 
-            this.startPersistentAngerTimer();
+            if (newTarget || stayAngryIfTargetPresent) {
+               this.startPersistentAngerTimer();
+            }
          }
 
          if (persistentAngerTarget != null && !this.isAngry() && (target == null || !isValidPlayerTarget(target) || !stayAngryIfTargetPresent)) {
+            this.stopBeingAngry();
+         }
+
+         if (EntityReference.getLivingEntity(persistentAngerTarget, level) instanceof Player player
+            && (player.isCreative() || player.isSpectator() || level.getDifficulty() == Difficulty.PEACEFUL)) {
             this.stopBeingAngry();
          }
       }
    }
 
    private static boolean isValidPlayerTarget(final LivingEntity target) {
-      return target instanceof Player player && !player.isCreative() && !player.isSpectator();
+      return target instanceof Player player && !player.isCreative() && !player.isSpectator() && player.level().getDifficulty() != Difficulty.PEACEFUL;
    }
 
    default boolean isAngryAt(final LivingEntity entity, final ServerLevel level) {
@@ -135,4 +149,6 @@ public interface NeutralMob {
    boolean canAttack(final LivingEntity target);
 
    @Nullable LivingEntity getTarget();
+
+   @Nullable LivingEntity getTargetUnchecked();
 }

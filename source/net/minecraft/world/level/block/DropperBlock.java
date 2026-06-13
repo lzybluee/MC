@@ -51,7 +51,7 @@ public class DropperBlock extends DispenserBlock {
          LOGGER.warn("Ignoring dispensing attempt for Dropper without matching block entity at {}", pos);
       } else {
          BlockSource source = new BlockSource(level, pos, state, blockEntity);
-         int slot = blockEntity.getRandomSlot(level.random);
+         int slot = blockEntity.getRandomSlot(level.getRandom());
          if (slot < 0) {
             level.levelEvent(1001, pos, 0);
          } else {

@@ -14,22 +14,39 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OutlineBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.ModelBakery;
 
 public class ModelPartFeatureRenderer {
    private final PoseStack poseStack = new PoseStack();
 
-   public void render(
+   public void renderSolid(
       final SubmitNodeCollection nodeCollection,
       final MultiBufferSource.BufferSource bufferSource,
       final OutlineBufferSource outlineBufferSource,
       final MultiBufferSource.BufferSource crumblingBufferSource
    ) {
       ModelPartFeatureRenderer.Storage storage = nodeCollection.getModelPartSubmits();
+      this.render(storage.solidModelPartSubmits, bufferSource, outlineBufferSource, crumblingBufferSource);
+   }
 
-      for (Entry<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> entry : storage.modelPartSubmits.entrySet()) {
+   public void renderTranslucent(
+      final SubmitNodeCollection nodeCollection,
+      final MultiBufferSource.BufferSource bufferSource,
+      final OutlineBufferSource outlineBufferSource,
+      final MultiBufferSource.BufferSource crumblingBufferSource
+   ) {
+      ModelPartFeatureRenderer.Storage storage = nodeCollection.getModelPartSubmits();
+      this.render(storage.translucentModelPartSubmits, bufferSource, outlineBufferSource, crumblingBufferSource);
+   }
+
+   private void render(
+      final Map<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> modelPartSubmitsMap,
+      final MultiBufferSource.BufferSource bufferSource,
+      final OutlineBufferSource outlineBufferSource,
+      final MultiBufferSource.BufferSource crumblingBufferSource
+   ) {
+      for (Entry<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> entry : modelPartSubmitsMap.entrySet()) {
          RenderType renderType = entry.getKey();
          List<SubmitNodeStorage.ModelPartSubmit> modelPartSubmits = entry.getValue();
          VertexConsumer buffer = bufferSource.getBuffer(renderType);
@@ -38,12 +55,12 @@ public class ModelPartFeatureRenderer {
             VertexConsumer actualBuffer;
             if (modelPartSubmit.sprite() != null) {
                if (modelPartSubmit.hasFoil()) {
-                  actualBuffer = modelPartSubmit.sprite().wrap(ItemRenderer.getFoilBuffer(bufferSource, renderType, modelPartSubmit.sheeted(), true));
+                  actualBuffer = modelPartSubmit.sprite().wrap(ItemFeatureRenderer.getFoilBuffer(bufferSource, renderType, modelPartSubmit.sheeted(), true));
                } else {
                   actualBuffer = modelPartSubmit.sprite().wrap(buffer);
                }
             } else if (modelPartSubmit.hasFoil()) {
-               actualBuffer = ItemRenderer.getFoilBuffer(bufferSource, renderType, modelPartSubmit.sheeted(), true);
+               actualBuffer = ItemFeatureRenderer.getFoilBuffer(bufferSource, renderType, modelPartSubmit.sheeted(), true);
             } else {
                actualBuffer = buffer;
             }
@@ -78,25 +95,40 @@ public class ModelPartFeatureRenderer {
    }
 
    public static class Storage {
-      private final Map<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> modelPartSubmits = new HashMap<>();
-      private final Set<RenderType> modelPartSubmitsUsage = new ObjectOpenHashSet();
+      private final Map<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> solidModelPartSubmits = new HashMap<>();
+      private final Map<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> translucentModelPartSubmits = new HashMap<>();
+      private final Set<RenderType> solidModelPartSubmitsUsage = new ObjectOpenHashSet();
+      private final Set<RenderType> translucentModelPartSubmitsUsage = new ObjectOpenHashSet();
 
       public void add(final RenderType renderType, final SubmitNodeStorage.ModelPartSubmit submit) {
-         this.modelPartSubmits.computeIfAbsent(renderType, ignored -> new ArrayList<>()).add(submit);
+         if (!renderType.hasBlending()) {
+            this.solidModelPartSubmits.computeIfAbsent(renderType, ignored -> new ArrayList<>()).add(submit);
+         } else {
+            this.translucentModelPartSubmits.computeIfAbsent(renderType, ignored -> new ArrayList<>()).add(submit);
+         }
       }
 
       public void clear() {
-         for (Entry<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> entry : this.modelPartSubmits.entrySet()) {
+         for (Entry<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> entry : this.solidModelPartSubmits.entrySet()) {
             if (!entry.getValue().isEmpty()) {
-               this.modelPartSubmitsUsage.add(entry.getKey());
+               this.solidModelPartSubmitsUsage.add(entry.getKey());
+               entry.getValue().clear();
+            }
+         }
+
+         for (Entry<RenderType, List<SubmitNodeStorage.ModelPartSubmit>> entry : this.translucentModelPartSubmits.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+               this.translucentModelPartSubmitsUsage.add(entry.getKey());
                entry.getValue().clear();
             }
          }
       }
 
       public void endFrame() {
-         this.modelPartSubmits.keySet().removeIf(renderType -> !this.modelPartSubmitsUsage.contains(renderType));
-         this.modelPartSubmitsUsage.clear();
+         this.solidModelPartSubmits.keySet().removeIf(renderType -> !this.solidModelPartSubmitsUsage.contains(renderType));
+         this.solidModelPartSubmitsUsage.clear();
+         this.translucentModelPartSubmits.keySet().removeIf(renderType -> !this.translucentModelPartSubmitsUsage.contains(renderType));
+         this.translucentModelPartSubmitsUsage.clear();
       }
    }
 }

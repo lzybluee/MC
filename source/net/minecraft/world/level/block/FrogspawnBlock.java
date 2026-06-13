@@ -7,6 +7,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -92,7 +94,7 @@ public class FrogspawnBlock extends Block {
    protected void entityInside(
       final BlockState state, final Level level, final BlockPos pos, final Entity entity, final InsideBlockEffectApplier effectApplier, final boolean isPrecise
    ) {
-      if (entity.getType().equals(EntityType.FALLING_BLOCK)) {
+      if (entity.is(EntityType.FALLING_BLOCK)) {
          this.destroyBlock(level, pos);
       }
    }
@@ -100,7 +102,7 @@ public class FrogspawnBlock extends Block {
    private static boolean mayPlaceOn(final BlockGetter level, final BlockPos pos) {
       FluidState fluidState = level.getFluidState(pos);
       FluidState fluidAbove = level.getFluidState(pos.above());
-      return fluidState.getType() == Fluids.WATER && fluidAbove.getType() == Fluids.EMPTY;
+      return (fluidState.is(FluidTags.SUPPORTS_FROGSPAWN) || level.getBlockState(pos).is(BlockTags.SUPPORTS_FROGSPAWN)) && fluidAbove.is(Fluids.EMPTY);
    }
 
    private void hatchFrogspawn(final ServerLevel level, final BlockPos pos, final RandomSource random) {

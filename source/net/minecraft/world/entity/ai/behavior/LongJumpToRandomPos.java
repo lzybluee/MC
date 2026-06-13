@@ -93,7 +93,7 @@ public class LongJumpToRandomPos<E extends Mob> extends Behavior<E> {
    protected boolean checkExtraStartConditions(final ServerLevel level, final Mob body) {
       boolean canStart = body.onGround() && !body.isInWater() && !body.isInLava() && !level.getBlockState(body.blockPosition()).is(Blocks.HONEY_BLOCK);
       if (!canStart) {
-         body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.random) / 2);
+         body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.getRandom()) / 2);
       }
 
       return canStart;
@@ -106,7 +106,7 @@ public class LongJumpToRandomPos<E extends Mob> extends Behavior<E> {
          && !body.isInWater()
          && (this.chosenJump != null || !this.jumpCandidates.isEmpty());
       if (!isValid && body.getBrain().getMemory(MemoryModuleType.LONG_JUMP_MID_JUMP).isEmpty()) {
-         body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.random) / 2);
+         body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.getRandom()) / 2);
          body.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
       }
 
@@ -177,7 +177,7 @@ public class LongJumpToRandomPos<E extends Mob> extends Behavior<E> {
 
    protected Optional<LongJumpToRandomPos.PossibleJump> getJumpCandidate(final ServerLevel level) {
       Optional<LongJumpToRandomPos.PossibleJump> randomItem = WeightedRandom.getRandomItem(
-         level.random, this.jumpCandidates, LongJumpToRandomPos.PossibleJump::weight
+         level.getRandom(), this.jumpCandidates, LongJumpToRandomPos.PossibleJump::weight
       );
       randomItem.ifPresent(this.jumpCandidates::remove);
       return randomItem;

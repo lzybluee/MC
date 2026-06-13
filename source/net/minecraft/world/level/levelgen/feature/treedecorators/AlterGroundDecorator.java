@@ -3,7 +3,7 @@ package net.minecraft.world.level.levelgen.feature.treedecorators;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 
@@ -24,7 +24,7 @@ public class AlterGroundDecorator extends TreeDecorator {
    public void place(final TreeDecorator.Context context) {
       List<BlockPos> blockPositions = TreeFeature.getLowestTrunkOrRootOfTree(context);
       if (!blockPositions.isEmpty()) {
-         int minY = blockPositions.get(0).getY();
+         int minY = blockPositions.getFirst().getY();
          blockPositions.stream().filter(pos -> pos.getY() == minY).forEach(pos -> {
             this.placeCircle(context, pos.west().north());
             this.placeCircle(context, pos.east(2).north());
@@ -55,13 +55,14 @@ public class AlterGroundDecorator extends TreeDecorator {
 
    private void placeBlockAt(final TreeDecorator.Context context, final BlockPos pos) {
       for (int dy = 2; dy >= -3; dy--) {
-         BlockPos blockPos = pos.above(dy);
-         if (Feature.isGrassOrDirt(context.level(), blockPos)) {
-            context.setBlock(blockPos, this.provider.getState(context.random(), pos));
+         BlockPos cursor = pos.above(dy);
+         BlockState replaceWith = this.provider.getOptionalState(context.level(), context.random(), cursor);
+         if (replaceWith != null) {
+            context.setBlock(cursor, replaceWith);
             break;
          }
 
-         if (!context.isAir(blockPos) && dy < 0) {
+         if (!context.isAir(cursor) && dy < 0) {
             break;
          }
       }

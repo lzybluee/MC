@@ -292,7 +292,7 @@ public abstract class Projectile extends Entity implements TraceableEntity {
       if (type == HitResult.Type.ENTITY) {
          EntityHitResult entityHitResult = (EntityHitResult)hitResult;
          Entity entityHit = entityHitResult.getEntity();
-         if (entityHit.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entityHit instanceof Projectile projectile) {
+         if (entityHit.is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entityHit instanceof Projectile projectile) {
             projectile.deflect(ProjectileDeflection.AIM_DEFLECT, this.getOwner(), this.owner, true);
          }
 
@@ -364,12 +364,12 @@ public abstract class Projectile extends Entity implements TraceableEntity {
    }
 
    public boolean mayBreak(final ServerLevel level) {
-      return this.getType().is(EntityTypeTags.IMPACT_PROJECTILES) && level.getGameRules().get(GameRules.PROJECTILES_CAN_BREAK_BLOCKS);
+      return this.is(EntityTypeTags.IMPACT_PROJECTILES) && level.getGameRules().get(GameRules.PROJECTILES_CAN_BREAK_BLOCKS);
    }
 
    @Override
    public boolean isPickable() {
-      return this.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
+      return this.is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
    }
 
    @Override

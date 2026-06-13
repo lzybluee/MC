@@ -23,7 +23,6 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -92,7 +91,7 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
       BlockPos.MutableBlockPos pos = stemBottomPos.mutable();
       int height = 0;
 
-      while (height < desiredHeight && canPlaceAt(level, pos, level.getBlockState(pos))) {
+      while (height < desiredHeight && canPlaceAt(level, pos)) {
          height++;
          pos.move(Direction.UP);
       }
@@ -112,8 +111,13 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
       return oldState.isAir() || oldState.is(Blocks.WATER) || oldState.is(Blocks.SMALL_DRIPLEAF);
    }
 
-   protected static boolean canPlaceAt(final LevelHeightAccessor level, final BlockPos pos, final BlockState oldState) {
-      return !level.isOutsideBuildHeight(pos) && canReplace(oldState);
+   protected static boolean canPlaceAt(final LevelReader level, final BlockPos pos) {
+      return canGrowInto(level, pos);
+   }
+
+   protected static boolean canGrowInto(final LevelReader level, final BlockPos pos) {
+      BlockState state = level.getBlockState(pos);
+      return level.isInsideBuildHeight(pos) && canReplace(state);
    }
 
    protected static boolean place(final LevelAccessor level, final BlockPos pos, final FluidState fluidState, final Direction facing) {
@@ -135,7 +139,7 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockPos belowPos = pos.below();
       BlockState belowState = level.getBlockState(belowPos);
-      return belowState.is(this) || belowState.is(Blocks.BIG_DRIPLEAF_STEM) || belowState.is(BlockTags.BIG_DRIPLEAF_PLACEABLE);
+      return belowState.is(this) || belowState.is(Blocks.BIG_DRIPLEAF_STEM) || belowState.is(BlockTags.SUPPORTS_BIG_DRIPLEAF);
    }
 
    @Override
@@ -164,8 +168,7 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      BlockState aboveState = level.getBlockState(pos.above());
-      return canReplace(aboveState);
+      return canGrowInto(level, pos.above());
    }
 
    @Override
@@ -176,11 +179,10 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
    @Override
    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
       BlockPos abovePos = pos.above();
-      BlockState aboveState = level.getBlockState(abovePos);
-      if (canPlaceAt(level, abovePos, aboveState)) {
+      if (canPlaceAt(level, abovePos)) {
          Direction facing = state.getValue(FACING);
          BigDripleafStemBlock.place(level, pos, state.getFluidState(), facing);
-         place(level, abovePos, aboveState.getFluidState(), facing);
+         place(level, abovePos, level.getBlockState(abovePos).getFluidState(), facing);
       }
    }
 
@@ -221,7 +223,7 @@ public class BigDripleafBlock extends HorizontalDirectionalBlock implements Simp
    }
 
    private static void playTiltSound(final Level level, final BlockPos pos, final SoundEvent tiltSound) {
-      float pitch = Mth.randomBetween(level.random, 0.8F, 1.2F);
+      float pitch = Mth.randomBetween(level.getRandom(), 0.8F, 1.2F);
       level.playSound(null, pos, tiltSound, SoundSource.BLOCKS, 1.0F, pitch);
    }
 

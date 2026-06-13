@@ -23,24 +23,26 @@ public class DonkeyModel extends AbstractEquineModel<DonkeyRenderState> {
       super(root);
    }
 
+   public DonkeyModel(
+      final ModelPart root,
+      final ModelPart headParts,
+      final ModelPart rightHindLeg,
+      final ModelPart rightFrontLeg,
+      final ModelPart leftHindLeg,
+      final ModelPart leftFrontLeg,
+      final ModelPart tail
+   ) {
+      super(root, headParts, rightHindLeg, rightFrontLeg, leftHindLeg, leftFrontLeg, tail);
+   }
+
    public static LayerDefinition createBodyLayer(final float scale) {
       return LayerDefinition.create(AbstractEquineModel.createBodyMesh(CubeDeformation.NONE), 64, 64)
          .apply(DONKEY_TRANSFORMER)
          .apply(MeshTransformer.scaling(scale));
    }
 
-   public static LayerDefinition createBabyLayer(final float scale) {
-      return LayerDefinition.create(AbstractEquineModel.createFullScaleBabyMesh(CubeDeformation.NONE), 64, 64)
-         .apply(DONKEY_TRANSFORMER)
-         .apply(BABY_TRANSFORMER)
-         .apply(MeshTransformer.scaling(scale));
-   }
-
-   public static LayerDefinition createSaddleLayer(final float scale, final boolean baby) {
-      return EquineSaddleModel.createFullScaleSaddleLayer(baby)
-         .apply(DONKEY_TRANSFORMER)
-         .apply(baby ? AbstractEquineModel.BABY_TRANSFORMER : MeshTransformer.IDENTITY)
-         .apply(MeshTransformer.scaling(scale));
+   public static LayerDefinition createSaddleLayer(final float scale) {
+      return EquineSaddleModel.createSaddleLayer().apply(DONKEY_TRANSFORMER).apply(MeshTransformer.scaling(scale));
    }
 
    private static void modifyMesh(final PartDefinition root) {

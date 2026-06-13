@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -23,12 +24,10 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.item.BoneMealItem;
 import net.minecraft.world.item.DispensibleContainerItem;
-import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.HoneycombItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
@@ -43,7 +42,6 @@ import net.minecraft.world.level.block.CandleCakeBlock;
 import net.minecraft.world.level.block.CarvedPumpkinBlock;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.SkullBlock;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.WitherSkullBlock;
@@ -78,32 +76,6 @@ public interface DispenseItemBehavior {
       DispenserBlock.registerProjectileBehavior(Items.FIREWORK_ROCKET);
       DispenserBlock.registerProjectileBehavior(Items.FIRE_CHARGE);
       DispenserBlock.registerProjectileBehavior(Items.WIND_CHARGE);
-      DefaultDispenseItemBehavior spawnEggBehavior = new DefaultDispenseItemBehavior() {
-         @Override
-         public ItemStack execute(final BlockSource source, final ItemStack dispensed) {
-            Direction direction = source.state().getValue(DispenserBlock.FACING);
-            EntityType<?> type = ((SpawnEggItem)dispensed.getItem()).getType(dispensed);
-            if (type == null) {
-               return dispensed;
-            }
-
-            try {
-               type.spawn(source.level(), dispensed, null, source.pos().relative(direction), EntitySpawnReason.DISPENSER, direction != Direction.UP, false);
-            } catch (Exception e) {
-               LOGGER.error("Error while dispensing spawn egg from dispenser at {}", source.pos(), e);
-               return ItemStack.EMPTY;
-            }
-
-            dispensed.shrink(1);
-            source.level().gameEvent(null, GameEvent.ENTITY_PLACE, source.pos());
-            return dispensed;
-         }
-      };
-
-      for (SpawnEggItem item : SpawnEggItem.eggs()) {
-         DispenserBlock.registerBehavior(item, spawnEggBehavior);
-      }
-
       DispenserBlock.registerBehavior(
          Items.ARMOR_STAND,
          new DefaultDispenseItemBehavior() {
@@ -326,14 +298,26 @@ public interface DispenseItemBehavior {
             return dispensed;
          }
       });
-      DispenserBlock.registerBehavior(Blocks.SHULKER_BOX.asItem(), new ShulkerBoxDispenseBehavior());
-
-      for (DyeColor color : DyeColor.values()) {
-         DispenserBlock.registerBehavior(ShulkerBoxBlock.getBlockByColor(color).asItem(), new ShulkerBoxDispenseBehavior());
-      }
-
+      ShulkerBoxDispenseBehavior shulkerBoxDispenseBehavior = new ShulkerBoxDispenseBehavior();
+      DispenserBlock.registerBehavior(Items.SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.WHITE_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.ORANGE_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.MAGENTA_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.LIGHT_BLUE_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.YELLOW_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.LIME_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.PINK_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.GRAY_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.LIGHT_GRAY_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.CYAN_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.PURPLE_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.BLUE_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.BROWN_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.GREEN_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.RED_SHULKER_BOX, shulkerBoxDispenseBehavior);
+      DispenserBlock.registerBehavior(Items.BLACK_SHULKER_BOX, shulkerBoxDispenseBehavior);
       DispenserBlock.registerBehavior(
-         Items.GLASS_BOTTLE.asItem(),
+         Items.GLASS_BOTTLE,
          new OptionalDispenseItemBehavior() {
             private ItemStack takeLiquid(final BlockSource source, final ItemStack dispensed, final ItemStack filledItemStack) {
                source.level().gameEvent(null, GameEvent.FLUID_PICKUP, source.pos());
@@ -382,8 +366,8 @@ public interface DispenseItemBehavior {
             }
          }
       });
-      DispenserBlock.registerBehavior(Items.SHEARS.asItem(), new ShearsDispenseItemBehavior());
-      DispenserBlock.registerBehavior(Items.BRUSH.asItem(), new OptionalDispenseItemBehavior() {
+      DispenserBlock.registerBehavior(Items.SHEARS, new ShearsDispenseItemBehavior());
+      DispenserBlock.registerBehavior(Items.BRUSH, new OptionalDispenseItemBehavior() {
          @Override
          protected ItemStack execute(final BlockSource source, final ItemStack dispensed) {
             ServerLevel level = source.level();
@@ -443,17 +427,11 @@ public interface DispenseItemBehavior {
                }
 
                if (!level.isClientSide()) {
+                  RandomSource random = level.getRandom();
+
                   for (int i = 0; i < 5; i++) {
                      level.sendParticles(
-                        ParticleTypes.SPLASH,
-                        pos.getX() + level.random.nextDouble(),
-                        pos.getY() + 1,
-                        pos.getZ() + level.random.nextDouble(),
-                        1,
-                        0.0,
-                        0.0,
-                        0.0,
-                        1.0
+                        ParticleTypes.SPLASH, pos.getX() + random.nextDouble(), pos.getY() + 1, pos.getZ() + random.nextDouble(), 1, 0.0, 0.0, 0.0, 1.0
                      );
                   }
                }

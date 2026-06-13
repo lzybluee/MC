@@ -38,7 +38,12 @@ public class TraderLlama extends Llama {
 
    @Override
    protected @Nullable Llama makeNewLlama() {
-      return EntityType.TRADER_LLAMA.create(this.level(), EntitySpawnReason.BREEDING);
+      TraderLlama baby = EntityType.TRADER_LLAMA.create(this.level(), EntitySpawnReason.BREEDING);
+      if (baby != null) {
+         baby.setPersistenceRequired();
+      }
+
+      return baby;
    }
 
    @Override
@@ -58,8 +63,7 @@ public class TraderLlama extends Llama {
       super.registerGoals();
       this.goalSelector.addGoal(1, new PanicGoal(this, 2.0));
       this.targetSelector.addGoal(1, new TraderLlama.TraderLlamaDefendWanderingTraderGoal(this));
-      this.targetSelector
-         .addGoal(2, new NearestAttackableTargetGoal<>(this, Zombie.class, true, (target, level) -> target.getType() != EntityType.ZOMBIFIED_PIGLIN));
+      this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Zombie.class, true, (target, level) -> !target.is(EntityType.ZOMBIFIED_PIGLIN)));
       this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
    }
 
@@ -94,7 +98,11 @@ public class TraderLlama extends Llama {
    }
 
    private boolean canDespawn() {
-      return !this.isTamed() && !this.isLeashedToSomethingOtherThanTheWanderingTrader() && !this.hasExactlyOnePlayerPassenger();
+      return !this.isTamed()
+         && !this.isLeashedToSomethingOtherThanTheWanderingTrader()
+         && !this.hasExactlyOnePlayerPassenger()
+         && !this.isAgeLocked()
+         && !this.isPersistenceRequired();
    }
 
    private boolean isLeashedToWanderingTrader() {

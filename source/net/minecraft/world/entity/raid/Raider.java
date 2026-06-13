@@ -96,7 +96,7 @@ public abstract class Raider extends PatrollingMonster {
                }
             } else {
                LivingEntity target = this.getTarget();
-               if (target != null && (target.getType() == EntityType.PLAYER || target.getType() == EntityType.IRON_GOLEM)) {
+               if (target != null && (target.is(EntityType.PLAYER) || target.is(EntityType.IRON_GOLEM))) {
                   this.noActionTime = 0;
                }
             }
@@ -121,7 +121,7 @@ public abstract class Raider extends PatrollingMonster {
                raidWhenKilled.removeLeader(this.getWave());
             }
 
-            if (killer != null && killer.getType() == EntityType.PLAYER) {
+            if (killer != null && killer.is(EntityType.PLAYER)) {
                raidWhenKilled.addHeroOfTheVillage(killer);
             }
 
@@ -261,7 +261,7 @@ public abstract class Raider extends PatrollingMonster {
    public @Nullable SpawnGroupData finalizeSpawn(
       final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
    ) {
-      this.setCanJoinRaid(this.getType() != EntityType.WITCH || spawnReason != EntitySpawnReason.NATURAL);
+      this.setCanJoinRaid(!this.is(EntityType.WITCH) || spawnReason != EntitySpawnReason.NATURAL);
       return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
    }
 
@@ -285,7 +285,7 @@ public abstract class Raider extends PatrollingMonster {
             && this.mob.isPatrolling()
             && this.mob.getTarget() != null
             && !this.mob.isAggressive()
-            && (lastHurtByMob == null || lastHurtByMob.getType() != EntityType.PLAYER);
+            && (lastHurtByMob == null || !lastHurtByMob.is(EntityType.PLAYER));
       }
 
       @Override

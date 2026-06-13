@@ -10,10 +10,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.CheckReturnValue;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.Nullable;
 
 public class ComponentUtils {
@@ -49,31 +47,34 @@ public class ComponentUtils {
       }
    }
 
-   public static Optional<MutableComponent> updateForEntity(
-      final @Nullable CommandSourceStack source, final Optional<Component> component, final @Nullable Entity entity, final int recursionDepth
-   ) throws CommandSyntaxException {
-      return component.isPresent() ? Optional.of(updateForEntity(source, component.get(), entity, recursionDepth)) : Optional.empty();
+   public static Optional<MutableComponent> resolve(final ResolutionContext context, final Optional<Component> component, final int recursionDepth) throws CommandSyntaxException {
+      return component.isPresent() ? Optional.of(resolve(context, component.get(), recursionDepth)) : Optional.empty();
    }
 
-   public static MutableComponent updateForEntity(
-      final @Nullable CommandSourceStack source, final Component component, final @Nullable Entity entity, final int recursionDepth
-   ) throws CommandSyntaxException {
-      if (recursionDepth > 100) {
-         return component.copy();
-      }
-
-      MutableComponent result = component.getContents().resolve(source, entity, recursionDepth + 1);
-
-      for (Component sibling : component.getSiblings()) {
-         result.append(updateForEntity(source, sibling, entity, recursionDepth + 1));
-      }
-
-      return result.withStyle(resolveStyle(source, component.getStyle(), entity, recursionDepth));
+   public static MutableComponent resolve(final ResolutionContext context, final Component component) throws CommandSyntaxException {
+      return resolve(context, component, 0);
    }
 
-   private static Style resolveStyle(final @Nullable CommandSourceStack source, final Style style, final @Nullable Entity entity, final int recursionDepth) throws CommandSyntaxException {
+   public static MutableComponent resolve(final ResolutionContext context, final Component component, final int recursionDepth) throws CommandSyntaxException {
+      if (recursionDepth > context.depthLimit()) {
+         return switch (context.depthLimitBehavior()) {
+            case DISCARD_REMAINING -> CommonComponents.ELLIPSIS.copy();
+            case STOP_PROCESSING_AND_COPY_REMAINING -> component.copy();
+         };
+      } else {
+         MutableComponent result = component.getContents().resolve(context, recursionDepth + 1);
+
+         for (Component sibling : component.getSiblings()) {
+            result.append(resolve(context, sibling, recursionDepth + 1));
+         }
+
+         return result.withStyle(resolveStyle(context, component.getStyle(), recursionDepth));
+      }
+   }
+
+   private static Style resolveStyle(final ResolutionContext context, final Style style, final int recursionDepth) throws CommandSyntaxException {
       if (style.getHoverEvent() instanceof HoverEvent.ShowText(Component text)) {
-         HoverEvent resolved = new HoverEvent.ShowText(updateForEntity(source, text, entity, recursionDepth + 1));
+         HoverEvent resolved = new HoverEvent.ShowText(resolve(context, text, recursionDepth + 1));
          return style.withHoverEvent(resolved);
       } else {
          return style;

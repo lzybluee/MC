@@ -31,7 +31,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
@@ -43,13 +42,11 @@ public class ZombieHorse extends AbstractHorse {
    private static final double PER_RANDOM_SPEED = 1.0;
    private static final EntityDimensions BABY_DIMENSIONS = EntityType.ZOMBIE_HORSE
       .getDimensions()
-      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.ZOMBIE_HORSE.getHeight() - 0.03125F, 0.0F))
-      .scale(0.5F);
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.ZOMBIE_HORSE.getHeight() - 0.25F, 0.0F))
+      .scale(0.7F);
 
    public ZombieHorse(final EntityType<? extends ZombieHorse> type, final Level level) {
       super(type, level);
-      this.setPathfindingMalus(PathType.DANGER_OTHER, -1.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_OTHER, -1.0F);
    }
 
    public static AttributeSupplier.Builder createAttributes() {
@@ -57,9 +54,9 @@ public class ZombieHorse extends AbstractHorse {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       this.setPersistenceRequired();
-      return super.interact(player, hand);
+      return super.interact(player, hand, location);
    }
 
    @Override
@@ -116,7 +113,7 @@ public class ZombieHorse extends AbstractHorse {
 
    @Override
    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
-      return null;
+      return EntityType.ZOMBIE_HORSE.create(level, EntitySpawnReason.BREEDING);
    }
 
    @Override
@@ -202,5 +199,10 @@ public class ZombieHorse extends AbstractHorse {
    @Override
    public float chargeSpeedModifier() {
       return 1.4F;
+   }
+
+   @Override
+   public boolean canAgeUp() {
+      return false;
    }
 }

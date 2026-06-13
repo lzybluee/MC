@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,7 +44,7 @@ public class KelpBlock extends GrowingPlantHeadBlock implements LiquidBlockConta
 
    @Override
    protected boolean canAttachTo(final BlockState state) {
-      return !state.is(Blocks.MAGMA_BLOCK);
+      return !state.is(BlockTags.CANNOT_SUPPORT_KELP);
    }
 
    @Override
@@ -64,7 +65,7 @@ public class KelpBlock extends GrowingPlantHeadBlock implements LiquidBlockConta
    @Override
    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
-      return fluidState.is(FluidTags.WATER) && fluidState.getAmount() == 8 ? super.getStateForPlacement(context) : null;
+      return fluidState.is(FluidTags.WATER) && fluidState.isFull() ? super.getStateForPlacement(context) : null;
    }
 
    @Override

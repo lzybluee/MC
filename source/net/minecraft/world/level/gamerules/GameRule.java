@@ -56,6 +56,10 @@ public final class GameRule<T> implements FeatureElement {
       return Objects.requireNonNull(BuiltInRegistries.GAME_RULE.getKey(this));
    }
 
+   public Identifier getIdentifierWithFallback() {
+      return Objects.requireNonNullElse(BuiltInRegistries.GAME_RULE.getKey(this), Identifier.withDefaultNamespace("unregistered_sadface"));
+   }
+
    public String getDescriptionId() {
       return Util.makeDescriptionId("gamerule", this.getIdentifier());
    }

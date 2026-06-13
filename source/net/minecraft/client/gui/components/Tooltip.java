@@ -1,13 +1,16 @@
 package net.minecraft.client.gui.components;
 
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.narration.NarrationSupplier;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import org.jspecify.annotations.Nullable;
 
 public class Tooltip implements NarrationSupplier {
@@ -15,19 +18,35 @@ public class Tooltip implements NarrationSupplier {
    private final Component message;
    private @Nullable List<FormattedCharSequence> cachedTooltip;
    private @Nullable Language splitWithLanguage;
+   private final @Nullable Identifier style;
    private final @Nullable Component narration;
+   private final Optional<TooltipComponent> component;
 
-   private Tooltip(final Component message, final @Nullable Component narration) {
+   private Tooltip(final Component message, final @Nullable Component narration, final Optional<TooltipComponent> component, final @Nullable Identifier style) {
       this.message = message;
       this.narration = narration;
-   }
-
-   public static Tooltip create(final Component message, final @Nullable Component narration) {
-      return new Tooltip(message, narration);
+      this.component = component;
+      this.style = style;
    }
 
    public static Tooltip create(final Component message) {
-      return new Tooltip(message, message);
+      return new Tooltip(message, message, Optional.empty(), null);
+   }
+
+   public static Tooltip create(final Component message, final @Nullable Component narration) {
+      return new Tooltip(message, narration, Optional.empty(), null);
+   }
+
+   public static Tooltip create(final Component message, final Optional<TooltipComponent> component, final @Nullable Identifier style) {
+      return new Tooltip(message, message, component, style);
+   }
+
+   public Optional<TooltipComponent> component() {
+      return this.component;
+   }
+
+   public @Nullable Identifier style() {
+      return this.style;
    }
 
    @Override

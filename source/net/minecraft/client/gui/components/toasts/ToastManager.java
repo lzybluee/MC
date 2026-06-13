@@ -10,7 +10,7 @@ import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MusicToastDisplayState;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.sounds.SoundEvent;
@@ -77,7 +77,7 @@ public class ToastManager {
       }
    }
 
-   public void render(final GuiGraphics graphics) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics) {
       if (!this.minecraft.options.hideGui) {
          int screenWidth = graphics.guiWidth();
          if (!this.visibleToasts.isEmpty()) {
@@ -85,13 +85,13 @@ public class ToastManager {
          }
 
          for (ToastManager.ToastInstance<?> toast : this.visibleToasts) {
-            toast.render(graphics, screenWidth);
+            toast.extractRenderState(graphics, screenWidth);
          }
 
          if (this.minecraft.options.musicToast().get().renderToast()
             && this.nowPlayingToast != null
             && (this.minecraft.screen == null || !(this.minecraft.screen instanceof PauseScreen))) {
-            this.nowPlayingToast.render(graphics, screenWidth);
+            this.nowPlayingToast.extractRenderState(graphics, screenWidth);
          }
       }
    }
@@ -260,11 +260,11 @@ public class ToastManager {
          }
       }
 
-      public void render(final GuiGraphics graphics, final int screenWidth) {
+      public void extractRenderState(final GuiGraphicsExtractor graphics, final int screenWidth) {
          if (!this.hasFinishedRendering) {
             graphics.pose().pushMatrix();
             graphics.pose().translate(this.toast.xPos(screenWidth, this.visiblePortion), this.toast.yPos(this.firstSlotIndex));
-            this.toast.render(graphics, ToastManager.this.minecraft.font, this.fullyVisibleFor);
+            this.toast.extractRenderState(graphics, ToastManager.this.minecraft.font, this.fullyVisibleFor);
             graphics.pose().popMatrix();
          }
       }

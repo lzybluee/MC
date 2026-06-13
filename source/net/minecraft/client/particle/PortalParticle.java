@@ -3,6 +3,7 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 public class PortalParticle extends SingleQuadParticle {
@@ -59,19 +60,11 @@ public class PortalParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
-      int br = super.getLightColor(a);
-      float pos = (float)this.age / this.lifetime;
-      pos *= pos;
-      pos *= pos;
-      int br1 = br & 0xFF;
-      int br2 = br >> 16 & 0xFF;
-      br2 += (int)(pos * 15.0F * 16.0F);
-      if (br2 > 240) {
-         br2 = 240;
-      }
-
-      return br1 | br2 << 16;
+   public int getLightCoords(final float a) {
+      float brightness = (float)this.age / this.lifetime;
+      brightness *= brightness;
+      brightness *= brightness;
+      return LightCoordsUtil.addSmoothBlockEmission(super.getLightCoords(a), brightness);
    }
 
    @Override

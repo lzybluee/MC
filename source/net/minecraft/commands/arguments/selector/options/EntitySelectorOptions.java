@@ -285,7 +285,7 @@ public class EntitySelectorOptions {
 
             if (parser.isTag()) {
                TagKey<EntityType<?>> id = TagKey.create(Registries.ENTITY_TYPE, Identifier.read(parser.getReader()));
-               parser.addPredicate(e -> e.getType().is(id) != inverted);
+               parser.addPredicate(e -> e.is(id) != inverted);
             } else {
                Identifier id = Identifier.read(parser.getReader());
                EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(id).orElseThrow(() -> {
@@ -305,7 +305,7 @@ public class EntitySelectorOptions {
          register("tag", parser -> {
             boolean inverted = parser.shouldInvertValue();
             String tag = parser.getReader().readUnquotedString();
-            parser.addPredicate(e -> "".equals(tag) ? e.getTags().isEmpty() != inverted : e.getTags().contains(tag) != inverted);
+            parser.addPredicate(e -> "".equals(tag) ? e.entityTags().isEmpty() != inverted : e.entityTags().contains(tag) != inverted);
          }, s -> true, Component.translatable("argument.entity.options.tag.description"));
          register("nbt", parser -> {
             boolean inverted = parser.shouldInvertValue();

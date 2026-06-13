@@ -19,16 +19,16 @@ public record TracingExecutor(ExecutorService service) implements Executor {
 
                try {
                   command.run();
-               } catch (Throwable var12) {
+               } catch (Throwable t$) {
                   if (ignored != null) {
                      try {
                         ignored.close();
-                     } catch (Throwable var11) {
-                        var12.addSuppressed(var11);
+                     } catch (Throwable x2) {
+                        t$.addSuppressed(x2);
                      }
                   }
 
-                  throw var12;
+                  throw t$;
                }
 
                if (ignored != null) {
@@ -44,16 +44,16 @@ public record TracingExecutor(ExecutorService service) implements Executor {
 
             try {
                command.run();
-            } catch (Throwable var6) {
+            } catch (Throwable t$) {
                if (ignored != null) {
                   try {
                      ignored.close();
-                  } catch (Throwable var5) {
-                     var6.addSuppressed(var5);
+                  } catch (Throwable x2) {
+                     t$.addSuppressed(x2);
                   }
                }
 
-               throw var6;
+               throw t$;
             }
 
             if (ignored != null) {
@@ -89,16 +89,16 @@ public record TracingExecutor(ExecutorService service) implements Executor {
 
          try {
             command.run();
-         } catch (Throwable var5) {
+         } catch (Throwable t$) {
             if (ignored != null) {
                try {
                   ignored.close();
-               } catch (Throwable var4) {
-                  var5.addSuppressed(var4);
+               } catch (Throwable x2) {
+                  t$.addSuppressed(x2);
                }
             }
 
-            throw var5;
+            throw t$;
          }
 
          if (ignored != null) {

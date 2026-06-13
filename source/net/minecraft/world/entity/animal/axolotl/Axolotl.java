@@ -1,8 +1,8 @@
 package net.minecraft.world.entity.animal.axolotl;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.UnmodifiableIterator;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Dynamic;
 import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
 import java.util.List;
@@ -38,11 +38,13 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -52,7 +54,6 @@ import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Bucketable;
@@ -73,32 +74,9 @@ import org.jspecify.annotations.Nullable;
 public class Axolotl extends Animal implements Bucketable {
    public static final int TOTAL_PLAYDEAD_TIME = 200;
    private static final int POSE_ANIMATION_TICKS = 10;
-   protected static final ImmutableList<? extends SensorType<? extends Sensor<? super Axolotl>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.HURT_BY, SensorType.AXOLOTL_ATTACKABLES, SensorType.FOOD_TEMPTATIONS
-   );
-   protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.ATTACK_TARGET,
-      MemoryModuleType.ATTACK_COOLING_DOWN,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT,
-      new MemoryModuleType[]{
-         MemoryModuleType.HURT_BY_ENTITY,
-         MemoryModuleType.PLAY_DEAD_TICKS,
-         MemoryModuleType.NEAREST_ATTACKABLE,
-         MemoryModuleType.TEMPTING_PLAYER,
-         MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-         MemoryModuleType.IS_TEMPTED,
-         MemoryModuleType.HAS_HUNTING_COOLDOWN,
-         MemoryModuleType.IS_PANICKING
-      }
+   private static final Brain.Provider<Axolotl> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.HURT_BY, SensorType.AXOLOTL_ATTACKABLES, SensorType.FOOD_TEMPTATIONS),
+      var0 -> AxolotlAi.getActivities()
    );
    private static final EntityDataAccessor<Integer> DATA_VARIANT = SynchedEntityData.defineId(Axolotl.class, EntityDataSerializers.INT);
    private static final EntityDataAccessor<Boolean> DATA_PLAYING_DEAD = SynchedEntityData.defineId(Axolotl.class, EntityDataSerializers.BOOLEAN);
@@ -114,6 +92,23 @@ public class Axolotl extends Animal implements Bucketable {
    public final BinaryAnimator inWaterAnimator = new BinaryAnimator(10, EasingType.IN_OUT_SINE);
    public final BinaryAnimator onGroundAnimator = new BinaryAnimator(10, EasingType.IN_OUT_SINE);
    public final BinaryAnimator movingAnimator = new BinaryAnimator(10, EasingType.IN_OUT_SINE);
+   public final AnimationState swimAnimationState = new AnimationState();
+   public final AnimationState walkAnimationState = new AnimationState();
+   public final AnimationState walkUnderWaterAnimationState = new AnimationState();
+   public final AnimationState idleUnderWaterAnimationState = new AnimationState();
+   public final AnimationState idleUnderWaterOnGroundAnimationState = new AnimationState();
+   public final AnimationState idleOnGroundAnimationState = new AnimationState();
+   public final AnimationState playDeadAnimationState = new AnimationState();
+   private final ImmutableList<AnimationState> ALL_ANIMATIONS = ImmutableList.of(
+      this.swimAnimationState,
+      this.walkAnimationState,
+      this.walkUnderWaterAnimationState,
+      this.idleUnderWaterAnimationState,
+      this.idleUnderWaterOnGroundAnimationState,
+      this.idleOnGroundAnimationState,
+      this.playDeadAnimationState
+   );
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.5F, 0.25F).withEyeHeight(0.2F);
    private static final int REGEN_BUFF_BASE_DURATION = 100;
 
    public Axolotl(final EntityType<? extends Axolotl> type, final Level level) {
@@ -192,25 +187,69 @@ public class Axolotl extends Animal implements Bucketable {
       }
 
       if (this.level().isClientSide()) {
-         this.tickAnimations();
+         if (this.isBaby()) {
+            this.tickBabyAnimations();
+         } else {
+            this.tickAdultAnimations();
+         }
       }
    }
 
-   private void tickAnimations() {
-      Axolotl.AnimationState animationState;
-      if (this.isPlayingDead()) {
-         animationState = Axolotl.AnimationState.PLAYING_DEAD;
-      } else if (this.isInWater()) {
-         animationState = Axolotl.AnimationState.IN_WATER;
-      } else if (this.onGround()) {
-         animationState = Axolotl.AnimationState.ON_GROUND;
+   private void tickBabyAnimations() {
+      boolean isPlayingDead = this.isPlayingDead();
+      boolean isInWater = this.isInWater();
+      boolean onGround = this.onGround();
+      boolean isMoving = this.walkAnimation.isMoving() || this.getXRot() != this.xRotO || this.getYRot() != this.yRotO;
+      this.movingAnimator.tick(isMoving);
+      if (isPlayingDead) {
+         this.soloAnimation(this.playDeadAnimationState);
       } else {
-         animationState = Axolotl.AnimationState.IN_AIR;
+         if (isMoving) {
+            if (isInWater && !onGround) {
+               this.soloAnimation(this.swimAnimationState);
+            } else if (!isInWater && onGround) {
+               this.soloAnimation(this.walkAnimationState);
+            } else {
+               this.soloAnimation(this.walkUnderWaterAnimationState);
+            }
+         } else if (isInWater && !onGround) {
+            this.soloAnimation(this.idleUnderWaterAnimationState);
+         } else if (isInWater && onGround) {
+            this.soloAnimation(this.idleUnderWaterOnGroundAnimationState);
+         } else {
+            this.soloAnimation(this.idleOnGroundAnimationState);
+         }
+      }
+   }
+
+   private void soloAnimation(final AnimationState toStart) {
+      UnmodifiableIterator var2 = this.ALL_ANIMATIONS.iterator();
+
+      while (var2.hasNext()) {
+         AnimationState animation = (AnimationState)var2.next();
+         if (animation == toStart) {
+            animation.startIfStopped(this.tickCount);
+         } else {
+            animation.stop();
+         }
+      }
+   }
+
+   private void tickAdultAnimations() {
+      Axolotl.AxolotlAnimationState animationState;
+      if (this.isPlayingDead()) {
+         animationState = Axolotl.AxolotlAnimationState.PLAYING_DEAD;
+      } else if (this.isInWater()) {
+         animationState = Axolotl.AxolotlAnimationState.IN_WATER;
+      } else if (this.onGround()) {
+         animationState = Axolotl.AxolotlAnimationState.ON_GROUND;
+      } else {
+         animationState = Axolotl.AxolotlAnimationState.IN_AIR;
       }
 
-      this.playingDeadAnimator.tick(animationState == Axolotl.AnimationState.PLAYING_DEAD);
-      this.inWaterAnimator.tick(animationState == Axolotl.AnimationState.IN_WATER);
-      this.onGroundAnimator.tick(animationState == Axolotl.AnimationState.ON_GROUND);
+      this.playingDeadAnimator.tick(animationState == Axolotl.AxolotlAnimationState.PLAYING_DEAD);
+      this.inWaterAnimator.tick(animationState == Axolotl.AxolotlAnimationState.IN_WATER);
+      this.onGroundAnimator.tick(animationState == Axolotl.AxolotlAnimationState.ON_GROUND);
       boolean isMoving = this.walkAnimation.isMoving() || this.getXRot() != this.xRotO || this.getYRot() != this.yRotO;
       this.movingAnimator.tick(isMoving);
    }
@@ -363,8 +402,8 @@ public class Axolotl extends Animal implements Bucketable {
    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
       float currentHealth = this.getHealth();
       if (!this.isNoAi()
-         && this.level().random.nextInt(3) == 0
-         && (this.level().random.nextInt(3) < damage || currentHealth / this.getMaxHealth() < 0.5F)
+         && this.random.nextInt(3) == 0
+         && (this.random.nextInt(3) < damage || currentHealth / this.getMaxHealth() < 0.5F)
          && damage < currentHealth
          && this.isInWater()
          && (source.getEntity() != null || source.getDirectEntity() != null)
@@ -396,6 +435,7 @@ public class Axolotl extends Animal implements Bucketable {
       bucket.copyFrom(DataComponents.AXOLOTL_VARIANT, this);
       CustomData.update(DataComponents.BUCKET_ENTITY_DATA, bucket, tag -> {
          tag.putInt("Age", this.getAge());
+         tag.putBoolean("AgeLocked", this.isAgeLocked());
          Brain<?> brain = this.getBrain();
          if (brain.hasMemoryValue(MemoryModuleType.HAS_HUNTING_COOLDOWN)) {
             tag.putLong("HuntingCooldown", brain.getTimeUntilExpiry(MemoryModuleType.HAS_HUNTING_COOLDOWN));
@@ -407,6 +447,7 @@ public class Axolotl extends Animal implements Bucketable {
    public void loadFromBucketTag(final CompoundTag tag) {
       Bucketable.loadDefaultDataFromBucketTag(this, tag);
       this.setAge(tag.getIntOr("Age", 0));
+      this.setAgeLocked(tag.getBooleanOr("AgeLocked", false));
       tag.getLong("HuntingCooldown")
          .ifPresentOrElse(
             huntingCooldown -> this.getBrain().setMemoryWithExpiry(MemoryModuleType.HAS_HUNTING_COOLDOWN, true, tag.getLongOr("HuntingCooldown", 0L)),
@@ -432,14 +473,10 @@ public class Axolotl extends Animal implements Bucketable {
    public static void onStopAttacking(final ServerLevel level, final Axolotl body, final LivingEntity target) {
       if (target.isDeadOrDying()) {
          DamageSource lastDamageSource = target.getLastDamageSource();
-         if (lastDamageSource != null) {
-            Entity entity = lastDamageSource.getEntity();
-            if (entity != null && entity.getType() == EntityType.PLAYER) {
-               Player player = (Player)entity;
-               List<Player> playersInRange = level.getEntitiesOfClass(Player.class, body.getBoundingBox().inflate(20.0));
-               if (playersInRange.contains(player)) {
-                  body.applySupportingEffects(player);
-               }
+         if (lastDamageSource != null && lastDamageSource.getEntity() instanceof Player player) {
+            List<Player> playersInRange = level.getEntitiesOfClass(Player.class, body.getBoundingBox().inflate(20.0));
+            if (playersInRange.contains(player)) {
+               body.applySupportingEffects(player);
             }
          }
       }
@@ -487,18 +524,13 @@ public class Axolotl extends Animal implements Bucketable {
    }
 
    @Override
-   protected Brain.Provider<Axolotl> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return AxolotlAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Axolotl> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Axolotl> getBrain() {
-      return (Brain<Axolotl>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -537,7 +569,12 @@ public class Axolotl extends Animal implements Bucketable {
       return level.getBlockState(pos.below()).is(BlockTags.AXOLOTLS_SPAWNABLE_ON);
    }
 
-   public enum AnimationState {
+   @Override
+   public EntityDimensions getDefaultDimensions(final Pose pose) {
+      return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+   }
+
+   public enum AxolotlAnimationState {
       PLAYING_DEAD,
       IN_WATER,
       ON_GROUND,

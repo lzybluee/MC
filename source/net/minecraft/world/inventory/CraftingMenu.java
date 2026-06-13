@@ -60,7 +60,7 @@ public class CraftingMenu extends AbstractCraftingMenu {
          RecipeHolder<CraftingRecipe> recipeHolder = maybeRecipe.get();
          CraftingRecipe craftingRecipe = recipeHolder.value();
          if (resultSlots.setRecipeUsed(serverPlayer, recipeHolder)) {
-            ItemStack recipeResult = craftingRecipe.assemble(input, level.registryAccess());
+            ItemStack recipeResult = craftingRecipe.assemble(input);
             if (recipeResult.isItemEnabled(level.enabledFeatures())) {
                result = recipeResult;
             }

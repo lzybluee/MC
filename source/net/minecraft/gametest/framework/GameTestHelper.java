@@ -6,6 +6,8 @@ import com.mojang.datafixers.util.Either;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -18,8 +20,10 @@ import java.util.stream.LongStream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.Connection;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.resources.ResourceKey;
@@ -31,6 +35,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -42,11 +47,14 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.InventoryCarrier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -108,7 +116,7 @@ public class GameTestHelper {
       } else if (type.isInstance(blockEntity)) {
          return type.cast(blockEntity);
       } else {
-         throw this.assertionException(pos, "test.error.wrong_block_entity", blockEntity.getType().builtInRegistryHolder().getRegisteredName());
+         throw this.assertionException(pos, "test.error.wrong_block_entity", blockEntity.typeHolder().getRegisteredName());
       }
    }
 
@@ -137,6 +145,14 @@ public class GameTestHelper {
 
    public ItemEntity spawnItem(final Item item, final BlockPos pos) {
       return this.spawnItem(item, pos.getX(), pos.getY(), pos.getZ());
+   }
+
+   public void despawnItem(final BlockPos pos, final double distance) {
+      BlockPos absolutePos = this.absolutePos(pos);
+
+      for (ItemEntity entity : this.getLevel().getEntities(EntityType.ITEM, new AABB(absolutePos).inflate(distance), Entity::isAlive)) {
+         entity.remove(Entity.RemovalReason.KILLED);
+      }
    }
 
    public <E extends Entity> E spawn(final EntityType<E> entityType, final BlockPos pos) {
@@ -195,6 +211,10 @@ public class GameTestHelper {
 
    public void kill(final Entity entity) {
       entity.kill(this.getLevel());
+   }
+
+   public void discard(final Entity entity) {
+      entity.discard();
    }
 
    public <E extends Entity> E findOneEntity(final EntityType<E> entityType) {
@@ -261,7 +281,15 @@ public class GameTestHelper {
    }
 
    public void moveTo(final Mob mob, final float x, final float y, final float z) {
-      Vec3 absoluteVec = this.absoluteVec(new Vec3(x, y, z));
+      this.moveTo(mob, new Vec3(x, y, z));
+   }
+
+   public void moveTo(final Mob mob, final BlockPos pos) {
+      this.moveTo(mob, pos.getBottomCenter());
+   }
+
+   public void moveTo(final Mob mob, final Vec3 pos) {
+      Vec3 absoluteVec = this.absoluteVec(pos);
       mob.snapTo(absoluteVec.x, absoluteVec.y, absoluteVec.z, mob.getYRot(), mob.getXRot());
    }
 
@@ -359,6 +387,25 @@ public class GameTestHelper {
       leverBlock.pull(blockState, this.getLevel(), absolutePos, null);
    }
 
+   public void placeBlock(final BlockPos relativePos, final Block block, final Direction relativePlaceDirection) {
+      BlockPos pos = this.absolutePos(relativePos);
+      Direction placeDirection = this.getAbsoluteDirection(relativePlaceDirection);
+      Item item = block.asItem();
+      if (item instanceof BlockItem blockItem) {
+         BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(pos), Direction.DOWN, pos, true);
+         BlockPlaceContext context = new GameTestHelper.TestBlockPlaceContext(
+            this.getLevel(), InteractionHand.MAIN_HAND, item.getDefaultInstance(), hitResult, placeDirection
+         );
+         blockItem.place(context);
+      } else {
+         this.fail(Component.translatable("test.error.not_a_block_item"));
+      }
+   }
+
+   public void placeBlock(final int x, final int y, final int z, final Block block, final Direction placeDirection) {
+      this.placeBlock(new BlockPos(x, y, z), block, placeDirection);
+   }
+
    public void pulseRedstone(final BlockPos pos, final long duration) {
       this.setBlock(pos, Blocks.REDSTONE_BLOCK);
       this.runAfterDelay(duration, () -> this.setBlock(pos, Blocks.AIR));
@@ -408,6 +455,14 @@ public class GameTestHelper {
    public void assertBlockPresent(final Block blockType, final BlockPos pos) {
       BlockState state = this.getBlockState(pos);
       this.assertBlock(pos, block -> state.is(blockType), block -> Component.translatable("test.error.expected_block", blockType.getName(), block.getName()));
+   }
+
+   public void assertBlockPresent(final Block blockType) {
+      AABB aabb = this.getRelativeBounds().contract(1.0, 1.0, 1.0);
+      boolean foundBlock = BlockPos.MutableBlockPos.betweenClosedStream(aabb).anyMatch(blockPos -> this.getBlockState(blockPos).is(blockType));
+      if (!foundBlock) {
+         throw this.assertionException(Component.translatable("test.error.expected_block_present", blockType.getName()));
+      }
    }
 
    public void assertBlockNotPresent(final Block blockType, final int x, final int y, final int z) {
@@ -566,8 +621,12 @@ public class GameTestHelper {
    }
 
    public void assertEntityInstancePresent(final Entity entity, final BlockPos pos) {
+      this.assertEntityInstancePresent(entity, pos, 0.0);
+   }
+
+   public void assertEntityInstancePresent(final Entity entity, final BlockPos pos, final double inflate) {
       BlockPos absolutePos = this.absolutePos(pos);
-      List<? extends Entity> entities = this.getLevel().getEntities(entity.getType(), new AABB(absolutePos), Entity::isAlive);
+      List<? extends Entity> entities = this.getLevel().getEntities(entity.getType(), new AABB(absolutePos).inflate(inflate), Entity::isAlive);
       entities.stream()
          .filter(it -> it == entity)
          .findFirst()
@@ -587,7 +646,7 @@ public class GameTestHelper {
       }
 
       if (num != count) {
-         throw this.assertionException(pos, "test.error.expected_items_count", count, itemType.getName(), num);
+         throw this.assertionException(pos, "test.error.expected_items_count", count, getItemName(itemType), num);
       }
    }
 
@@ -595,7 +654,7 @@ public class GameTestHelper {
       BlockPos absolutePos = this.absolutePos(pos);
       Predicate<ItemEntity> isSameItem = entity -> entity.isAlive() && entity.getItem().is(itemType);
       if (!this.getLevel().hasEntities(EntityType.ITEM, new AABB(absolutePos).inflate(distance), isSameItem)) {
-         throw this.assertionException(pos, "test.error.expected_item", itemType.getName());
+         throw this.assertionException(pos, "test.error.expected_item", getItemName(itemType));
       }
    }
 
@@ -603,21 +662,21 @@ public class GameTestHelper {
       BlockPos absolutePos = this.absolutePos(pos);
       Predicate<ItemEntity> isSameItem = entity -> entity.isAlive() && entity.getItem().is(itemType);
       if (this.getLevel().hasEntities(EntityType.ITEM, new AABB(absolutePos).inflate(distance), isSameItem)) {
-         throw this.assertionException(pos, "test.error.unexpected_item", itemType.getName());
+         throw this.assertionException(pos, "test.error.unexpected_item", getItemName(itemType));
       }
    }
 
    public void assertItemEntityPresent(final Item itemType) {
       Predicate<ItemEntity> isSameItem = entity -> entity.isAlive() && entity.getItem().is(itemType);
       if (!this.getLevel().hasEntities(EntityType.ITEM, this.getBounds(), isSameItem)) {
-         throw this.assertionException("test.error.expected_item", itemType.getName());
+         throw this.assertionException("test.error.expected_item", getItemName(itemType));
       }
    }
 
    public void assertItemEntityNotPresent(final Item itemType) {
       Predicate<ItemEntity> isSameItem = entity -> entity.isAlive() && entity.getItem().is(itemType);
       if (this.getLevel().hasEntities(EntityType.ITEM, this.getBounds(), isSameItem)) {
-         throw this.assertionException("test.error.unexpected_item", itemType.getName());
+         throw this.assertionException("test.error.unexpected_item", getItemName(itemType));
       }
    }
 
@@ -718,7 +777,7 @@ public class GameTestHelper {
          }
       }
 
-      throw this.assertionException(pos, "test.error.expected_entity_holding", item.getName());
+      throw this.assertionException(pos, "test.error.expected_entity_holding", getItemName(item));
    }
 
    public <E extends Entity & InventoryCarrier> void assertEntityInventoryContains(final BlockPos pos, final EntityType<E> entityType, final Item item) {
@@ -734,7 +793,7 @@ public class GameTestHelper {
          }
       }
 
-      throw this.assertionException(pos, "test.error.expected_entity_having", item.getName());
+      throw this.assertionException(pos, "test.error.expected_entity_having", getItemName(item));
    }
 
    public void assertContainerEmpty(final BlockPos pos) {
@@ -747,14 +806,14 @@ public class GameTestHelper {
    public void assertContainerContainsSingle(final BlockPos pos, final Item item) {
       BaseContainerBlockEntity container = this.getBlockEntity(pos, BaseContainerBlockEntity.class);
       if (container.countItem(item) != 1) {
-         throw this.assertionException(pos, "test.error.expected_container_contents_single", item.getName());
+         throw this.assertionException(pos, "test.error.expected_container_contents_single", getItemName(item));
       }
    }
 
    public void assertContainerContains(final BlockPos pos, final Item item) {
       BaseContainerBlockEntity container = this.getBlockEntity(pos, BaseContainerBlockEntity.class);
       if (container.countItem(item) == 0) {
-         throw this.assertionException(pos, "test.error.expected_container_contents", item.getName());
+         throw this.assertionException(pos, "test.error.expected_container_contents", getItemName(item));
       }
    }
 
@@ -857,20 +916,30 @@ public class GameTestHelper {
       this.testInfo.setRunAtTickTime(time, asserter);
    }
 
+   public void runBeforeTestEnd(final Runnable asserter) {
+      this.runAtTickTime(this.testInfo.getTimeoutTicks() - 1, asserter);
+   }
+
    public void runAfterDelay(final long ticksToDelay, final Runnable whatToRun) {
       this.runAtTickTime(this.testInfo.getTick() + ticksToDelay, whatToRun);
+   }
+
+   public void setTime(final long ticks) {
+      ServerLevel level = this.getLevel();
+      Holder<WorldClock> clock = level.dimensionType().defaultClock().orElseThrow();
+      level.clockManager().setTotalTicks(clock, ticks);
    }
 
    public void randomTick(final BlockPos pos) {
       BlockPos absolutePos = this.absolutePos(pos);
       ServerLevel level = this.getLevel();
-      level.getBlockState(absolutePos).randomTick(level, absolutePos, level.random);
+      level.getBlockState(absolutePos).randomTick(level, absolutePos, level.getRandom());
    }
 
    public void tickBlock(final BlockPos pos) {
       BlockPos absolutePos = this.absolutePos(pos);
       ServerLevel level = this.getLevel();
-      level.getBlockState(absolutePos).tick(level, absolutePos, level.random);
+      level.getBlockState(absolutePos).tick(level, absolutePos, level.getRandom());
    }
 
    public void tickPrecipitation(final BlockPos pos) {
@@ -927,8 +996,8 @@ public class GameTestHelper {
 
    public BlockPos absolutePos(final BlockPos relativePos) {
       BlockPos testPos = this.testInfo.getTestOrigin();
-      BlockPos absolutePosBeforeTranform = testPos.offset(relativePos);
-      return StructureTemplate.transform(absolutePosBeforeTranform, Mirror.NONE, this.testInfo.getRotation(), testPos);
+      BlockPos absolutePosBeforeTransform = testPos.offset(relativePos);
+      return StructureTemplate.transform(absolutePosBeforeTransform, Mirror.NONE, this.testInfo.getRotation(), testPos);
    }
 
    public BlockPos relativePos(final BlockPos absolutePos) {
@@ -1008,6 +1077,10 @@ public class GameTestHelper {
       return this.testInfo.getStructureBounds();
    }
 
+   public AABB getBoundsWithPadding() {
+      return this.getBounds().inflate(this.testInfo.getTest().padding());
+   }
+
    public AABB getRelativeBounds() {
       AABB absolute = this.testInfo.getStructureBounds();
       Rotation rotation = this.testInfo.getRotation();
@@ -1037,7 +1110,7 @@ public class GameTestHelper {
    }
 
    public void setBiome(final ResourceKey<Biome> biome) {
-      AABB bounds = this.getBounds();
+      AABB bounds = this.getBoundsWithPadding();
       BlockPos low = BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ);
       BlockPos high = BlockPos.containing(bounds.maxX, bounds.maxY, bounds.maxZ);
       Either<Integer, CommandSyntaxException> result = FillBiomeCommand.fill(
@@ -1045,6 +1118,33 @@ public class GameTestHelper {
       );
       if (result.right().isPresent()) {
          throw this.assertionException("test.error.set_biome");
+      }
+   }
+
+   private static Component getItemName(final Item itemType) {
+      return itemType.components().getOrDefault(DataComponents.ITEM_NAME, CommonComponents.EMPTY);
+   }
+
+   private class TestBlockPlaceContext extends BlockPlaceContext {
+      private final Direction placeDirection;
+
+      public TestBlockPlaceContext(
+         final Level level, final InteractionHand hand, final ItemStack itemStackInHand, final BlockHitResult hitResult, final Direction placeDirection
+      ) {
+         super(level, null, hand, itemStackInHand, hitResult);
+         this.placeDirection = placeDirection;
+      }
+
+      @Override
+      public Direction getNearestLookingDirection() {
+         return this.placeDirection;
+      }
+
+      @Override
+      public Direction[] getNearestLookingDirections() {
+         Direction[] directions = Direction.values();
+         Arrays.sort(directions, Comparator.comparingDouble(d -> d.getUnitVec3().distanceTo(this.placeDirection.getUnitVec3())));
+         return directions;
       }
    }
 }

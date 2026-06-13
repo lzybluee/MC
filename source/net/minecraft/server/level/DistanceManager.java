@@ -109,7 +109,7 @@ public abstract class DistanceManager {
 
    public void addPlayer(final SectionPos pos, final ServerPlayer player) {
       ChunkPos chunk = pos.chunk();
-      long chunkPos = chunk.toLong();
+      long chunkPos = chunk.pack();
       ((ObjectSet)this.playersPerChunk.computeIfAbsent(chunkPos, k -> new ObjectOpenHashSet())).add(player);
       this.naturalSpawnChunkCounter.update(chunkPos, 0, true);
       this.playerTicketManager.update(chunkPos, 0, true);
@@ -118,7 +118,7 @@ public abstract class DistanceManager {
 
    public void removePlayer(final SectionPos pos, final ServerPlayer player) {
       ChunkPos chunk = pos.chunk();
-      long chunkPos = chunk.toLong();
+      long chunkPos = chunk.pack();
       ObjectSet<ServerPlayer> chunkPlayers = (ObjectSet<ServerPlayer>)this.playersPerChunk.get(chunkPos);
       chunkPlayers.remove(player);
       if (chunkPlayers.isEmpty()) {
@@ -301,7 +301,7 @@ public abstract class DistanceManager {
                int oldLevel = this.queueLevels.get(node);
                int level = this.getLevel(node);
                if (oldLevel != level) {
-                  DistanceManager.this.ticketDispatcher.onLevelChange(new ChunkPos(node), () -> this.queueLevels.get(node), level, l -> {
+                  DistanceManager.this.ticketDispatcher.onLevelChange(ChunkPos.unpack(node), () -> this.queueLevels.get(node), level, l -> {
                      if (l >= this.queueLevels.defaultReturnValue()) {
                         this.queueLevels.remove(node);
                      } else {

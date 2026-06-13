@@ -48,7 +48,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
    }
 
    public void addContainer(final ChunkPos pos, final LevelChunkTicks<T> container) {
-      long posKey = pos.toLong();
+      long posKey = pos.pack();
       this.allContainers.put(posKey, container);
       ScheduledTick<T> nextTick = container.peek();
       if (nextTick != null) {
@@ -59,7 +59,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
    }
 
    public void removeContainer(final ChunkPos pos) {
-      long chunkKey = pos.toLong();
+      long chunkKey = pos.pack();
       LevelChunkTicks<T> removedContainer = (LevelChunkTicks<T>)this.allContainers.remove(chunkKey);
       this.nextTickForContainer.remove(chunkKey);
       if (removedContainer != null) {
@@ -69,7 +69,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
 
    @Override
    public void schedule(final ScheduledTick<T> tick) {
-      long chunkKey = ChunkPos.asLong(tick.pos());
+      long chunkKey = ChunkPos.pack(tick.pos());
       LevelChunkTicks<T> tickContainer = (LevelChunkTicks<T>)this.allContainers.get(chunkKey);
       if (tickContainer == null) {
          Util.logAndPauseIfInIde("Trying to schedule tick in not loaded position " + tick.pos());
@@ -147,7 +147,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
    }
 
    private void updateContainerScheduling(final ScheduledTick<T> nextTick) {
-      this.nextTickForContainer.put(ChunkPos.asLong(nextTick.pos()), nextTick.triggerTick());
+      this.nextTickForContainer.put(ChunkPos.pack(nextTick.pos()), nextTick.triggerTick());
    }
 
    private void drainFromCurrentContainer(
@@ -200,7 +200,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
 
    @Override
    public boolean hasScheduledTick(final BlockPos pos, final T block) {
-      LevelChunkTicks<T> tickContainer = (LevelChunkTicks<T>)this.allContainers.get(ChunkPos.asLong(pos));
+      LevelChunkTicks<T> tickContainer = (LevelChunkTicks<T>)this.allContainers.get(ChunkPos.pack(pos));
       return tickContainer != null && tickContainer.hasScheduledTick(pos, block);
    }
 
@@ -224,7 +224,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
 
       for (int x = xMin; x <= xMax; x++) {
          for (int z = zMin; z <= zMax; z++) {
-            long containerPos = ChunkPos.asLong(x, z);
+            long containerPos = ChunkPos.pack(x, z);
             LevelChunkTicks<T> container = (LevelChunkTicks<T>)this.allContainers.get(containerPos);
             if (container != null) {
                ouput.accept(containerPos, container);

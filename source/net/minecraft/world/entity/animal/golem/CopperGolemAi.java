@@ -3,8 +3,8 @@ package net.minecraft.world.entity.animal.golem;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.sounds.SoundEvent;
@@ -14,7 +14,7 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.CountDownCooldownTicks;
 import net.minecraft.world.entity.ai.behavior.DoNothing;
@@ -27,8 +27,6 @@ import net.minecraft.world.entity.ai.behavior.SetEntityLookTargetSometimes;
 import net.minecraft.world.entity.ai.behavior.TransportItemsBetweenContainers;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
-import net.minecraft.world.entity.ai.sensing.Sensor;
-import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
@@ -44,44 +42,17 @@ public class CopperGolemAi {
    private static final int TICK_TO_PLAY_ON_REACHED_SOUND = 9;
    private static final Predicate<BlockState> TRANSPORT_ITEM_SOURCE_BLOCK = block -> block.is(BlockTags.COPPER_CHESTS);
    private static final Predicate<BlockState> TRANSPORT_ITEM_DESTINATION_BLOCK = block -> block.is(Blocks.CHEST) || block.is(Blocks.TRAPPED_CHEST);
-   private static final ImmutableList<SensorType<? extends Sensor<? super CopperGolem>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY
-   );
-   private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.IS_PANICKING,
-      MemoryModuleType.HURT_BY,
-      MemoryModuleType.HURT_BY_ENTITY,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.GAZE_COOLDOWN_TICKS,
-      MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS,
-      MemoryModuleType.VISITED_BLOCK_POSITIONS,
-      new MemoryModuleType[]{MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS, MemoryModuleType.DOORS_TO_CLOSE}
-   );
 
-   public static Brain.Provider<CopperGolem> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   protected static Brain<?> makeBrain(final Brain<CopperGolem> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      brain.setCoreActivities(Set.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<CopperGolem>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity());
    }
 
    public static void updateActivity(final CopperGolem body) {
       body.getBrain().setActiveActivityToFirstValid(ImmutableList.of(Activity.IDLE));
    }
 
-   private static void initCoreActivity(final Brain<CopperGolem> brain) {
-      brain.addActivity(
+   private static ActivityData<CopperGolem> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -95,8 +66,8 @@ public class CopperGolemAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<CopperGolem> brain) {
-      brain.addActivity(
+   private static ActivityData<CopperGolem> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(

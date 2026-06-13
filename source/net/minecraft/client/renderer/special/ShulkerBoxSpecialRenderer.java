@@ -8,29 +8,24 @@ import java.util.function.Consumer;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.ShulkerBoxRenderer;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.core.Direction;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.ItemDisplayContext;
 import org.joml.Vector3fc;
 
 public class ShulkerBoxSpecialRenderer implements NoDataSpecialModelRenderer {
    private final ShulkerBoxRenderer shulkerBoxRenderer;
    private final float openness;
-   private final Direction orientation;
-   private final Material material;
+   private final SpriteId sprite;
 
-   public ShulkerBoxSpecialRenderer(final ShulkerBoxRenderer shulkerBoxRenderer, final float openness, final Direction orientation, final Material material) {
+   public ShulkerBoxSpecialRenderer(final ShulkerBoxRenderer shulkerBoxRenderer, final float openness, final SpriteId sprite) {
       this.shulkerBoxRenderer = shulkerBoxRenderer;
       this.openness = openness;
-      this.orientation = orientation;
-      this.material = material;
+      this.sprite = sprite;
    }
 
    @Override
    public void submit(
-      final ItemDisplayContext type,
       final PoseStack poseStack,
       final SubmitNodeCollector submitNodeCollector,
       final int lightCoords,
@@ -38,31 +33,29 @@ public class ShulkerBoxSpecialRenderer implements NoDataSpecialModelRenderer {
       final boolean hasFoil,
       final int outlineColor
    ) {
-      this.shulkerBoxRenderer
-         .submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, this.orientation, this.openness, null, this.material, outlineColor);
+      this.shulkerBoxRenderer.submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, this.openness, null, this.sprite, outlineColor);
    }
 
    @Override
    public void getExtents(final Consumer<Vector3fc> output) {
-      this.shulkerBoxRenderer.getExtents(this.orientation, this.openness, output);
+      this.shulkerBoxRenderer.getExtents(this.openness, output);
    }
 
-   public record Unbaked(Identifier texture, float openness, Direction orientation) implements SpecialModelRenderer.Unbaked {
+   public record Unbaked(Identifier texture, float openness) implements NoDataSpecialModelRenderer.Unbaked {
       public static final MapCodec<ShulkerBoxSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
                Identifier.CODEC.fieldOf("texture").forGetter(ShulkerBoxSpecialRenderer.Unbaked::texture),
-               Codec.FLOAT.optionalFieldOf("openness", 0.0F).forGetter(ShulkerBoxSpecialRenderer.Unbaked::openness),
-               Direction.CODEC.optionalFieldOf("orientation", Direction.UP).forGetter(ShulkerBoxSpecialRenderer.Unbaked::orientation)
+               Codec.FLOAT.optionalFieldOf("openness", 0.0F).forGetter(ShulkerBoxSpecialRenderer.Unbaked::openness)
             )
             .apply(i, ShulkerBoxSpecialRenderer.Unbaked::new)
       );
 
       public Unbaked() {
-         this(Identifier.withDefaultNamespace("shulker"), 0.0F, Direction.UP);
+         this(Identifier.withDefaultNamespace("shulker"), 0.0F);
       }
 
       public Unbaked(final DyeColor color) {
-         this(Sheets.colorToShulkerMaterial(color), 0.0F, Direction.UP);
+         this(Sheets.colorToShulkerSprite(color), 0.0F);
       }
 
       @Override
@@ -70,9 +63,8 @@ public class ShulkerBoxSpecialRenderer implements NoDataSpecialModelRenderer {
          return MAP_CODEC;
       }
 
-      @Override
-      public SpecialModelRenderer<?> bake(final SpecialModelRenderer.BakingContext context) {
-         return new ShulkerBoxSpecialRenderer(new ShulkerBoxRenderer(context), this.openness, this.orientation, Sheets.SHULKER_MAPPER.apply(this.texture));
+      public ShulkerBoxSpecialRenderer bake(final SpecialModelRenderer.BakingContext context) {
+         return new ShulkerBoxSpecialRenderer(new ShulkerBoxRenderer(context), this.openness, Sheets.SHULKER_MAPPER.apply(this.texture));
       }
    }
 }

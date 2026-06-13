@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import java.util.Locale;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -21,14 +20,6 @@ public interface LevelData {
 
    long getGameTime();
 
-   long getDayTime();
-
-   boolean isThundering();
-
-   boolean isRaining();
-
-   void setRaining(boolean raining);
-
    boolean isHardcore();
 
    Difficulty getDifficulty();
@@ -37,7 +28,6 @@ public interface LevelData {
 
    default void fillCrashReportCategory(final CrashReportCategory category, final LevelHeightAccessor levelHeightAccessor) {
       category.setDetail("Level spawn location", () -> CrashReportCategory.formatLocation(levelHeightAccessor, this.getRespawnData().pos()));
-      category.setDetail("Level time", () -> String.format(Locale.ROOT, "%d game time, %d day time", this.getGameTime(), this.getDayTime()));
    }
 
    record RespawnData(GlobalPos globalPos, float yaw, float pitch) {

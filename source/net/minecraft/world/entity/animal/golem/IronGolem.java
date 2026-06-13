@@ -76,7 +76,7 @@ public class IronGolem extends AbstractGolem implements NeutralMob {
       this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isAngryAt));
       this.targetSelector
          .addGoal(
-            3, new NearestAttackableTargetGoal<>(this, Mob.class, 5, false, false, (target, level) -> target instanceof Enemy && !(target instanceof Creeper))
+            3, new NearestAttackableTargetGoal<>(this, Mob.class, 5, false, false, (target, var1) -> target instanceof Enemy && !(target instanceof Creeper))
          );
       this.targetSelector.addGoal(4, new ResetUniversalAngerTargetGoal<>(this, false));
    }
@@ -132,11 +132,11 @@ public class IronGolem extends AbstractGolem implements NeutralMob {
    }
 
    @Override
-   public boolean canAttackType(final EntityType<?> targetType) {
-      if (this.isPlayerCreated() && targetType == EntityType.PLAYER) {
+   public boolean canAttack(final LivingEntity target) {
+      if (this.isPlayerCreated() && target.is(EntityType.PLAYER)) {
          return false;
       } else {
-         return targetType == EntityType.CREEPER ? false : super.canAttackType(targetType);
+         return target.is(EntityType.CREEPER) ? false : super.canAttack(target);
       }
    }
 

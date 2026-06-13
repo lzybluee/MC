@@ -84,7 +84,7 @@ public class EntitySectionStorage<T extends EntityAccess> {
    }
 
    private static long getChunkKeyFromSectionKey(final long sectionPos) {
-      return ChunkPos.asLong(SectionPos.x(sectionPos), SectionPos.z(sectionPos));
+      return ChunkPos.pack(SectionPos.x(sectionPos), SectionPos.z(sectionPos));
    }
 
    public EntitySection<T> getOrCreateSection(final long key) {

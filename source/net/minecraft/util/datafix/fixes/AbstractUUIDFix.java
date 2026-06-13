@@ -13,7 +13,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 public abstract class AbstractUUIDFix extends DataFix {
-   protected TypeReference typeReference;
+   protected final TypeReference typeReference;
 
    public AbstractUUIDFix(final Schema outputSchema, final TypeReference typeReference) {
       super(outputSchema, false);

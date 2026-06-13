@@ -23,8 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.tabs.LoadingTab;
@@ -54,9 +53,9 @@ public class RealmsConfigureWorldScreen extends RealmsScreen {
    private final Map<RealmsRegion, ServiceQuality> regionServiceQuality = new LinkedHashMap<>();
    private final long serverId;
    private boolean stateChanged;
-   private final TabManager tabManager = new TabManager(x$0 -> {
-      AbstractWidget var10000 = this.addRenderableWidget(x$0);
-   }, x$0 -> this.removeWidget(x$0), this::onTabSelected, this::onTabDeselected);
+   private final TabManager tabManager = new TabManager(
+      x$0 -> this.addRenderableWidget(x$0), x$0 -> this.removeWidget(x$0), this::onTabSelected, this::onTabDeselected
+   );
    private @Nullable Button playButton;
    private @Nullable TabNavigationBar tabNavigationBar;
    final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
@@ -145,8 +144,7 @@ public class RealmsConfigureWorldScreen extends RealmsScreen {
    @Override
    public void repositionElements() {
       if (this.tabNavigationBar != null) {
-         this.tabNavigationBar.setWidth(this.width);
-         this.tabNavigationBar.arrangeElements();
+         this.tabNavigationBar.updateWidth(this.width);
          int tabAreaTop = this.tabNavigationBar.getRectangle().bottom();
          ScreenRectangle tabArea = new ScreenRectangle(0, tabAreaTop, this.width, this.height - this.layout.getFooterHeight() - tabAreaTop);
          this.tabManager.setTabArea(tabArea);
@@ -165,8 +163,8 @@ public class RealmsConfigureWorldScreen extends RealmsScreen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int xm, final int ym, final float a) {
-      super.render(graphics, xm, ym, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+      super.extractRenderState(graphics, xm, ym, a);
       graphics.blit(RenderPipelines.GUI_TEXTURED, Screen.FOOTER_SEPARATOR, 0, this.height - this.layout.getFooterHeight() - 2, 0.0F, 0.0F, this.width, 2, 32, 2);
    }
 
@@ -176,9 +174,9 @@ public class RealmsConfigureWorldScreen extends RealmsScreen {
    }
 
    @Override
-   protected void renderMenuBackground(final GuiGraphics graphics) {
+   protected void extractMenuBackground(final GuiGraphicsExtractor graphics) {
       graphics.blit(RenderPipelines.GUI_TEXTURED, CreateWorldScreen.TAB_HEADER_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.layout.getHeaderHeight(), 16, 16);
-      this.renderMenuBackground(graphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
+      this.extractMenuBackground(graphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
    }
 
    @Override

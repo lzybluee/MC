@@ -150,7 +150,7 @@ public class Phantom extends Mob implements Enemy {
    }
 
    @Override
-   public SpawnGroupData finalizeSpawn(
+   public @Nullable SpawnGroupData finalizeSpawn(
       final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
    ) {
       this.anchorPoint = this.blockPosition().above(5);
@@ -195,16 +195,6 @@ public class Phantom extends Mob implements Enemy {
    @Override
    protected SoundEvent getDeathSound() {
       return SoundEvents.PHANTOM_DEATH;
-   }
-
-   @Override
-   protected float getSoundVolume() {
-      return 1.0F;
-   }
-
-   @Override
-   public boolean canAttackType(final EntityType<?> targetType) {
-      return true;
    }
 
    @Override
@@ -488,10 +478,6 @@ public class Phantom extends Mob implements Enemy {
 
             return !this.isScaredOfCat;
          }
-      }
-
-      @Override
-      public void start() {
       }
 
       @Override

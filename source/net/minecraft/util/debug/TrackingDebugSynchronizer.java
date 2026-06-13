@@ -55,7 +55,7 @@ public abstract class TrackingDebugSynchronizer<T> {
    private void addSubscriber(final ServerPlayer player) {
       this.subscribedPlayers.add(player.getUUID());
       player.getChunkTrackingView().forEach(chunkPos -> {
-         if (!player.connection.chunkSender.isPending(chunkPos.toLong())) {
+         if (!player.connection.chunkSender.isPending(chunkPos.pack())) {
             this.startTrackingChunk(player, chunkPos);
          }
       });
@@ -66,7 +66,7 @@ public abstract class TrackingDebugSynchronizer<T> {
       ChunkMap chunkMap = level.getChunkSource().chunkMap;
 
       for (UUID playerId : this.subscribedPlayers) {
-         if (level.getPlayerByUUID(playerId) instanceof ServerPlayer player && chunkMap.isChunkTracked(player, trackedChunk.x, trackedChunk.z)) {
+         if (level.getPlayerByUUID(playerId) instanceof ServerPlayer player && chunkMap.isChunkTracked(player, trackedChunk.x(), trackedChunk.z())) {
             player.connection.send(packet);
          }
       }
@@ -118,18 +118,20 @@ public abstract class TrackingDebugSynchronizer<T> {
 
       public void onPoiAdded(final ServerLevel level, final PoiRecord record) {
          this.sendToPlayersTrackingChunk(
-            level, new ChunkPos(record.getPos()), new ClientboundDebugBlockValuePacket(record.getPos(), this.subscription.packUpdate(new DebugPoiInfo(record)))
+            level,
+            ChunkPos.containing(record.getPos()),
+            new ClientboundDebugBlockValuePacket(record.getPos(), this.subscription.packUpdate(new DebugPoiInfo(record)))
          );
       }
 
       public void onPoiRemoved(final ServerLevel level, final BlockPos poiPos) {
-         this.sendToPlayersTrackingChunk(level, new ChunkPos(poiPos), new ClientboundDebugBlockValuePacket(poiPos, this.subscription.emptyUpdate()));
+         this.sendToPlayersTrackingChunk(level, ChunkPos.containing(poiPos), new ClientboundDebugBlockValuePacket(poiPos, this.subscription.emptyUpdate()));
       }
 
       public void onPoiTicketCountChanged(final ServerLevel level, final BlockPos poiPos) {
          this.sendToPlayersTrackingChunk(
             level,
-            new ChunkPos(poiPos),
+            ChunkPos.containing(poiPos),
             new ClientboundDebugBlockValuePacket(poiPos, this.subscription.packUpdate(level.getPoiManager().getDebugPoiInfo(poiPos)))
          );
       }
@@ -165,7 +167,7 @@ public abstract class TrackingDebugSynchronizer<T> {
             DebugSubscription.Update<T> update = entry.getValue().pollUpdate(this.subscription);
             if (update != null) {
                BlockPos blockPos = entry.getKey();
-               ChunkPos chunkPos = new ChunkPos(blockPos);
+               ChunkPos chunkPos = ChunkPos.containing(blockPos);
                this.sendToPlayersTrackingChunk(level, chunkPos, new ClientboundDebugBlockValuePacket(blockPos, update));
             }
          }
@@ -199,7 +201,7 @@ public abstract class TrackingDebugSynchronizer<T> {
       public void dropBlockEntity(final ServerLevel level, final BlockPos blockPos) {
          TrackingDebugSynchronizer.ValueSource<T> source = this.blockEntitySources.remove(blockPos);
          if (source != null) {
-            ChunkPos chunkPos = new ChunkPos(blockPos);
+            ChunkPos chunkPos = ChunkPos.containing(blockPos);
             this.sendToPlayersTrackingChunk(level, chunkPos, new ClientboundDebugBlockValuePacket(blockPos, this.subscription.emptyUpdate()));
          }
       }
@@ -288,11 +290,13 @@ public abstract class TrackingDebugSynchronizer<T> {
                BlockPos sectionBlockPos = sectionPos.center();
                if (isVillage) {
                   this.sendToPlayersTrackingChunk(
-                     level, new ChunkPos(sectionBlockPos), new ClientboundDebugBlockValuePacket(sectionBlockPos, this.subscription.packUpdate(Unit.INSTANCE))
+                     level,
+                     ChunkPos.containing(sectionBlockPos),
+                     new ClientboundDebugBlockValuePacket(sectionBlockPos, this.subscription.packUpdate(Unit.INSTANCE))
                   );
                } else {
                   this.sendToPlayersTrackingChunk(
-                     level, new ChunkPos(sectionBlockPos), new ClientboundDebugBlockValuePacket(sectionBlockPos, this.subscription.emptyUpdate())
+                     level, ChunkPos.containing(sectionBlockPos), new ClientboundDebugBlockValuePacket(sectionBlockPos, this.subscription.emptyUpdate())
                   );
                }
             }

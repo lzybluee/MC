@@ -15,6 +15,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -34,7 +35,7 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
    private static final MapCodec<ApplyBonusCount.Formula> FORMULA_CODEC = ExtraCodecs.dispatchOptionalValue(
       "formula", "parameters", FORMULA_TYPE_CODEC, ApplyBonusCount.Formula::getType, ApplyBonusCount.FormulaType::codec
    );
-   public static final MapCodec<ApplyBonusCount> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ApplyBonusCount> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(i.group(Enchantment.CODEC.fieldOf("enchantment").forGetter(f -> f.enchantment), FORMULA_CODEC.forGetter(f -> f.formula)))
          .apply(i, ApplyBonusCount::new)
@@ -49,8 +50,8 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<ApplyBonusCount> getType() {
-      return LootItemFunctions.APPLY_BONUS;
+   public MapCodec<ApplyBonusCount> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -60,7 +61,7 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
 
    @Override
    public ItemStack run(final ItemStack itemStack, final LootContext context) {
-      ItemStack tool = context.getOptionalParameter(LootContextParams.TOOL);
+      ItemInstance tool = context.getOptionalParameter(LootContextParams.TOOL);
       if (tool != null) {
          int level = EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, tool);
          int newCount = this.formula.calculateNewCount(context.getRandom(), itemStack.getCount(), level);

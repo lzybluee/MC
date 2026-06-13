@@ -26,6 +26,12 @@ public class LootContextParamSets {
    public static final ContextKeySet SELECTOR = register(
       "selector", builder -> builder.required(LootContextParams.ORIGIN).required(LootContextParams.THIS_ENTITY)
    );
+   public static final ContextKeySet VILLAGER_TRADE = register(
+      "villager_trade",
+      builder -> builder.required(LootContextParams.ORIGIN)
+         .required(LootContextParams.THIS_ENTITY)
+         .required(LootContextParams.ADDITIONAL_COST_COMPONENT_ALLOWED)
+   );
    public static final ContextKeySet FISHING = register(
       "fishing", builder -> builder.required(LootContextParams.ORIGIN).required(LootContextParams.TOOL).optional(LootContextParams.THIS_ENTITY)
    );
@@ -77,6 +83,7 @@ public class LootContextParamSets {
          .required(LootContextParams.BLOCK_ENTITY)
          .required(LootContextParams.TOOL)
          .required(LootContextParams.EXPLOSION_RADIUS)
+         .required(LootContextParams.ADDITIONAL_COST_COMPONENT_ALLOWED)
    );
    public static final ContextKeySet BLOCK = register(
       "block",

@@ -34,6 +34,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -82,7 +83,7 @@ public class LootCommand {
                                                    c,
                                                    ResourceOrIdArgument.getLootTable(c, "loot_table"),
                                                    BlockPosArgument.getLoadedBlockPos(c, "pos"),
-                                                   ItemArgument.getItem(c, "tool").createItemStack(1, false),
+                                                   ItemArgument.getItem(c, "tool").createItemStack(1),
                                                    output
                                                 )
                                              )
@@ -134,7 +135,7 @@ public class LootCommand {
                                     Commands.argument("tool", ItemArgument.item(context))
                                        .executes(
                                           c -> dropBlockLoot(
-                                             c, BlockPosArgument.getLoadedBlockPos(c, "pos"), ItemArgument.getItem(c, "tool").createItemStack(1, false), output
+                                             c, BlockPosArgument.getLoadedBlockPos(c, "pos"), ItemArgument.getItem(c, "tool").createItemStack(1), output
                                           )
                                        )
                                  ))
@@ -430,7 +431,7 @@ public class LootCommand {
    }
 
    private static int dropBlockLoot(
-      final CommandContext<CommandSourceStack> context, final BlockPos pos, final ItemStack tool, final LootCommand.DropConsumer output
+      final CommandContext<CommandSourceStack> context, final BlockPos pos, final ItemInstance tool, final LootCommand.DropConsumer output
    ) throws CommandSyntaxException {
       CommandSourceStack source = (CommandSourceStack)context.getSource();
       ServerLevel level = source.getLevel();
@@ -488,7 +489,7 @@ public class LootCommand {
       final CommandContext<CommandSourceStack> context,
       final Holder<LootTable> lootTable,
       final BlockPos pos,
-      final ItemStack tool,
+      final ItemInstance tool,
       final LootCommand.DropConsumer output
    ) throws CommandSyntaxException {
       CommandSourceStack source = (CommandSourceStack)context.getSource();

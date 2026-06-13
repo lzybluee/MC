@@ -5,19 +5,19 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.stream.Stream;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulator;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulators;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntries;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetContainerContents extends LootItemConditionalFunction {
-   public static final MapCodec<SetContainerContents> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetContainerContents> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -39,8 +39,8 @@ public class SetContainerContents extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetContainerContents> getType() {
-      return LootItemFunctions.SET_CONTENTS;
+   public MapCodec<SetContainerContents> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -58,10 +58,7 @@ public class SetContainerContents extends LootItemConditionalFunction {
    @Override
    public void validate(final ValidationContext context) {
       super.validate(context);
-
-      for (int i = 0; i < this.entries.size(); i++) {
-         this.entries.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("entries", i)));
-      }
+      Validatable.validate(context, "entries", this.entries);
    }
 
    public static SetContainerContents.Builder setContents(final ContainerComponentManipulator<?> component) {

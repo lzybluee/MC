@@ -19,7 +19,6 @@ import net.minecraft.resources.RegistryFileCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.context.ContextKeySet;
@@ -31,7 +30,7 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunctions;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import org.slf4j.Logger;
 
-public class LootTable {
+public class LootTable implements Validatable {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final Codec<ResourceKey<LootTable>> KEY_CODEC = ResourceKey.codec(Registries.LOOT_TABLE);
    public static final ContextKeySet DEFAULT_PARAM_SET = LootContextParamSets.ALL_PARAMS;
@@ -139,14 +138,10 @@ public class LootTable {
       return this.paramSet;
    }
 
+   @Override
    public void validate(final ValidationContext context) {
-      for (int i = 0; i < this.pools.size(); i++) {
-         this.pools.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("pools", i)));
-      }
-
-      for (int i = 0; i < this.functions.size(); i++) {
-         this.functions.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("functions", i)));
-      }
+      Validatable.validate(context, "pools", this.pools);
+      Validatable.validate(context, "functions", this.functions);
    }
 
    public void fill(final Container container, final LootParams params, final long optionalRandomSeed) {

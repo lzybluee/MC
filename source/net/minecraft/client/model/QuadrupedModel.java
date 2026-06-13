@@ -1,5 +1,6 @@
 package net.minecraft.client.model;
 
+import java.util.function.Function;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
@@ -7,6 +8,9 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 public class QuadrupedModel<T extends LivingEntityRenderState> extends EntityModel<T> {
@@ -18,7 +22,11 @@ public class QuadrupedModel<T extends LivingEntityRenderState> extends EntityMod
    protected final ModelPart leftFrontLeg;
 
    protected QuadrupedModel(final ModelPart root) {
-      super(root);
+      this(root, RenderTypes::entityCutout);
+   }
+
+   protected QuadrupedModel(final ModelPart root, final Function<Identifier, RenderType> renderType) {
+      super(root, renderType);
       this.head = root.getChild("head");
       this.body = root.getChild("body");
       this.rightHindLeg = root.getChild("right_hind_leg");

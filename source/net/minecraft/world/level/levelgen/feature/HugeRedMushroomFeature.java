@@ -3,7 +3,7 @@ package net.minecraft.world.level.levelgen.feature;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.HugeMushroomBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
@@ -15,7 +15,7 @@ public class HugeRedMushroomFeature extends AbstractHugeMushroomFeature {
 
    @Override
    protected void makeCap(
-      final LevelAccessor level,
+      final WorldGenLevel level,
       final RandomSource random,
       final BlockPos origin,
       final int treeHeight,
@@ -23,8 +23,8 @@ public class HugeRedMushroomFeature extends AbstractHugeMushroomFeature {
       final HugeMushroomFeatureConfiguration config
    ) {
       for (int dy = treeHeight - 3; dy <= treeHeight; dy++) {
-         int radius = dy < treeHeight ? config.foliageRadius : config.foliageRadius - 1;
-         int center = config.foliageRadius - 2;
+         int radius = dy < treeHeight ? config.foliageRadius() : config.foliageRadius() - 1;
+         int center = config.foliageRadius() - 2;
 
          for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -36,7 +36,7 @@ public class HugeRedMushroomFeature extends AbstractHugeMushroomFeature {
                boolean zEdge = minZ || maxZ;
                if (dy >= treeHeight || xEdge != zEdge) {
                   blockPos.setWithOffset(origin, dx, dy, dz);
-                  BlockState state = config.capProvider.getState(random, origin);
+                  BlockState state = config.capProvider().getState(level, random, origin);
                   if (state.hasProperty(HugeMushroomBlock.WEST)
                      && state.hasProperty(HugeMushroomBlock.EAST)
                      && state.hasProperty(HugeMushroomBlock.NORTH)

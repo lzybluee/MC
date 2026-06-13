@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -40,6 +41,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -77,15 +79,14 @@ import net.minecraft.CharPredicate;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.DefaultUncaughtExceptionHandler;
-import net.minecraft.ReportType;
 import net.minecraft.ReportedException;
 import net.minecraft.SharedConstants;
 import net.minecraft.SuppressForbidden;
 import net.minecraft.TracingExecutor;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.Bootstrap;
 import net.minecraft.util.datafix.DataFixers;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -247,12 +248,17 @@ public class Util {
          throwable = throwable.getCause();
       }
 
+      LOGGER.error("Caught exception in thread {}", thread, throwable);
+      CrashReport report;
       if (throwable instanceof ReportedException reportedException) {
-         Bootstrap.realStdoutPrintln(reportedException.getReport().getFriendlyReport(ReportType.CRASH));
-         System.exit(-1);
+         report = reportedException.getReport();
+      } else {
+         report = CrashReport.forThrowable(throwable, "Exception on worker thread");
       }
 
-      LOGGER.error("Caught exception in thread {}", thread, throwable);
+      CrashReportCategory threadInfo = report.addCategory("ThreadInfo");
+      threadInfo.setDetail("Name", thread.getName());
+      BlockableEventLoop.relayDelayCrash(report);
    }
 
    public static @Nullable Type<?> fetchChoiceType(final TypeReference reference, final String name) {
@@ -622,6 +628,10 @@ public class Util {
       return Maps.transformValues(map, valueMapper);
    }
 
+   public static <T extends Enum<T>> Set<T> allOfEnumExcept(final T value) {
+      return EnumSet.complementOf(EnumSet.of(value));
+   }
+
    public static <V> CompletableFuture<List<V>> sequence(final List<? extends CompletableFuture<V>> futures) {
       if (futures.isEmpty()) {
          return CompletableFuture.completedFuture(List.of());
@@ -780,12 +790,12 @@ public class Util {
       return list.isEmpty() ? Optional.empty() : Optional.of(getRandom(list, random));
    }
 
-   private static BooleanSupplier createRenamer(final Path from, final Path to) {
+   private static BooleanSupplier createRenamer(final Path from, final Path to, final CopyOption... options) {
       return new BooleanSupplier() {
          @Override
          public boolean getAsBoolean() {
             try {
-               Files.move(from, to);
+               Files.move(from, to, options);
                return true;
             } catch (IOException e) {
                Util.LOGGER.error("Failed to rename", e);
@@ -870,6 +880,10 @@ public class Util {
 
       LOGGER.error("Failed to {}, aborting, progress might be lost", description);
       return false;
+   }
+
+   public static boolean safeMoveFile(final Path fromPath, final Path toPath, final CopyOption... options) {
+      return runWithRetries(10, "move from  " + fromPath + " to " + toPath, createRenamer(fromPath, toPath, options), createFileCreatedCheck(toPath));
    }
 
    public static void safeReplaceFile(final Path targetPath, final Path newPath, final Path backupPath) {
@@ -1139,6 +1153,10 @@ public class Util {
 
    public static <T> List<T> copyAndAdd(final List<T> list, final T element) {
       return ImmutableList.builderWithExpectedSize(list.size() + 1).addAll(list).add(element).build();
+   }
+
+   public static <T> List<T> copyAndAdd(final List<T> list, final T... elements) {
+      return ImmutableList.builderWithExpectedSize(list.size() + elements.length).addAll(list).add(elements).build();
    }
 
    public static <T> List<T> copyAndAdd(final T element, final List<T> list) {

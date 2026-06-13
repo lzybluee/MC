@@ -52,9 +52,8 @@ public class MaceItem extends Item {
       if (canSmashAttack(attacker)) {
          ServerLevel level = (ServerLevel)attacker.level();
          attacker.setDeltaMovement(attacker.getDeltaMovement().with(Direction.Axis.Y, 0.01F));
+         attacker.setIgnoreFallDamageFromCurrentImpulse(true, this.calculateImpactPosition(attacker));
          if (attacker instanceof ServerPlayer player) {
-            player.currentImpulseImpactPos = this.calculateImpactPosition(player);
-            player.setIgnoreFallDamageFromCurrentImpulse(true);
             player.connection.send(new ClientboundSetEntityMotionPacket(player));
          }
 
@@ -73,12 +72,10 @@ public class MaceItem extends Item {
       }
    }
 
-   private Vec3 calculateImpactPosition(final ServerPlayer player) {
-      return player.isIgnoringFallDamageFromCurrentImpulse()
-            && player.currentImpulseImpactPos != null
-            && player.currentImpulseImpactPos.y <= player.position().y
-         ? player.currentImpulseImpactPos
-         : player.position();
+   private Vec3 calculateImpactPosition(final LivingEntity attacker) {
+      return attacker.isIgnoringFallDamageFromCurrentImpulse() && attacker.currentImpulseImpactPos.y <= attacker.position().y
+         ? attacker.currentImpulseImpactPos
+         : attacker.position();
    }
 
    @Override

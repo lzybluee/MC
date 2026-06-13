@@ -46,7 +46,7 @@ public record EntityEquipmentPredicate(
                   DataComponentMatchers.Builder.components()
                      .exact(
                         DataComponentExactPredicate.someOf(
-                           Raid.getOminousBannerInstance(patternGetter).getComponents(), DataComponents.BANNER_PATTERNS, DataComponents.ITEM_NAME
+                           Raid.getBannerComponentPatch(patternGetter).split().added(), DataComponents.BANNER_PATTERNS, DataComponents.ITEM_NAME
                         )
                      )
                      .build()

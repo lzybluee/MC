@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
@@ -26,7 +26,7 @@ public class GiantTrunkPlacer extends TrunkPlacer {
 
    @Override
    public List<FoliagePlacer.FoliageAttachment> placeTrunk(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final int treeHeight,
@@ -34,10 +34,10 @@ public class GiantTrunkPlacer extends TrunkPlacer {
       final TreeConfiguration config
    ) {
       BlockPos below = origin.below();
-      setDirtAt(level, trunkSetter, random, below, config);
-      setDirtAt(level, trunkSetter, random, below.east(), config);
-      setDirtAt(level, trunkSetter, random, below.south(), config);
-      setDirtAt(level, trunkSetter, random, below.south().east(), config);
+      placeBelowTrunkBlock(level, trunkSetter, random, below, config);
+      placeBelowTrunkBlock(level, trunkSetter, random, below.east(), config);
+      placeBelowTrunkBlock(level, trunkSetter, random, below.south(), config);
+      placeBelowTrunkBlock(level, trunkSetter, random, below.south().east(), config);
       BlockPos.MutableBlockPos trunkPos = new BlockPos.MutableBlockPos();
 
       for (int hh = 0; hh < treeHeight; hh++) {
@@ -53,7 +53,7 @@ public class GiantTrunkPlacer extends TrunkPlacer {
    }
 
    private void placeLogIfFreeWithOffset(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final BlockPos.MutableBlockPos trunkPos,

@@ -51,7 +51,9 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
       }
 
       public EquipmentClientInfo.Builder addMainHumanoidLayer(final Identifier textureId, final boolean dyeable) {
-         return this.addLayers(EquipmentClientInfo.LayerType.HUMANOID, EquipmentClientInfo.Layer.leatherDyeable(textureId, dyeable));
+         this.addLayers(EquipmentClientInfo.LayerType.HUMANOID, EquipmentClientInfo.Layer.leatherDyeable(textureId, dyeable));
+         this.addLayers(EquipmentClientInfo.LayerType.HUMANOID_BABY, EquipmentClientInfo.Layer.leatherDyeable(textureId, dyeable));
+         return this;
       }
 
       public EquipmentClientInfo.Builder addLayers(final EquipmentClientInfo.LayerType type, final EquipmentClientInfo.Layer... layers) {
@@ -105,6 +107,7 @@ public record EquipmentClientInfo(Map<EquipmentClientInfo.LayerType, List<Equipm
    public enum LayerType implements StringRepresentable {
       HUMANOID("humanoid"),
       HUMANOID_LEGGINGS("humanoid_leggings"),
+      HUMANOID_BABY("humanoid_baby"),
       WINGS("wings"),
       WOLF_BODY("wolf_body"),
       HORSE_BODY("horse_body"),

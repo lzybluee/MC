@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.util.FileSystemUtil;
 import net.minecraft.util.Util;
 import org.slf4j.Logger;
@@ -58,7 +59,7 @@ public class VanillaPackResourcesBuilder {
    });
    private final Set<Path> rootPaths = new LinkedHashSet<>();
    private final Map<PackType, Set<Path>> pathsForType = new EnumMap<>(PackType.class);
-   private BuiltInMetadata metadata = BuiltInMetadata.of();
+   private ResourceMetadata metadata = ResourceMetadata.EMPTY;
    private final Set<String> namespaces = new HashSet<>();
 
    private boolean validateDirPath(final Path path) {
@@ -138,7 +139,7 @@ public class VanillaPackResourcesBuilder {
       return this;
    }
 
-   public VanillaPackResourcesBuilder setMetadata(final BuiltInMetadata metadata) {
+   public VanillaPackResourcesBuilder setMetadata(final ResourceMetadata metadata) {
       this.metadata = metadata;
       return this;
    }

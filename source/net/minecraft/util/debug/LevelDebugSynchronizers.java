@@ -180,13 +180,13 @@ public class LevelDebugSynchronizers {
 
    public <T> void sendBlockValue(final BlockPos blockPos, final DebugSubscription<T> subscription, final T value) {
       if (this.hasAnySubscriberFor(subscription)) {
-         this.broadcastToTracking(new ChunkPos(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.packUpdate(value)));
+         this.broadcastToTracking(ChunkPos.containing(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.packUpdate(value)));
       }
    }
 
    public <T> void clearBlockValue(final BlockPos blockPos, final DebugSubscription<T> subscription) {
       if (this.hasAnySubscriberFor(subscription)) {
-         this.broadcastToTracking(new ChunkPos(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.emptyUpdate()));
+         this.broadcastToTracking(ChunkPos.containing(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.emptyUpdate()));
       }
    }
 
@@ -204,7 +204,7 @@ public class LevelDebugSynchronizers {
 
    public <T> void broadcastEventToTracking(final BlockPos blockPos, final DebugSubscription<T> subscription, final T value) {
       if (this.hasAnySubscriberFor(subscription)) {
-         this.broadcastToTracking(new ChunkPos(blockPos), subscription, new ClientboundDebugEventPacket(subscription.packEvent(value)));
+         this.broadcastToTracking(ChunkPos.containing(blockPos), subscription, new ClientboundDebugEventPacket(subscription.packEvent(value)));
       }
    }
 

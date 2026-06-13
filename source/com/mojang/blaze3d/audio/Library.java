@@ -3,10 +3,8 @@ package com.mojang.blaze3d.audio;
 import com.google.common.collect.Sets;
 import com.mojang.logging.LogUtils;
 import java.nio.IntBuffer;
-import java.util.Collections;
-import java.util.List;
+import java.util.HexFormat;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.OptionalLong;
 import java.util.Set;
 import net.minecraft.SharedConstants;
@@ -19,18 +17,18 @@ import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALC11;
 import org.lwjgl.openal.ALCCapabilities;
 import org.lwjgl.openal.ALCapabilities;
-import org.lwjgl.openal.ALUtil;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 
 public class Library {
    private static final Logger LOGGER = LogUtils.getLogger();
-   private static final int NO_DEVICE = 0;
+   public static final int NO_DEVICE = 0;
+   private static final String NO_DEVICE_NAME = "(None)";
    private static final int DEFAULT_CHANNEL_COUNT = 30;
    private long currentDevice;
+   private String currentDeviceName = "(None)";
    private long context;
    private boolean supportsDisconnections;
-   private @Nullable String defaultDeviceName;
    private static final Library.ChannelPool EMPTY = new Library.ChannelPool() {
       @Override
       public @Nullable Channel acquire() {
@@ -60,12 +58,10 @@ public class Library {
    private Library.ChannelPool streamingChannels = EMPTY;
    private final Listener listener = new Listener();
 
-   public Library() {
-      this.defaultDeviceName = getDefaultDeviceName();
-   }
-
-   public void init(final @Nullable String preferredDevice, final boolean useHrtf) {
-      this.currentDevice = openDeviceOrFallback(preferredDevice);
+   public void init(final @Nullable String preferredDevice, final DeviceList currentDevices, final boolean useHrtf) {
+      this.currentDeviceName = "(None)";
+      this.currentDevice = openDeviceOrFallback(preferredDevice, currentDevices.defaultDevice());
+      this.currentDeviceName = queryDeviceName(this.currentDevice);
       this.supportsDisconnections = false;
       ALCCapabilities alcCapabilities = ALC.createCapabilities(this.currentDevice);
       if (OpenAlUtil.checkALCError(this.currentDevice, "Get capabilities")) {
@@ -81,16 +77,16 @@ public class Library {
       try {
          IntBuffer attr = this.createAttributes(stack, alcCapabilities.ALC_SOFT_HRTF && useHrtf);
          this.context = ALC10.alcCreateContext(this.currentDevice, attr);
-      } catch (Throwable var9) {
+      } catch (Throwable var10) {
          if (stack != null) {
             try {
                stack.close();
-            } catch (Throwable var8) {
-               var9.addSuppressed(var8);
+            } catch (Throwable var9) {
+               var10.addSuppressed(var9);
             }
          }
 
-         throw var9;
+         throw var10;
       }
 
       if (stack != null) {
@@ -119,7 +115,7 @@ public class Library {
       }
 
       OpenAlUtil.checkALError("Enable per-source distance models");
-      LOGGER.info("OpenAL initialized on device {}", this.getCurrentDeviceName());
+      LOGGER.info("OpenAL initialized on device {}", this.currentDeviceName);
       this.supportsDisconnections = ALC10.alcIsExtensionPresent(this.currentDevice, "ALC_EXT_disconnect");
    }
 
@@ -193,46 +189,31 @@ public class Library {
       return var7;
    }
 
-   public static @Nullable String getDefaultDeviceName() {
-      if (!ALC10.alcIsExtensionPresent(0L, "ALC_ENUMERATE_ALL_EXT")) {
-         return null;
-      }
-
-      ALUtil.getStringList(0L, 4115);
-      return ALC10.alcGetString(0L, 4114);
+   public @Nullable String currentDeviceName() {
+      return this.currentDeviceName;
    }
 
-   public String getCurrentDeviceName() {
-      String name = ALC10.alcGetString(this.currentDevice, 4115);
+   private static String queryDeviceName(final long deviceId) {
+      String name = ALC10.alcGetString(deviceId, 4115);
       if (name == null) {
-         name = ALC10.alcGetString(this.currentDevice, 4101);
+         name = ALC10.alcGetString(deviceId, 4101);
       }
 
       if (name == null) {
-         name = "Unknown";
+         name = "Unknown (0x" + HexFormat.of().toHexDigits(deviceId) + ")";
       }
 
       return name;
    }
 
-   public synchronized boolean hasDefaultDeviceChanged() {
-      String name = getDefaultDeviceName();
-      if (Objects.equals(this.defaultDeviceName, name)) {
-         return false;
-      }
-
-      this.defaultDeviceName = name;
-      return true;
-   }
-
-   private static long openDeviceOrFallback(final @Nullable String preferredDevice) {
+   private static long openDeviceOrFallback(final @Nullable String preferredDevice, final @Nullable String systemDefaultDevice) {
       OptionalLong device = OptionalLong.empty();
       if (preferredDevice != null) {
          device = tryOpenDevice(preferredDevice);
       }
 
-      if (device.isEmpty()) {
-         device = tryOpenDevice(getDefaultDeviceName());
+      if (device.isEmpty() && systemDefaultDevice != null) {
+         device = tryOpenDevice(systemDefaultDevice);
       }
 
       if (device.isEmpty()) {
@@ -274,7 +255,7 @@ public class Library {
       }
    }
 
-   public String getDebugString() {
+   public String getChannelDebugString() {
       return String.format(
          Locale.ROOT,
          "Sounds: %d/%d + %d/%d",
@@ -285,19 +266,25 @@ public class Library {
       );
    }
 
-   public List<String> getAvailableSoundDevices() {
-      List<String> result = ALUtil.getStringList(0L, 4115);
-      return result == null ? Collections.emptyList() : result;
-   }
-
    public boolean isCurrentDeviceDisconnected() {
       return this.supportsDisconnections && ALC11.alcGetInteger(this.currentDevice, 787) == 0;
+   }
+
+   public static DeviceTracker createDeviceTracker() {
+      DeviceList deviceList = DeviceList.query();
+      if (CallbackDeviceTracker.isSupported()) {
+         LOGGER.debug("Using SOFT_system_events callback for tracking audio device changes");
+         return CallbackDeviceTracker.createAndInstall(deviceList);
+      } else {
+         LOGGER.debug("Using polling for tracking audio device changes");
+         return new PollingDeviceTracker(deviceList);
+      }
    }
 
    private interface ChannelPool {
       @Nullable Channel acquire();
 
-      boolean release(final Channel channel);
+      boolean release(Channel channel);
 
       void cleanup();
 

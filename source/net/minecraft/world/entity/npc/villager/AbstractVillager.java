@@ -1,17 +1,24 @@
 package net.minecraft.world.entity.npc.villager;
 
 import com.google.common.collect.Lists;
-import java.util.ArrayList;
+import com.mojang.logging.LogUtils;
+import java.util.List;
+import java.util.Optional;
 import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Unit;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -28,27 +35,33 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.world.item.trading.VillagerTrade;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public abstract class AbstractVillager extends AgeableMob implements Npc, Merchant, InventoryCarrier {
+   private static final Logger LOGGER = LogUtils.getLogger();
    private static final EntityDataAccessor<Integer> DATA_UNHAPPY_COUNTER = SynchedEntityData.defineId(AbstractVillager.class, EntityDataSerializers.INT);
-   public static final int VILLAGER_SLOT_OFFSET = 300;
-   private static final int VILLAGER_INVENTORY_SIZE = 8;
    private @Nullable Player tradingPlayer;
    protected @Nullable MerchantOffers offers;
    private final SimpleContainer inventory = new SimpleContainer(8);
 
    public AbstractVillager(final EntityType<? extends AbstractVillager> type, final Level level) {
       super(type, level);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, 16.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 16.0F);
+      this.setPathfindingMalus(PathType.FIRE, -1.0F);
    }
 
    @Override
@@ -218,14 +231,57 @@ public abstract class AbstractVillager extends AgeableMob implements Npc, Mercha
 
    protected abstract void updateTrades(ServerLevel level);
 
-   protected void addOffersFromItemListings(
-      final ServerLevel level, final MerchantOffers merchantOffers, final VillagerTrades.ItemListing[] itemListings, final int numberOfOffers
+   protected void addOffersFromTradeSet(final ServerLevel level, final MerchantOffers offers, final ResourceKey<TradeSet> resourceKey) {
+      Optional<TradeSet> tradeSetOpt = this.registryAccess().lookupOrThrow(Registries.TRADE_SET).getOptional(resourceKey);
+      if (tradeSetOpt.isEmpty()) {
+         LOGGER.debug("Missing expected trade set {}", resourceKey);
+      } else {
+         TradeSet tradeSet = tradeSetOpt.get();
+         LootContext lootContext = new LootContext.Builder(
+               new LootParams.Builder(level)
+                  .withParameter(LootContextParams.ORIGIN, this.position())
+                  .withParameter(LootContextParams.THIS_ENTITY, this)
+                  .withParameter(LootContextParams.ADDITIONAL_COST_COMPONENT_ALLOWED, Unit.INSTANCE)
+                  .create(LootContextParamSets.VILLAGER_TRADE)
+            )
+            .create(tradeSet.randomSequence());
+         int numberOfOffers = tradeSet.calculateNumberOfTrades(lootContext);
+         if (tradeSet.allowDuplicates()) {
+            addOffersFromItemListings(lootContext, offers, tradeSet.getTrades(), numberOfOffers);
+         } else {
+            addOffersFromItemListingsWithoutDuplicates(lootContext, offers, tradeSet.getTrades(), numberOfOffers);
+         }
+      }
+   }
+
+   private static void addOffersFromItemListings(
+      final LootContext lootContext, final MerchantOffers merchantOffers, final HolderSet<VillagerTrade> potentialOffers, final int numberOfOffers
    ) {
-      ArrayList<VillagerTrades.ItemListing> potentialOffers = Lists.newArrayList(itemListings);
       int offersFound = 0;
 
-      while (offersFound < numberOfOffers && !potentialOffers.isEmpty()) {
-         MerchantOffer offer = potentialOffers.remove(this.random.nextInt(potentialOffers.size())).getOffer(level, this, this.random);
+      while (offersFound < numberOfOffers) {
+         Optional<Holder<VillagerTrade>> villagerTrade = potentialOffers.getRandomElement(lootContext.getRandom());
+         if (villagerTrade.isEmpty()) {
+            break;
+         }
+
+         MerchantOffer offer = villagerTrade.get().value().getOffer(lootContext);
+         if (offer != null) {
+            merchantOffers.add(offer);
+            offersFound++;
+         }
+      }
+   }
+
+   private static void addOffersFromItemListingsWithoutDuplicates(
+      final LootContext lootContext, final MerchantOffers merchantOffers, final HolderSet<VillagerTrade> potentialOffers, final int numberOfOffers
+   ) {
+      List<Holder<VillagerTrade>> leftoverOffers = Lists.newArrayList(potentialOffers);
+      int offersFound = 0;
+
+      while (offersFound < numberOfOffers && !leftoverOffers.isEmpty()) {
+         Holder<VillagerTrade> villagerTrade = leftoverOffers.remove(lootContext.getRandom().nextInt(leftoverOffers.size()));
+         MerchantOffer offer = villagerTrade.value().getOffer(lootContext);
          if (offer != null) {
             merchantOffers.add(offer);
             offersFound++;

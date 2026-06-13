@@ -13,6 +13,7 @@ public class BlockStatePredictionHandler implements AutoCloseable {
    private final Long2ObjectOpenHashMap<BlockStatePredictionHandler.ServerVerifiedState> serverVerifiedStates = new Long2ObjectOpenHashMap();
    private int currentSequenceNr;
    private boolean isPredicting;
+   private int lastTeleportSequence = -1;
 
    public void retainKnownServerState(final BlockPos pos, final BlockState state, final LocalPlayer player) {
       this.serverVerifiedStates
@@ -44,7 +45,7 @@ public class BlockStatePredictionHandler implements AutoCloseable {
          if (serverVerifiedState.sequence <= sequence) {
             BlockPos pos = BlockPos.of(next.getLongKey());
             stateIterator.remove();
-            clientLevel.syncBlockState(pos, serverVerifiedState.blockState, serverVerifiedState.playerPos);
+            clientLevel.syncBlockState(pos, serverVerifiedState.blockState, this.lastTeleportSequence < sequence ? serverVerifiedState.playerPos : null);
          }
       }
    }
@@ -62,6 +63,10 @@ public class BlockStatePredictionHandler implements AutoCloseable {
 
    public int currentSequence() {
       return this.currentSequenceNr;
+   }
+
+   public void onTeleport() {
+      this.lastTeleportSequence = this.currentSequenceNr;
    }
 
    public boolean isPredicting() {

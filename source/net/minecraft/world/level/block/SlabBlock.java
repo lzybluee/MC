@@ -73,7 +73,7 @@ public class SlabBlock extends Block implements SimpleWaterloggedBlock {
       }
 
       FluidState replacedFluidState = context.getLevel().getFluidState(pos);
-      BlockState result = this.defaultBlockState().setValue(TYPE, SlabType.BOTTOM).setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+      BlockState result = this.defaultBlockState().setValue(TYPE, SlabType.BOTTOM).setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
       Direction clickedFace = context.getClickedFace();
       return clickedFace != Direction.DOWN && (clickedFace == Direction.UP || !(context.getClickLocation().y - pos.getY() > 0.5))
          ? result

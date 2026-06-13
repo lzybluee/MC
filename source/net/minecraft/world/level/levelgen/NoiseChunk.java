@@ -35,6 +35,7 @@ public class NoiseChunk implements DensityFunction.FunctionContext, DensityFunct
    private final Long2IntMap preliminarySurfaceLevelCache = new Long2IntOpenHashMap();
    private final Aquifer aquifer;
    private final DensityFunction preliminarySurfaceLevel;
+   private final DensityFunction fullNoiseDensity;
    private final NoiseChunk.BlockStateFiller blockStateRule;
    private final Blender blender;
    private final NoiseChunk.FlatCache blendAlpha;
@@ -155,6 +156,7 @@ public class NoiseChunk implements DensityFunction.FunctionContext, DensityFunct
             DensityFunctions.add(wrappedRouter.finalDensity(), DensityFunctions.BeardifierMarker.INSTANCE)
          )
          .mapAll(this::wrap);
+      this.fullNoiseDensity = fullNoiseValue;
       builder.add(context -> this.aquifer.computeSubstance(context, fullNoiseValue.compute(context)));
       if (settings.oreVeinsEnabled()) {
          builder.add(OreVeinifier.create(wrappedRouter.veinToggle(), wrappedRouter.veinRidged(), wrappedRouter.veinGap(), randomState.oreRandom()));
@@ -177,6 +179,10 @@ public class NoiseChunk implements DensityFunction.FunctionContext, DensityFunct
 
    protected @Nullable BlockState getInterpolatedState() {
       return this.blockStateRule.calculate(this);
+   }
+
+   protected double getInterpolatedDensity() {
+      return this.fullNoiseDensity.compute(this);
    }
 
    @Override
@@ -358,7 +364,7 @@ public class NoiseChunk implements DensityFunction.FunctionContext, DensityFunct
    }
 
    private Blender.BlendingOutput getOrComputeBlendingOutput(final int blockX, final int blockZ) {
-      long pos2D = ChunkPos.asLong(blockX, blockZ);
+      long pos2D = ChunkPos.pack(blockX, blockZ);
       if (this.lastBlendingDataPos == pos2D) {
          return this.lastBlendingOutput;
       }
@@ -493,7 +499,7 @@ public class NoiseChunk implements DensityFunction.FunctionContext, DensityFunct
       public double compute(final DensityFunction.FunctionContext context) {
          int blockX = context.blockX();
          int blockZ = context.blockZ();
-         long pos2D = ChunkPos.asLong(blockX, blockZ);
+         long pos2D = ChunkPos.pack(blockX, blockZ);
          if (this.lastPos2D == pos2D) {
             return this.lastValue;
          }

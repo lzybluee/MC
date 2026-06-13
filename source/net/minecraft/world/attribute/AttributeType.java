@@ -5,8 +5,10 @@ import com.mojang.serialization.Codec;
 import java.util.Map;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.ToFloatFunction;
 import net.minecraft.util.Util;
 import net.minecraft.world.attribute.modifier.AttributeModifier;
+import org.jspecify.annotations.Nullable;
 
 public record AttributeType<Value>(
    Codec<Value> valueCodec,
@@ -15,21 +17,23 @@ public record AttributeType<Value>(
    LerpFunction<Value> keyframeLerp,
    LerpFunction<Value> stateChangeLerp,
    LerpFunction<Value> spatialLerp,
-   LerpFunction<Value> partialTickLerp
+   LerpFunction<Value> partialTickLerp,
+   @Nullable ToFloatFunction<Value> toFloat
 ) {
    public static <Value> AttributeType<Value> ofInterpolated(
       final Codec<Value> valueCodec, final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLibrary, final LerpFunction<Value> lerp
    ) {
-      return ofInterpolated(valueCodec, modifierLibrary, lerp, lerp);
+      return ofInterpolated(valueCodec, modifierLibrary, lerp, lerp, null);
    }
 
    public static <Value> AttributeType<Value> ofInterpolated(
       final Codec<Value> valueCodec,
       final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLibrary,
       final LerpFunction<Value> lerp,
-      final LerpFunction<Value> partialTickLerp
+      final LerpFunction<Value> partialTickLerp,
+      final @Nullable ToFloatFunction<Value> toFloat
    ) {
-      return new AttributeType<>(valueCodec, modifierLibrary, createModifierCodec(modifierLibrary), lerp, lerp, lerp, partialTickLerp);
+      return new AttributeType<>(valueCodec, modifierLibrary, createModifierCodec(modifierLibrary), lerp, lerp, lerp, partialTickLerp, toFloat);
    }
 
    public static <Value> AttributeType<Value> ofNotInterpolated(
@@ -42,7 +46,8 @@ public record AttributeType<Value>(
          LerpFunction.ofStep(1.0F),
          LerpFunction.ofStep(0.0F),
          LerpFunction.ofStep(0.5F),
-         LerpFunction.ofStep(0.0F)
+         LerpFunction.ofStep(0.0F),
+         null
       );
    }
 
@@ -63,6 +68,14 @@ public record AttributeType<Value>(
    public void checkAllowedModifier(final AttributeModifier<Value, ?> modifier) {
       if (modifier != AttributeModifier.override() && !this.modifierLibrary.containsValue(modifier)) {
          throw new IllegalArgumentException("Modifier " + modifier + " is not valid for " + this);
+      }
+   }
+
+   public float toFloat(final Value value) {
+      if (this.toFloat == null) {
+         throw new IllegalStateException(value + " cannot be represented as a float");
+      } else {
+         return this.toFloat.applyAsFloat(value);
       }
    }
 

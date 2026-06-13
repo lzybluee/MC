@@ -93,7 +93,7 @@ public class BedBlock extends HorizontalDirectionalBlock implements EntityBlock 
 
       BedRule bedRule = level.environmentAttributes().getValue(EnvironmentAttributes.BED_RULE, pos);
       if (bedRule.explodes()) {
-         bedRule.errorMessage().ifPresent(message -> player.displayClientMessage(message, true));
+         bedRule.errorMessage().ifPresent(player::sendOverlayMessage);
          level.removeBlock(pos, false);
          BlockPos blockPos = pos.relative(state.getValue(FACING).getOpposite());
          if (level.getBlockState(blockPos).is(this)) {
@@ -105,14 +105,14 @@ public class BedBlock extends HorizontalDirectionalBlock implements EntityBlock 
          return InteractionResult.SUCCESS_SERVER;
       } else if (state.getValue(OCCUPIED)) {
          if (!this.kickVillagerOutOfBed(level, pos)) {
-            player.displayClientMessage(Component.translatable("block.minecraft.bed.occupied"), true);
+            player.sendOverlayMessage(Component.translatable("block.minecraft.bed.occupied"));
          }
 
          return InteractionResult.SUCCESS_SERVER;
       } else {
          player.startSleepInBed(pos).ifLeft(problem -> {
             if (problem.message() != null) {
-               player.displayClientMessage(problem.message(), true);
+               player.sendOverlayMessage(problem.message());
             }
          });
          return InteractionResult.SUCCESS_SERVER;

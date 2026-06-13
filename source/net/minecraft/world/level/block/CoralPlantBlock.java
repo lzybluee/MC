@@ -35,7 +35,7 @@ public class CoralPlantBlock extends BaseCoralPlantTypeBlock {
 
    @Override
    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
-      this.tryScheduleDieTick(state, level, level, level.random, pos);
+      this.tryScheduleDieTick(state, level, level, level.getRandom(), pos);
    }
 
    @Override

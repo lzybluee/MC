@@ -12,7 +12,7 @@ import net.minecraft.util.SignatureUpdater;
 
 public record LastSeenMessages(List<MessageSignature> entries) {
    public static final Codec<LastSeenMessages> CODEC = MessageSignature.CODEC.listOf().xmap(LastSeenMessages::new, LastSeenMessages::entries);
-   public static LastSeenMessages EMPTY = new LastSeenMessages(List.of());
+   public static final LastSeenMessages EMPTY = new LastSeenMessages(List.of());
    public static final int LAST_SEEN_MESSAGES_MAX_LENGTH = 20;
 
    public void updateSignature(final SignatureUpdater.Output output) throws SignatureException {

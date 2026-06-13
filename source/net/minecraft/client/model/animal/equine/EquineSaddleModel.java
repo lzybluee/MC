@@ -6,7 +6,6 @@ import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.EquineRenderState;
 
@@ -27,12 +26,8 @@ public class EquineSaddleModel extends AbstractEquineModel<EquineRenderState> {
       this.ridingParts = new ModelPart[]{leftSaddleLine, rightSaddleLine};
    }
 
-   public static LayerDefinition createSaddleLayer(final boolean baby) {
-      return createFullScaleSaddleLayer(baby).apply(baby ? BABY_TRANSFORMER : MeshTransformer.IDENTITY);
-   }
-
-   public static LayerDefinition createFullScaleSaddleLayer(final boolean baby) {
-      MeshDefinition mesh = baby ? createFullScaleBabyMesh(CubeDeformation.NONE) : createBodyMesh(CubeDeformation.NONE);
+   public static LayerDefinition createSaddleLayer() {
+      MeshDefinition mesh = createBodyMesh(CubeDeformation.NONE);
       PartDefinition root = mesh.getRoot();
       PartDefinition body = root.getChild("body");
       PartDefinition headParts = root.getChild("head_parts");

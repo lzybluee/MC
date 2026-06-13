@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import net.minecraft.SharedConstants;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ChunkMap;
@@ -36,7 +37,9 @@ public class TicketStorage extends SavedData {
    public static final Codec<TicketStorage> CODEC = RecordCodecBuilder.create(
       i -> i.group(TICKET_ENTRY.listOf().optionalFieldOf("tickets", List.of()).forGetter(TicketStorage::packTickets)).apply(i, TicketStorage::fromPacked)
    );
-   public static final SavedDataType<TicketStorage> TYPE = new SavedDataType<>("chunks", TicketStorage::new, CODEC, DataFixTypes.SAVED_DATA_FORCED_CHUNKS);
+   public static final SavedDataType<TicketStorage> TYPE = new SavedDataType<>(
+      Identifier.withDefaultNamespace("chunk_tickets"), TicketStorage::new, CODEC, DataFixTypes.SAVED_DATA_FORCED_CHUNKS
+   );
    private final Long2ObjectOpenHashMap<List<Ticket>> tickets;
    private final Long2ObjectOpenHashMap<List<Ticket>> deactivatedTickets;
    private LongSet chunksWithForcedTickets = new LongOpenHashSet();
@@ -58,7 +61,7 @@ public class TicketStorage extends SavedData {
 
       for (Pair<ChunkPos, Ticket> ticket : tickets) {
          ChunkPos pos = (ChunkPos)ticket.getFirst();
-         List<Ticket> ticketsInChunk = (List<Ticket>)ticketsToLoad.computeIfAbsent(pos.toLong(), k -> new ObjectArrayList(4));
+         List<Ticket> ticketsInChunk = (List<Ticket>)ticketsToLoad.computeIfAbsent(pos.pack(), k -> new ObjectArrayList(4));
          ticketsInChunk.add((Ticket)ticket.getSecond());
       }
 
@@ -85,7 +88,7 @@ public class TicketStorage extends SavedData {
 
       while (var2.hasNext()) {
          Entry<List<Ticket>> entry = (Entry<List<Ticket>>)var2.next();
-         ChunkPos chunkPos = new ChunkPos(entry.getLongKey());
+         ChunkPos chunkPos = ChunkPos.unpack(entry.getLongKey());
 
          for (Ticket ticket : (List)entry.getValue()) {
             output.accept(chunkPos, ticket);
@@ -145,11 +148,11 @@ public class TicketStorage extends SavedData {
 
    public void addTicketWithRadius(final TicketType type, final ChunkPos chunkPos, final int radius) {
       Ticket ticket = new Ticket(type, ChunkLevel.byStatus(FullChunkStatus.FULL) - radius);
-      this.addTicket(chunkPos.toLong(), ticket);
+      this.addTicket(chunkPos.pack(), ticket);
    }
 
    public void addTicket(final Ticket ticket, final ChunkPos chunkPos) {
-      this.addTicket(chunkPos.toLong(), ticket);
+      this.addTicket(chunkPos.pack(), ticket);
    }
 
    public boolean addTicket(final long key, final Ticket ticket) {
@@ -167,7 +170,7 @@ public class TicketStorage extends SavedData {
       int oldLoadingTicketLevel = getTicketLevelAt(tickets, false);
       tickets.add(ticket);
       if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-         LOGGER.debug("ATI {} {}", new ChunkPos(key), ticket);
+         LOGGER.debug("ATI {} {}", ChunkPos.unpack(key), ticket);
       }
 
       if (ticket.getType().doesSimulate() && ticket.getTicketLevel() < oldSimulationTicketLevel && this.simulationChunkUpdatedListener != null) {
@@ -221,11 +224,11 @@ public class TicketStorage extends SavedData {
 
    public void removeTicketWithRadius(final TicketType type, final ChunkPos chunkPos, final int radius) {
       Ticket ticket = new Ticket(type, ChunkLevel.byStatus(FullChunkStatus.FULL) - radius);
-      this.removeTicket(chunkPos.toLong(), ticket);
+      this.removeTicket(chunkPos.pack(), ticket);
    }
 
    public void removeTicket(final Ticket ticket, final ChunkPos chunkPos) {
-      this.removeTicket(chunkPos.toLong(), ticket);
+      this.removeTicket(chunkPos.pack(), ticket);
    }
 
    public boolean removeTicket(final long key, final Ticket ticket) {
@@ -242,7 +245,7 @@ public class TicketStorage extends SavedData {
          if (isTicketSameTypeAndLevel(ticket, t)) {
             iterator.remove();
             if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-               LOGGER.debug("RTI {} {}", new ChunkPos(key), t);
+               LOGGER.debug("RTI {} {}", ChunkPos.unpack(key), t);
             }
 
             found = true;
@@ -393,7 +396,7 @@ public class TicketStorage extends SavedData {
 
    public boolean updateChunkForced(final ChunkPos chunkPos, final boolean forced) {
       Ticket ticket = new Ticket(TicketType.FORCED, ChunkMap.FORCED_TICKET_LEVEL);
-      return forced ? this.addTicket(chunkPos.toLong(), ticket) : this.removeTicket(chunkPos.toLong(), ticket);
+      return forced ? this.addTicket(chunkPos.pack(), ticket) : this.removeTicket(chunkPos.pack(), ticket);
    }
 
    public LongSet getForceLoadedChunks() {

@@ -127,7 +127,7 @@ public class WallBlock extends Block implements SimpleWaterloggedBlock {
       boolean east = this.connectsTo(eastState, eastState.isFaceSturdy(level, eastPos, Direction.WEST), Direction.WEST);
       boolean south = this.connectsTo(southState, southState.isFaceSturdy(level, southPos, Direction.NORTH), Direction.NORTH);
       boolean west = this.connectsTo(westState, westState.isFaceSturdy(level, westPos, Direction.EAST), Direction.EAST);
-      BlockState state = this.defaultBlockState().setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+      BlockState state = this.defaultBlockState().setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
       return this.updateShape(level, state, topPos, topState, north, east, south, west);
    }
 

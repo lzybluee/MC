@@ -117,8 +117,8 @@ public class JfrResultJsonSerializer {
                   Function<StructureGenStat, JsonElement> structureGenStatJsonGenerator = structureGen -> {
                      JsonObject result = new JsonObject();
                      result.addProperty("durationNanos", structureGen.duration().toNanos());
-                     result.addProperty("chunkPosX", structureGen.chunkPos().x);
-                     result.addProperty("chunkPosZ", structureGen.chunkPos().z);
+                     result.addProperty("chunkPosX", structureGen.chunkPos().x());
+                     result.addProperty("chunkPosZ", structureGen.chunkPos().z());
                      result.addProperty("structureName", structureGen.structureName());
                      result.addProperty("level", structureGen.level());
                      result.addProperty("success", structureGen.success());
@@ -158,8 +158,8 @@ public class JfrResultJsonSerializer {
             JsonObject chunkGenStatJson = new JsonObject();
             chunkGenStatJson.addProperty("durationNanos", chunk.duration().toNanos());
             chunkGenStatJson.addProperty("level", chunk.level());
-            chunkGenStatJson.addProperty("chunkPosX", chunk.chunkPos().x);
-            chunkGenStatJson.addProperty("chunkPosZ", chunk.chunkPos().z);
+            chunkGenStatJson.addProperty("chunkPosX", chunk.chunkPos().x());
+            chunkGenStatJson.addProperty("chunkPosZ", chunk.chunkPos().z());
             chunkGenStatJson.addProperty("worldPosX", chunk.worldPos().x());
             chunkGenStatJson.addProperty("worldPosZ", chunk.worldPos().z());
             return chunkGenStatJson;

@@ -65,7 +65,7 @@ public class ClipContext {
 
             if (collisionContext instanceof EntityCollisionContext entityCollisionContext
                && entityCollisionContext.getEntity() != null
-               && entityCollisionContext.getEntity().getType() == EntityType.PLAYER) {
+               && entityCollisionContext.getEntity().is(EntityType.PLAYER)) {
                if (state.is(Blocks.END_GATEWAY) || state.is(Blocks.END_PORTAL)) {
                   return Shapes.block();
                }

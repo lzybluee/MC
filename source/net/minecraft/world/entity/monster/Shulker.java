@@ -425,7 +425,7 @@ public class Shulker extends AbstractGolem implements Enemy {
          this.teleportSomewhere();
       } else if (source.is(DamageTypeTags.IS_PROJECTILE)) {
          Entity directEntity = source.getDirectEntity();
-         if (directEntity != null && directEntity.getType() == EntityType.SHULKER_BULLET) {
+         if (directEntity != null && directEntity.is(EntityType.SHULKER_BULLET)) {
             this.hitByShulkerBullet();
          }
       }
@@ -443,7 +443,7 @@ public class Shulker extends AbstractGolem implements Enemy {
       if (!this.isClosed() && this.teleportSomewhere()) {
          int shulkerCount = this.level().getEntities(EntityType.SHULKER, oldAabb.inflate(8.0), Entity::isAlive).size();
          float failureChance = (shulkerCount - 1) / 5.0F;
-         if (!(this.level().random.nextFloat() < failureChance)) {
+         if (!(this.level().getRandom().nextFloat() < failureChance)) {
             Shulker baby = EntityType.SHULKER.create(this.level(), EntitySpawnReason.BREEDING);
             if (baby != null) {
                baby.setVariant(this.getVariant());

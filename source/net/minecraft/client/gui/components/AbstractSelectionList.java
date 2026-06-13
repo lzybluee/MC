@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -40,7 +40,7 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
    private @Nullable E hovered;
 
    public AbstractSelectionList(final Minecraft minecraft, final int width, final int height, final int y, final int defaultEntryHeight) {
-      super(0, y, width, height, CommonComponents.EMPTY);
+      super(0, y, width, height, CommonComponents.EMPTY, AbstractScrollArea.defaultSettings(defaultEntryHeight / 2));
       this.minecraft = minecraft;
       this.defaultEntryHeight = defaultEntryHeight;
    }
@@ -205,24 +205,24 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
    }
 
    @Override
-   public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       this.hovered = this.isMouseOver(mouseX, mouseY) ? this.getEntryAtPosition(mouseX, mouseY) : null;
-      this.renderListBackground(graphics);
+      this.extractListBackground(graphics);
       this.enableScissor(graphics);
-      this.renderListItems(graphics, mouseX, mouseY, a);
+      this.extractListItems(graphics, mouseX, mouseY, a);
       graphics.disableScissor();
-      this.renderListSeparators(graphics);
-      this.renderScrollbar(graphics, mouseX, mouseY);
+      this.extractListSeparators(graphics);
+      this.extractScrollbar(graphics, mouseX, mouseY);
    }
 
-   protected void renderListSeparators(final GuiGraphics graphics) {
+   protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
       Identifier headerSeparator = this.minecraft.level == null ? Screen.HEADER_SEPARATOR : Screen.INWORLD_HEADER_SEPARATOR;
       Identifier footerSeparator = this.minecraft.level == null ? Screen.FOOTER_SEPARATOR : Screen.INWORLD_FOOTER_SEPARATOR;
       graphics.blit(RenderPipelines.GUI_TEXTURED, headerSeparator, this.getX(), this.getY() - 2, 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
       graphics.blit(RenderPipelines.GUI_TEXTURED, footerSeparator, this.getX(), this.getBottom(), 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
    }
 
-   protected void renderListBackground(final GuiGraphics graphics) {
+   protected void extractListBackground(final GuiGraphicsExtractor graphics) {
       Identifier menuListBackground = this.minecraft.level == null ? MENU_LIST_BACKGROUND : INWORLD_MENU_LIST_BACKGROUND;
       graphics.blit(
          RenderPipelines.GUI_TEXTURED,
@@ -238,7 +238,7 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
       );
    }
 
-   protected void enableScissor(final GuiGraphics graphics) {
+   protected void enableScissor(final GuiGraphicsExtractor graphics) {
       graphics.enableScissor(this.getX(), this.getY(), this.getRight(), this.getBottom());
    }
 
@@ -280,26 +280,13 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
    }
 
    @Override
-   protected double scrollRate() {
-      return this.defaultEntryHeight / 2.0;
-   }
-
-   @Override
    protected int scrollBarX() {
-      return this.getRowRight() + 6 + 2;
+      return this.getRowRight() + this.scrollbarWidth() + 2;
    }
 
    @Override
    public Optional<GuiEventListener> getChildAt(final double x, final double y) {
       return Optional.ofNullable(this.getEntryAtPosition(x, y));
-   }
-
-   @Override
-   public void setFocused(final boolean focused) {
-      super.setFocused(focused);
-      if (!focused) {
-         this.setFocused(null);
-      }
    }
 
    @Override
@@ -350,24 +337,24 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
       return null;
    }
 
-   protected void renderListItems(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   protected void extractListItems(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       for (E child : this.children) {
          if (child.getY() + child.getHeight() >= this.getY() && child.getY() <= this.getBottom()) {
-            this.renderItem(graphics, mouseX, mouseY, a, child);
+            this.extractItem(graphics, mouseX, mouseY, a, child);
          }
       }
    }
 
-   protected void renderItem(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a, final E entry) {
+   protected void extractItem(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a, final E entry) {
       if (this.entriesCanBeSelected() && this.getSelected() == entry) {
          int outlineColor = this.isFocused() ? -1 : -8355712;
-         this.renderSelection(graphics, entry, outlineColor);
+         this.extractSelection(graphics, entry, outlineColor);
       }
 
-      entry.renderContent(graphics, mouseX, mouseY, Objects.equals(this.hovered, entry), a);
+      entry.extractContent(graphics, mouseX, mouseY, Objects.equals(this.hovered, entry), a);
    }
 
-   protected void renderSelection(final GuiGraphics graphics, final E entry, final int outlineColor) {
+   protected void extractSelection(final GuiGraphicsExtractor graphics, final E entry, final int outlineColor) {
       int outlineX0 = entry.getX();
       int outlineY0 = entry.getY();
       int outlineX1 = outlineX0 + entry.getWidth();
@@ -456,7 +443,7 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
          return this.list.getFocused() == this;
       }
 
-      public abstract void renderContent(final GuiGraphics graphics, int mouseX, int mouseY, boolean hovered, float a);
+      public abstract void extractContent(final GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float a);
 
       @Override
       public boolean isMouseOver(final double mx, final double my) {

@@ -3,7 +3,7 @@ package net.minecraft.client.gui.components.toasts;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -84,15 +84,15 @@ public class TutorialToast implements Toast {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final Font font, final long fullyVisibleForMs) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs) {
       int height = this.height();
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, 0, 0, this.width(), height);
-      this.icon.render(graphics, 6, 6);
+      this.icon.extractRenderState(graphics, 6, 6);
       int textHeight = this.lines.size() * 11;
       int textTop = 7 + (this.contentHeight() - textHeight) / 2;
 
       for (int i = 0; i < this.lines.size(); i++) {
-         graphics.drawString(font, this.lines.get(i), 30, textTop + i * 11, -16777216, false);
+         graphics.text(font, this.lines.get(i), 30, textTop + i * 11, -16777216, false);
       }
 
       if (this.progressable) {
@@ -132,7 +132,7 @@ public class TutorialToast implements Toast {
          this.sprite = sprite;
       }
 
-      public void render(final GuiGraphics graphics, final int x, final int y) {
+      public void extractRenderState(final GuiGraphicsExtractor graphics, final int x, final int y) {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, x, y, 20, 20);
       }
    }

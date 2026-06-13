@@ -7,7 +7,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
 
@@ -62,7 +62,7 @@ public interface LootContextArg<R> {
          return this.anyOf(LootContext.BlockEntityTarget.values(), target -> function.apply(target.contextParam()));
       }
 
-      public LootContextArg.ArgCodecBuilder<R> anyItemStack(final Function<? super ContextKey<? extends ItemStack>, ? extends LootContextArg<R>> function) {
+      public LootContextArg.ArgCodecBuilder<R> anyItemStack(final Function<? super ContextKey<? extends ItemInstance>, ? extends LootContextArg<R>> function) {
          return this.anyOf(LootContext.ItemStackTarget.values(), target -> function.apply(target.contextParam()));
       }
 

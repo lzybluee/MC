@@ -16,6 +16,7 @@ import net.minecraft.ReportedException;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.debug.DebugOptionsScreen;
@@ -24,6 +25,7 @@ import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -66,6 +68,7 @@ public class KeyboardHandler {
    private long debugCrashKeyReportedTime = -1L;
    private long debugCrashKeyReportedCount = -1L;
    private boolean usedDebugKeyAsModifier;
+   private @Nullable PreeditEvent lastPreeditEvent;
 
    public KeyboardHandler(final Minecraft minecraft) {
       this.minecraft = minecraft;
@@ -113,10 +116,10 @@ public class KeyboardHandler {
             return true;
          case 85:
             if (event.hasShiftDown()) {
-               this.minecraft.levelRenderer.killFrustum();
+               this.minecraft.gameRenderer.getMainCamera().killFrustum();
                this.debugFeedback("Killed frustum");
             } else {
-               this.minecraft.levelRenderer.captureFrustum();
+               this.minecraft.gameRenderer.getMainCamera().captureFrustum();
                this.debugFeedback("Captured frustum");
             }
 
@@ -136,12 +139,12 @@ public class KeyboardHandler {
       }
    }
 
-   private void debugFeedbackEnabledStatus(final String prefix, boolean isEnabled) {
+   private void debugFeedbackEnabledStatus(final String prefix, final boolean isEnabled) {
       this.debugFeedback(prefix + (isEnabled ? "enabled" : "disabled"));
    }
 
    private void showDebugChat(final Component message) {
-      this.minecraft.gui.getChat().addMessage(message);
+      this.minecraft.gui.getChat().addClientSystemMessage(message);
       this.minecraft.getNarrator().saySystemQueued(message);
    }
 
@@ -336,6 +339,11 @@ public class KeyboardHandler {
 
       if (options.keyDebugNetworkCharts.matches(event)) {
          this.minecraft.getDebugOverlay().toggleNetworkCharts();
+         debugAction = true;
+      }
+
+      if (options.keyDebugLightmapTexture.matches(event)) {
+         this.minecraft.getDebugOverlay().toggleLightmapTexture();
          debugAction = true;
       }
 
@@ -558,10 +566,6 @@ public class KeyboardHandler {
                      optionList.children().forEach(DebugOptionsScreen.AbstractOptionEntry::refreshEntry);
                   }
                }
-            } else if (handlesGlobalInput && options.keyToggleGui.matches(event)) {
-               options.hideGui = !options.hideGui;
-            } else if (handlesGlobalInput && options.keyToggleSpectatorShaderEffects.matches(event)) {
-               this.minecraft.gameRenderer.togglePostEffect();
             }
 
             if (modifierAndOverlayIsSame) {
@@ -598,10 +602,38 @@ public class KeyboardHandler {
                screen.fillCrashDetails(report);
                CrashReportCategory keyDetails = report.addCategory("Key");
                keyDetails.setDetail("Codepoint", event.codepoint());
-               keyDetails.setDetail("Mods", event.modifiers());
                throw new ReportedException(report);
             }
          }
+      }
+   }
+
+   private void preeditCallback(final long handle, final @Nullable PreeditEvent event) {
+      if (handle == this.minecraft.getWindow().handle()) {
+         this.lastPreeditEvent = event;
+         Screen screen = this.minecraft.screen;
+         if (screen != null && this.minecraft.getOverlay() == null) {
+            submitPreeditEvent(screen, event);
+         }
+      }
+   }
+
+   public void resubmitLastPreeditEvent(final GuiEventListener screen) {
+      submitPreeditEvent(screen, this.lastPreeditEvent);
+   }
+
+   public static void submitPreeditEvent(final GuiEventListener element, final @Nullable PreeditEvent event) {
+      try {
+         element.preeditUpdated(event);
+      } catch (Throwable t) {
+         CrashReport report = CrashReport.forThrowable(t, "IME pre-edit event handler");
+         if (element instanceof Screen screen) {
+            screen.fillCrashDetails(report);
+         }
+
+         CrashReportCategory keyDetails = report.addCategory("Event");
+         keyDetails.setDetail("Contents", () -> String.valueOf(event));
+         throw new ReportedException(report);
       }
    }
 
@@ -609,10 +641,13 @@ public class KeyboardHandler {
       InputConstants.setupKeyboardCallbacks(window, (window1, keysym, scancode, action, mods) -> {
          KeyEvent event = new KeyEvent(keysym, scancode, mods);
          this.minecraft.execute(() -> this.keyPress(window1, action, event));
-      }, (window1, codepoint, mods) -> {
-         CharacterEvent event = new CharacterEvent(codepoint, mods);
+      }, (window1, codepoint) -> {
+         CharacterEvent event = new CharacterEvent(codepoint);
          this.minecraft.execute(() -> this.charTyped(window1, event));
-      });
+      }, (window1, preeditSize, preeditPtr, blockCount, blockSizesPtr, focusedBlock, caret) -> {
+         PreeditEvent event = PreeditEvent.createFromCallback(preeditSize, preeditPtr, blockCount, blockSizesPtr, focusedBlock, caret);
+         this.minecraft.execute(() -> this.preeditCallback(window1, event));
+      }, window1 -> this.minecraft.textInputManager().notifyIMEChanged());
    }
 
    public String getClipboard() {

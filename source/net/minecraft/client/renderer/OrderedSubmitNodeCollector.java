@@ -6,18 +6,21 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
@@ -79,6 +82,45 @@ public interface OrderedSubmitNodeCollector {
       this.submitModel(model, state, poseStack, renderType, lightCoords, overlayCoords, -1, null, outlineColor, crumblingOverlay);
    }
 
+   default <S> void submitModel(
+      final Model<? super S> model,
+      final S state,
+      final PoseStack poseStack,
+      final Identifier texture,
+      final int lightCoords,
+      final int overlayCoords,
+      final int outlineColor,
+      final ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay
+   ) {
+      this.submitModel(model, state, poseStack, model.renderType(texture), lightCoords, overlayCoords, -1, null, outlineColor, crumblingOverlay);
+   }
+
+   default <S> void submitModel(
+      final Model<S> model,
+      final S state,
+      final PoseStack poseStack,
+      final int lightCoords,
+      final int overlayCoords,
+      final int tintedColor,
+      final SpriteId sprite,
+      final SpriteGetter sprites,
+      final int outlineColor,
+      final ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay
+   ) {
+      this.submitModel(
+         model,
+         state,
+         poseStack,
+         sprite.renderType(model.renderType()),
+         lightCoords,
+         overlayCoords,
+         tintedColor,
+         sprites.get(sprite),
+         outlineColor,
+         crumblingOverlay
+      );
+   }
+
    default void submitModelPart(
       final ModelPart modelPart,
       final PoseStack poseStack,
@@ -130,13 +172,13 @@ public interface OrderedSubmitNodeCollector {
       final int outlineColor
    );
 
-   void submitBlock(PoseStack poseStack, BlockState state, int lightCoords, int overlayCoords, int outlineColor);
-
    void submitMovingBlock(PoseStack poseStack, MovingBlockRenderState movingBlockRenderState);
 
    void submitBlockModel(
-      PoseStack poseStack, RenderType renderType, BlockStateModel model, float r, float g, float b, int lightCoords, int overlayCoords, int outlineColor
+      PoseStack poseStack, RenderType renderType, List<BlockStateModelPart> parts, int[] tintLayers, int lightCoords, int overlayCoords, int outlineColor
    );
+
+   void submitBreakingBlockModel(PoseStack poseStack, BlockStateModel model, long seed, int progress);
 
    void submitItem(
       PoseStack poseStack,
@@ -146,7 +188,6 @@ public interface OrderedSubmitNodeCollector {
       int outlineColor,
       int[] tintLayers,
       List<BakedQuad> quads,
-      RenderType renderType,
       ItemStackRenderState.FoilType foilType
    );
 

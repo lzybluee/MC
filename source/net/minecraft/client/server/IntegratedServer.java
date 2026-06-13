@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import net.minecraft.CrashReport;
@@ -36,9 +37,11 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.debugchart.LocalSampleLogger;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.ValueInput;
@@ -65,10 +68,22 @@ public class IntegratedServer extends MinecraftServer {
       final LevelStorageSource.LevelStorageAccess levelStorageAccess,
       final PackRepository packRepository,
       final WorldStem worldStem,
+      final Optional<GameRules> gameRules,
       final Services services,
       final LevelLoadListener levelLoadListener
    ) {
-      super(serverThread, levelStorageAccess, packRepository, worldStem, minecraft.getProxy(), minecraft.getFixerUpper(), services, levelLoadListener);
+      super(
+         serverThread,
+         levelStorageAccess,
+         packRepository,
+         worldStem,
+         gameRules,
+         minecraft.getProxy(),
+         minecraft.getFixerUpper(),
+         services,
+         levelLoadListener,
+         false
+      );
       this.setSingleplayerProfile(minecraft.getGameProfile());
       this.setDemo(minecraft.isDemo());
       this.setPlayerList(new IntegratedPlayerList(this, this.registries(), this.playerDataStorage));
@@ -84,6 +99,7 @@ public class IntegratedServer extends MinecraftServer {
       GameProfile host = this.getSingleplayerProfile();
       String levelName = this.getWorldData().getLevelName();
       this.setMotd(host != null ? host.name() + " - " + levelName : levelName);
+      this.saveEverything(false, true, true);
       return true;
    }
 
@@ -119,7 +135,7 @@ public class IntegratedServer extends MinecraftServer {
          this.tickPaused();
       } else {
          if (wasPaused) {
-            this.forceTimeSynchronization();
+            this.forceGameTimeSynchronization();
          }
 
          super.tickServer(haveTime);
@@ -187,7 +203,7 @@ public class IntegratedServer extends MinecraftServer {
 
    @Override
    protected void onServerCrash(final CrashReport report) {
-      this.minecraft.delayCrashRaw(report);
+      BlockableEventLoop.relayDelayCrash(report);
    }
 
    @Override
@@ -217,6 +233,7 @@ public class IntegratedServer extends MinecraftServer {
          this.getPlayerList().setAllowCommandsForAllPlayers(allowCommands);
          PermissionSet newProfilePermissions = this.getProfilePermissions(this.minecraft.player.nameAndId());
          this.minecraft.player.setPermissions(newProfilePermissions);
+         this.minecraft.player.refreshChatAbilities();
 
          for (ServerPlayer player : this.getPlayerList().getPlayers()) {
             this.getCommands().sendCommands(player);
@@ -304,13 +321,18 @@ public class IntegratedServer extends MinecraftServer {
 
    @Override
    protected GlobalPos selectLevelLoadFocusPos() {
-      CompoundTag loadedPlayerTag = this.worldData.getLoadedPlayerTag();
-      if (loadedPlayerTag == null) {
+      UUID lastSinglePlayerOwnerUUID = this.worldData.getSinglePlayerUUID();
+      if (lastSinglePlayerOwnerUUID == null) {
+         return super.selectLevelLoadFocusPos();
+      }
+
+      Optional<CompoundTag> playerData = this.playerDataStorage.load(new NameAndId(lastSinglePlayerOwnerUUID, "<single player owner>"));
+      if (playerData.isEmpty()) {
          return super.selectLevelLoadFocusPos();
       }
 
       try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(LOGGER)) {
-         ValueInput input = TagValueInput.create(reporter, this.registryAccess(), loadedPlayerTag);
+         ValueInput input = TagValueInput.create(reporter, this.registryAccess(), playerData.get());
          ServerPlayer.SavedPosition loadedPosition = input.<ServerPlayer.SavedPosition>read(ServerPlayer.SavedPosition.MAP_CODEC)
             .orElse(ServerPlayer.SavedPosition.EMPTY);
          if (loadedPosition.dimension().isPresent() && loadedPosition.position().isPresent()) {
@@ -322,16 +344,9 @@ public class IntegratedServer extends MinecraftServer {
    }
 
    @Override
-   public boolean saveEverything(final boolean silent, final boolean flush, final boolean force) {
-      boolean retval = super.saveEverything(silent, flush, force);
-      this.warnOnLowDiskSpace();
-      return retval;
-   }
-
-   private void warnOnLowDiskSpace() {
-      if (this.storageSource.checkForLowDiskSpace()) {
-         this.minecraft.execute(() -> SystemToast.onLowDiskSpace(this.minecraft));
-      }
+   public void sendLowDiskSpaceWarning() {
+      super.sendLowDiskSpaceWarning();
+      this.minecraft.sendLowDiskSpaceWarning();
    }
 
    @Override

@@ -30,7 +30,7 @@ public record ReplaceBlock(Vec3i offset, Optional<BlockPredicate> predicate, Blo
    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
       BlockPos pos = BlockPos.containing(position).offset(this.offset);
       if (this.predicate.map(p -> p.test(serverLevel, pos)).orElse(true)
-         && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(entity.getRandom(), pos))) {
+         && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(serverLevel, entity.getRandom(), pos))) {
          this.triggerGameEvent.ifPresent(event -> serverLevel.gameEvent(entity, (Holder<GameEvent>)event, pos));
       }
    }

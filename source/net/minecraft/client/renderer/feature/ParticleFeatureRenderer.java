@@ -6,6 +6,7 @@ import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.state.QuadParticleRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
 import org.jspecify.annotations.Nullable;
 
@@ -25,7 +26,15 @@ public class ParticleFeatureRenderer implements AutoCloseable {
    private final Queue<ParticleFeatureRenderer.ParticleBufferCache> availableBuffers = new ArrayDeque<>();
    private final List<ParticleFeatureRenderer.ParticleBufferCache> usedBuffers = new ArrayList<>();
 
-   public void render(final SubmitNodeCollection nodeCollection) {
+   public void renderSolid(final SubmitNodeCollection nodeCollection) {
+      this.render(nodeCollection, false);
+   }
+
+   public void renderTranslucent(final SubmitNodeCollection nodeCollection) {
+      this.render(nodeCollection, true);
+   }
+
+   private void render(final SubmitNodeCollection nodeCollection, final boolean translucent) {
       if (!nodeCollection.getParticleGroupRenderers().isEmpty()) {
          GpuDevice device = RenderSystem.getDevice();
          Minecraft minecraft = Minecraft.getInstance();
@@ -34,40 +43,29 @@ public class ParticleFeatureRenderer implements AutoCloseable {
          RenderTarget particleTarget = minecraft.levelRenderer.getParticlesTarget();
 
          for (SubmitNodeCollector.ParticleGroupRenderer particleGroupRenderer : nodeCollection.getParticleGroupRenderers()) {
-            ParticleFeatureRenderer.ParticleBufferCache buffer = this.availableBuffers.poll();
-            if (buffer == null) {
-               buffer = new ParticleFeatureRenderer.ParticleBufferCache();
-            }
-
-            this.usedBuffers.add(buffer);
-            QuadParticleRenderState.PreparedBuffers prepared = particleGroupRenderer.prepare(buffer);
-            if (prepared != null) {
-               try (RenderPass renderPass = device.createCommandEncoder()
-                     .createRenderPass(
-                        () -> "Particles - Main",
-                        mainTarget.getColorTextureView(),
-                        OptionalInt.empty(),
-                        mainTarget.getDepthTextureView(),
-                        OptionalDouble.empty()
-                     )) {
-                  this.prepareRenderPass(renderPass);
-                  particleGroupRenderer.render(prepared, buffer, renderPass, textureManager, false);
-                  if (particleTarget == null) {
-                     particleGroupRenderer.render(prepared, buffer, renderPass, textureManager, true);
-                  }
+            if (!particleGroupRenderer.isEmpty()) {
+               ParticleFeatureRenderer.ParticleBufferCache buffer = this.availableBuffers.poll();
+               if (buffer == null) {
+                  buffer = new ParticleFeatureRenderer.ParticleBufferCache();
                }
 
-               if (particleTarget != null) {
+               this.usedBuffers.add(buffer);
+               QuadParticleRenderState.PreparedBuffers prepared = particleGroupRenderer.prepare(buffer, translucent);
+               if (prepared != null) {
+                  boolean useParticleTarget = particleTarget != null && translucent;
+                  GpuTextureView colorTextureView = useParticleTarget ? particleTarget.getColorTextureView() : mainTarget.getColorTextureView();
+                  GpuTextureView depthTextureView = useParticleTarget ? particleTarget.getDepthTextureView() : mainTarget.getDepthTextureView();
+
                   try (RenderPass renderPass = device.createCommandEncoder()
                         .createRenderPass(
-                           () -> "Particles - Transparent",
-                           particleTarget.getColorTextureView(),
+                           () -> "Particles - " + (translucent ? "Translucent" : "Solid"),
+                           colorTextureView,
                            OptionalInt.empty(),
-                           particleTarget.getDepthTextureView(),
+                           depthTextureView,
                            OptionalDouble.empty()
                         )) {
                      this.prepareRenderPass(renderPass);
-                     particleGroupRenderer.render(prepared, buffer, renderPass, textureManager, true);
+                     particleGroupRenderer.render(prepared, buffer, renderPass, textureManager);
                   }
                }
             }
@@ -87,9 +85,7 @@ public class ParticleFeatureRenderer implements AutoCloseable {
    private void prepareRenderPass(final RenderPass renderPass) {
       renderPass.setUniform("Projection", RenderSystem.getProjectionMatrixBuffer());
       renderPass.setUniform("Fog", RenderSystem.getShaderFog());
-      renderPass.bindTexture(
-         "Sampler2", Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-      );
+      renderPass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
    }
 
    @Override

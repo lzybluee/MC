@@ -57,6 +57,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
@@ -419,17 +421,21 @@ public class Panda extends Animal {
    private void addEatingParticles() {
       if (this.getEatCounter() % 5 == 0) {
          this.playSound(SoundEvents.PANDA_EAT, 0.5F + 0.5F * this.random.nextInt(2), (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
+         ItemStack heldItem = this.getItemBySlot(EquipmentSlot.MAINHAND);
+         if (!heldItem.isEmpty()) {
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(heldItem));
 
-         for (int i = 0; i < 6; i++) {
-            Vec3 d = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, (this.random.nextFloat() - 0.5) * 0.1);
-            d = d.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
-            d = d.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
-            double y1 = -this.random.nextFloat() * 0.6 - 0.3;
-            Vec3 p = new Vec3((this.random.nextFloat() - 0.5) * 0.8, y1, 1.0 + (this.random.nextFloat() - 0.5) * 0.4);
-            p = p.yRot(-this.yBodyRot * (float) (Math.PI / 180.0));
-            p = p.add(this.getX(), this.getEyeY() + 1.0, this.getZ());
-            this.level()
-               .addParticle(new ItemParticleOption(ParticleTypes.ITEM, this.getItemBySlot(EquipmentSlot.MAINHAND)), p.x, p.y, p.z, d.x, d.y + 0.05, d.z);
+            for (int i = 0; i < 6; i++) {
+               Vec3 velocity = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, (this.random.nextFloat() - 0.5) * 0.1)
+                  .xRot(-this.getXRot() * (float) (Math.PI / 180.0))
+                  .yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+               Vec3 position = new Vec3(
+                     (this.random.nextFloat() - 0.5) * 0.8, -this.random.nextFloat() * 0.6 - 0.3, 1.0 + (this.random.nextFloat() - 0.5) * 0.4
+                  )
+                  .yRot(-this.yBodyRot * (float) (Math.PI / 180.0))
+                  .add(this.getX(), this.getEyeY() + 1.0, this.getZ());
+               this.level().addParticle(breakParticle, position.x, position.y, position.z, velocity.x, velocity.y + 0.05, velocity.z);
+            }
          }
       }
    }
@@ -617,31 +623,37 @@ public class Panda extends Animal {
             this.gotBamboo = true;
          }
 
-         if (this.isBaby()) {
+         if (this.canAgeUp()) {
             this.usePlayerItem(player, hand, interactionItemStack);
             this.ageUp((int)(-this.getAge() / 20 * 0.1F), true);
-         } else if (!this.level().isClientSide() && this.getAge() == 0 && this.canFallInLove()) {
-            this.usePlayerItem(player, hand, interactionItemStack);
-            this.setInLove(player);
          } else {
-            if (!(this.level() instanceof ServerLevel level) || this.isSitting() || this.isInWater()) {
+            if (this.isBaby()) {
                return InteractionResult.PASS;
             }
 
-            this.tryToSit();
-            this.eat(true);
-            ItemStack pandasCurrentItem = this.getItemBySlot(EquipmentSlot.MAINHAND);
-            if (!pandasCurrentItem.isEmpty() && !player.hasInfiniteMaterials()) {
-               this.spawnAtLocation(level, pandasCurrentItem);
-            }
+            if (!this.level().isClientSide() && this.getAge() == 0 && this.canFallInLove()) {
+               this.usePlayerItem(player, hand, interactionItemStack);
+               this.setInLove(player);
+            } else {
+               if (!(this.level() instanceof ServerLevel level) || this.isSitting() || this.isInWater()) {
+                  return InteractionResult.PASS;
+               }
 
-            this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(interactionItemStack.getItem(), 1));
-            this.usePlayerItem(player, hand, interactionItemStack);
+               this.tryToSit();
+               this.eat(true);
+               ItemStack pandasCurrentItem = this.getItemBySlot(EquipmentSlot.MAINHAND);
+               if (!pandasCurrentItem.isEmpty() && !player.hasInfiniteMaterials()) {
+                  this.spawnAtLocation(level, pandasCurrentItem);
+               }
+
+               this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(interactionItemStack.getItem(), 1));
+               this.usePlayerItem(player, hand, interactionItemStack);
+            }
          }
 
          return InteractionResult.SUCCESS_SERVER;
       } else {
-         return InteractionResult.PASS;
+         return this.isBaby() && player.isHolding(Items.GOLDEN_DANDELION) ? super.mobInteract(player, hand) : InteractionResult.PASS;
       }
    }
 

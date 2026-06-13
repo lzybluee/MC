@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
@@ -37,7 +38,7 @@ public class MangroveRootPlacer extends RootPlacer {
 
    @Override
    public boolean placeRoots(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> rootSetter,
       final RandomSource random,
       final BlockPos origin,
@@ -125,14 +126,14 @@ public class MangroveRootPlacer extends RootPlacer {
 
    @Override
    protected void placeRoot(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> rootSetter,
       final RandomSource random,
       final BlockPos pos,
       final TreeConfiguration config
    ) {
       if (level.isStateAtPosition(pos, s -> s.is(this.mangroveRootPlacement.muddyRootsIn()))) {
-         BlockState muddyRoots = this.mangroveRootPlacement.muddyRootsProvider().getState(random, pos);
+         BlockState muddyRoots = this.mangroveRootPlacement.muddyRootsProvider().getState(level, random, pos);
          rootSetter.accept(pos, this.getPotentiallyWaterloggedState(level, pos, muddyRoots));
       } else {
          super.placeRoot(level, rootSetter, random, pos, config);

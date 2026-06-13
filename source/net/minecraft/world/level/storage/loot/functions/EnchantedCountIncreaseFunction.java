@@ -1,7 +1,5 @@
 package net.minecraft.world.level.storage.loot.functions;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -18,6 +16,8 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
@@ -25,38 +25,44 @@ import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 
 public class EnchantedCountIncreaseFunction extends LootItemConditionalFunction {
    public static final int NO_LIMIT = 0;
-   public static final MapCodec<EnchantedCountIncreaseFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<EnchantedCountIncreaseFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
                Enchantment.CODEC.fieldOf("enchantment").forGetter(f -> f.enchantment),
-               NumberProviders.CODEC.fieldOf("count").forGetter(f -> f.value),
+               NumberProviders.CODEC.fieldOf("count").forGetter(f -> f.count),
                Codec.INT.optionalFieldOf("limit", 0).forGetter(f -> f.limit)
             )
          )
          .apply(i, EnchantedCountIncreaseFunction::new)
    );
    private final Holder<Enchantment> enchantment;
-   private final NumberProvider value;
+   private final NumberProvider count;
    private final int limit;
 
    private EnchantedCountIncreaseFunction(
-      final List<LootItemCondition> predicates, final Holder<Enchantment> enchantment, final NumberProvider value, final int limit
+      final List<LootItemCondition> predicates, final Holder<Enchantment> enchantment, final NumberProvider count, final int limit
    ) {
       super(predicates);
       this.enchantment = enchantment;
-      this.value = value;
+      this.count = count;
       this.limit = limit;
    }
 
    @Override
-   public LootItemFunctionType<EnchantedCountIncreaseFunction> getType() {
-      return LootItemFunctions.ENCHANTED_COUNT_INCREASE;
+   public MapCodec<EnchantedCountIncreaseFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public Set<ContextKey<?>> getReferencedContextParams() {
-      return Sets.union(ImmutableSet.of(LootContextParams.ATTACKING_ENTITY), this.value.getReferencedContextParams());
+      return Set.of(LootContextParams.ATTACKING_ENTITY);
+   }
+
+   @Override
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      Validatable.validate(context, "count", this.count);
    }
 
    private boolean hasLimit() {
@@ -72,7 +78,7 @@ public class EnchantedCountIncreaseFunction extends LootItemConditionalFunction 
             return itemStack;
          }
 
-         float addition = level * this.value.getFloat(context);
+         float addition = level * this.count.getFloat(context);
          itemStack.grow(Math.round(addition));
          if (this.hasLimit()) {
             itemStack.limitSize(this.limit);

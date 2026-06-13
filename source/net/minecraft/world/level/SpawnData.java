@@ -67,7 +67,7 @@ public record SpawnData(CompoundTag entityToSpawn, Optional<SpawnData.CustomSpaw
 
       public boolean isValidPosition(final BlockPos blockSpawnPos, final ServerLevel level) {
          return this.blockLightLimit.isValueInRange(level.getBrightness(LightLayer.BLOCK, blockSpawnPos))
-            && this.skyLightLimit.isValueInRange(level.getBrightness(LightLayer.SKY, blockSpawnPos));
+            && this.skyLightLimit.isValueInRange(level.getEffectiveSkyBrightness(blockSpawnPos));
       }
    }
 }

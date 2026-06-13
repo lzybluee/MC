@@ -60,8 +60,8 @@ public record PlacedFeature(Holder<ConfiguredFeature<?, ?>> feature, List<Placem
       return placedAny.isTrue();
    }
 
-   public Stream<ConfiguredFeature<?, ?>> getFeatures() {
-      return this.feature.value().getFeatures();
+   public Stream<Holder<ConfiguredFeature<?, ?>>> getFeatures() {
+      return Stream.concat(Stream.of(this.feature), this.feature.value().getSubFeatures());
    }
 
    @Override

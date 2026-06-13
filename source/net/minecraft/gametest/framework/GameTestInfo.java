@@ -73,7 +73,7 @@ public class GameTestInfo {
 
          this.placedStructure = true;
          test.encaseStructure();
-         BoundingBox boundingBox = test.getStructureBoundingBox();
+         BoundingBox boundingBox = test.getTestBoundingBox();
          this.level.getBlockTicks().clearArea(boundingBox);
          this.level.clearBlockEvents(boundingBox);
          this.listeners.forEach(listener -> listener.testStructureLoaded(this));
@@ -92,18 +92,21 @@ public class GameTestInfo {
 
          if (this.error != null) {
             this.finish();
+         } else {
+            if (!this.chunksLoaded
+               && !this.testInstanceBlockEntity.getStructureBoundingBox().intersectingChunks().allMatch(this.level::areEntitiesActuallyLoadedAndTicking)) {
+               return;
+            }
+
+            this.chunksLoaded = true;
          }
 
-         if (this.chunksLoaded
-            || this.testInstanceBlockEntity.getStructureBoundingBox().intersectingChunks().allMatch(this.level::areEntitiesActuallyLoadedAndTicking)) {
-            this.chunksLoaded = true;
-            this.tickInternal();
-            if (this.isDone()) {
-               if (this.error != null) {
-                  this.listeners.forEach(listener -> listener.testFailed(this, runner));
-               } else {
-                  this.listeners.forEach(listener -> listener.testPassed(this, runner));
-               }
+         this.tickInternal();
+         if (this.isDone()) {
+            if (this.error != null) {
+               this.listeners.forEach(listener -> listener.testFailed(this, runner));
+            } else {
+               this.listeners.forEach(listener -> listener.testPassed(this, runner));
             }
          }
       }

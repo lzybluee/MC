@@ -132,6 +132,6 @@ public class GiveGiftToHero extends Behavior<Villager> {
    }
 
    private static int calculateTimeUntilNextGift(final ServerLevel level) {
-      return 600 + level.random.nextInt(6001);
+      return 600 + level.getRandom().nextInt(6001);
    }
 }

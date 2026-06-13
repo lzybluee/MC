@@ -8,7 +8,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.IronGolemRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.level.block.Blocks;
 
 public class IronGolemFlowerLayer extends RenderLayer<IronGolemRenderState, IronGolemModel> {
    public IronGolemFlowerLayer(final RenderLayerParent<IronGolemRenderState, IronGolemModel> renderer) {
@@ -23,7 +22,7 @@ public class IronGolemFlowerLayer extends RenderLayer<IronGolemRenderState, Iron
       final float yRot,
       final float xRot
    ) {
-      if (state.offerFlowerTick != 0) {
+      if (!state.flowerBlock.isEmpty()) {
          poseStack.pushPose();
          ModelPart arm = this.getParentModel().getFlowerHoldingArm();
          arm.translateAndRotate(poseStack);
@@ -33,7 +32,7 @@ public class IronGolemFlowerLayer extends RenderLayer<IronGolemRenderState, Iron
          poseStack.scale(0.5F, 0.5F, 0.5F);
          poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
          poseStack.translate(-0.5F, -0.5F, -0.5F);
-         submitNodeCollector.submitBlock(poseStack, Blocks.POPPY.defaultBlockState(), lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+         state.flowerBlock.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
          poseStack.popPose();
       }
    }

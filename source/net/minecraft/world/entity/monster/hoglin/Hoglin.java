@@ -1,8 +1,7 @@
 package net.minecraft.world.entity.monster.hoglin;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -32,8 +31,6 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Enemy;
@@ -65,32 +62,9 @@ public class Hoglin extends Animal implements Enemy, HoglinBase {
    private int attackAnimationRemainingTicks;
    private int timeInOverworld = 0;
    private boolean cannotBeHunted = false;
-   protected static final ImmutableList<? extends SensorType<? extends Sensor<? super Hoglin>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ADULT, SensorType.HOGLIN_SPECIFIC_SENSOR
-   );
-   protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.ATTACK_TARGET,
-      MemoryModuleType.ATTACK_COOLING_DOWN,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN,
-      new MemoryModuleType[]{
-         MemoryModuleType.AVOID_TARGET,
-         MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT,
-         MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT,
-         MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS,
-         MemoryModuleType.NEAREST_VISIBLE_ADULT,
-         MemoryModuleType.NEAREST_REPELLENT,
-         MemoryModuleType.PACIFIED,
-         MemoryModuleType.IS_PANICKING
-      }
+   private static final Brain.Provider<Hoglin> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ADULT, SensorType.HOGLIN_SPECIFIC_SENSOR),
+      var0 -> HoglinAi.getActivities()
    );
 
    public Hoglin(final EntityType<? extends Hoglin> type, final Level level) {
@@ -148,18 +122,13 @@ public class Hoglin extends Animal implements Enemy, HoglinBase {
    }
 
    @Override
-   protected Brain.Provider<Hoglin> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return HoglinAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Hoglin> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Hoglin> getBrain() {
-      return (Brain<Hoglin>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override

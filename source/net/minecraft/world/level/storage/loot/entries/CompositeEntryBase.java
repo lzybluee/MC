@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
@@ -26,15 +27,16 @@ public abstract class CompositeEntryBase extends LootPoolEntryContainer {
    }
 
    @Override
+   public abstract MapCodec<? extends CompositeEntryBase> codec();
+
+   @Override
    public void validate(final ValidationContext context) {
       super.validate(context);
       if (this.children.isEmpty()) {
          context.reportProblem(NO_CHILDREN_PROBLEM);
       }
 
-      for (int i = 0; i < this.children.size(); i++) {
-         this.children.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("children", i)));
-      }
+      Validatable.validate(context, "children", this.children);
    }
 
    protected abstract ComposableEntryContainer compose(List<? extends ComposableEntryContainer> entries);

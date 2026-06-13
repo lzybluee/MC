@@ -3,10 +3,15 @@ package net.minecraft.world.item;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentLookup;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +19,8 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.material.MapColor;
 import org.jetbrains.annotations.Contract;
@@ -37,9 +44,10 @@ public enum DyeColor implements StringRepresentable {
    RED(14, "red", 11546150, MapColor.COLOR_RED, 11743532, 16711680),
    BLACK(15, "black", 1908001, MapColor.COLOR_BLACK, 1973019, 0);
 
-   private static final IntFunction<DyeColor> BY_ID = ByIdMap.continuous(DyeColor::getId, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+   public static final List<DyeColor> VALUES = List.of(values());
+   private static final IntFunction<DyeColor> BY_ID = ByIdMap.continuous(DyeColor::getId, VALUES.toArray(DyeColor[]::new), ByIdMap.OutOfBoundsStrategy.ZERO);
    private static final Int2ObjectOpenHashMap<DyeColor> BY_FIREWORK_COLOR = new Int2ObjectOpenHashMap(
-      Arrays.stream(values()).collect(Collectors.toMap(v -> v.fireworkColor, v -> (DyeColor)v))
+      VALUES.stream().collect(Collectors.toMap(v -> v.fireworkColor, v -> (DyeColor)v))
    );
    public static final StringRepresentable.EnumCodec<DyeColor> CODEC = StringRepresentable.fromEnum(DyeColor::values);
    public static final StreamCodec<ByteBuf, DyeColor> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, DyeColor::getId);
@@ -110,18 +118,40 @@ public enum DyeColor implements StringRepresentable {
    }
 
    public static DyeColor getMixedColor(final ServerLevel level, final DyeColor dyeColor1, final DyeColor dyeColor2) {
-      CraftingInput input = makeCraftColorInput(dyeColor1, dyeColor2);
-      return level.recipeAccess()
-         .getRecipeFor(RecipeType.CRAFTING, input, level)
-         .map(recipe -> recipe.value().assemble(input, level.registryAccess()))
-         .map(ItemStack::getItem)
-         .filter(DyeItem.class::isInstance)
-         .map(DyeItem.class::cast)
-         .map(DyeItem::getDyeColor)
-         .orElseGet(() -> level.random.nextBoolean() ? dyeColor1 : dyeColor2);
+      DyeColor mixedColor = findColorMixInRecipes(level, dyeColor1, dyeColor2);
+      if (mixedColor != null) {
+         return mixedColor;
+      } else {
+         return level.getRandom().nextBoolean() ? dyeColor1 : dyeColor2;
+      }
    }
 
-   private static CraftingInput makeCraftColorInput(final DyeColor dyeColor1, final DyeColor dyeColor2) {
-      return CraftingInput.of(2, 1, List.of(new ItemStack(DyeItem.byColor(dyeColor1)), new ItemStack(DyeItem.byColor(dyeColor2))));
+   private static @Nullable DyeColor findColorMixInRecipes(final ServerLevel level, final DyeColor dyeColor1, final DyeColor dyeColor2) {
+      DataComponentLookup<Item> itemComponents = level.registryAccess().lookupOrThrow(Registries.ITEM).componentLookup();
+      Collection<Holder<Item>> dye1Items = itemComponents.findAll(DataComponents.DYE, dyeColor1);
+      if (dye1Items.isEmpty()) {
+         return null;
+      }
+
+      Collection<Holder<Item>> dye2Items = itemComponents.findAll(DataComponents.DYE, dyeColor2);
+      if (dye2Items.isEmpty()) {
+         return null;
+      }
+
+      for (Holder<Item> dye1Item : dye1Items) {
+         for (Holder<Item> dye2Item : dye2Items) {
+            CraftingInput input = CraftingInput.of(2, 1, List.of(new ItemStack(dye1Item), new ItemStack(dye2Item)));
+            Optional<RecipeHolder<CraftingRecipe>> foundRecipe = level.recipeAccess().getRecipeFor(RecipeType.CRAFTING, input, level);
+            if (foundRecipe.isPresent()) {
+               ItemStack craftingResult = foundRecipe.get().value().assemble(input);
+               DyeColor craftedDyeColor = craftingResult.get(DataComponents.DYE);
+               if (craftedDyeColor != null) {
+                  return craftedDyeColor;
+               }
+            }
+         }
+      }
+
+      return null;
    }
 }

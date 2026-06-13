@@ -6,7 +6,7 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.FocusableTextWidget;
@@ -71,9 +71,9 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          this.categoryName.setPosition(KeyBindsList.this.width / 2 - this.categoryName.getWidth() / 2, this.getContentBottom() - this.categoryName.getHeight());
-         this.categoryName.render(graphics, mouseX, mouseY, a);
+         this.categoryName.extractRenderState(graphics, mouseX, mouseY, a);
       }
 
       @Override
@@ -126,15 +126,15 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          int resetButtonX = KeyBindsList.this.scrollBarX() - this.resetButton.getWidth() - 10;
          int buttonY = this.getContentY() - 2;
          this.resetButton.setPosition(resetButtonX, buttonY);
-         this.resetButton.render(graphics, mouseX, mouseY, a);
+         this.resetButton.extractRenderState(graphics, mouseX, mouseY, a);
          int changeButtonX = resetButtonX - 5 - this.changeButton.getWidth();
          this.changeButton.setPosition(changeButtonX, buttonY);
-         this.changeButton.render(graphics, mouseX, mouseY, a);
-         graphics.drawString(KeyBindsList.this.minecraft.font, this.name, this.getContentX(), this.getContentYMiddle() - 9 / 2, -1);
+         this.changeButton.extractRenderState(graphics, mouseX, mouseY, a);
+         graphics.text(KeyBindsList.this.minecraft.font, this.name, this.getContentX(), this.getContentYMiddle() - 9 / 2, -1);
          if (this.hasCollision) {
             int stripeWidth = 3;
             int stripeLeft = this.changeButton.getX() - 6;

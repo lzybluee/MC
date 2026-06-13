@@ -38,12 +38,12 @@ public abstract class AbstractCauldronBlock extends Block {
          );
       }
    );
-   protected final CauldronInteraction.InteractionMap interactions;
+   protected final CauldronInteraction.Dispatcher interactions;
 
    @Override
    protected abstract MapCodec<? extends AbstractCauldronBlock> codec();
 
-   public AbstractCauldronBlock(final BlockBehaviour.Properties properties, final CauldronInteraction.InteractionMap interactions) {
+   public AbstractCauldronBlock(final BlockBehaviour.Properties properties, final CauldronInteraction.Dispatcher interactions) {
       super(properties);
       this.interactions = interactions;
    }
@@ -62,7 +62,7 @@ public abstract class AbstractCauldronBlock extends Block {
       final InteractionHand hand,
       final BlockHitResult hitResult
    ) {
-      CauldronInteraction behavior = this.interactions.map().get(itemStack.getItem());
+      CauldronInteraction behavior = this.interactions.get(itemStack);
       return behavior.interact(state, level, pos, player, hand, itemStack);
    }
 

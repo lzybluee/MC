@@ -14,11 +14,11 @@ public class ChunkLoadCounter {
       ServerChunkCache chunkSource = level.getChunkSource();
       LongSet alreadyLoadedChunks = new LongOpenHashSet();
       chunkSource.runDistanceManagerUpdates();
-      chunkSource.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(chunkHolder -> alreadyLoadedChunks.add(chunkHolder.getPos().toLong()));
+      chunkSource.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(chunkHolder -> alreadyLoadedChunks.add(chunkHolder.getPos().pack()));
       scheduler.run();
       chunkSource.runDistanceManagerUpdates();
       chunkSource.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(chunkHolder -> {
-         if (!alreadyLoadedChunks.contains(chunkHolder.getPos().toLong())) {
+         if (!alreadyLoadedChunks.contains(chunkHolder.getPos().pack())) {
             this.pendingChunks.add(chunkHolder);
             this.totalChunks++;
          }

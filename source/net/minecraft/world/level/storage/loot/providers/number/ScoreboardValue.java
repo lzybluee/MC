@@ -3,9 +3,9 @@ package net.minecraft.world.level.storage.loot.providers.number;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.providers.score.ContextScoreboardNameProvider;
 import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProvider;
 import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProviders;
@@ -15,7 +15,7 @@ import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 
 public record ScoreboardValue(ScoreboardNameProvider target, String score, float scale) implements NumberProvider {
-   public static final MapCodec<ScoreboardValue> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ScoreboardValue> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             ScoreboardNameProviders.CODEC.fieldOf("target").forGetter(ScoreboardValue::target),
             Codec.STRING.fieldOf("score").forGetter(ScoreboardValue::score),
@@ -25,13 +25,14 @@ public record ScoreboardValue(ScoreboardNameProvider target, String score, float
    );
 
    @Override
-   public LootNumberProviderType getType() {
-      return NumberProviders.SCORE;
+   public MapCodec<ScoreboardValue> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.target.getReferencedContextParams();
+   public void validate(final ValidationContext context) {
+      NumberProvider.super.validate(context);
+      Validatable.validate(context, "target", this.target);
    }
 
    public static ScoreboardValue fromScoreboard(final LootContext.EntityTarget entityTarget, final String score) {

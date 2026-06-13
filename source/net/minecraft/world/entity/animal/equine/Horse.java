@@ -28,10 +28,10 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
@@ -40,14 +40,12 @@ public class Horse extends AbstractHorse {
    private static final EntityDataAccessor<Integer> DATA_ID_TYPE_VARIANT = SynchedEntityData.defineId(Horse.class, EntityDataSerializers.INT);
    private static final EntityDimensions BABY_DIMENSIONS = EntityType.HORSE
       .getDimensions()
-      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.HORSE.getHeight() + 0.125F, 0.0F))
-      .scale(0.5F);
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.HORSE.getHeight() - 0.125F, 0.0F))
+      .scale(0.7F);
    private static final int DEFAULT_VARIANT = 0;
 
    public Horse(final EntityType<? extends Horse> type, final Level level) {
       super(type, level);
-      this.setPathfindingMalus(PathType.DANGER_OTHER, -1.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_OTHER, -1.0F);
    }
 
    @Override
@@ -124,39 +122,39 @@ public class Horse extends AbstractHorse {
    protected void playGallopSound(final SoundType soundType) {
       super.playGallopSound(soundType);
       if (this.random.nextInt(10) == 0) {
-         this.playSound(SoundEvents.HORSE_BREATHE, soundType.getVolume() * 0.6F, soundType.getPitch());
+         this.playSound(this.isBaby() ? SoundEvents.HORSE_BREATHE_BABY : SoundEvents.HORSE_BREATHE, soundType.getVolume() * 0.6F, soundType.getPitch());
       }
    }
 
    @Override
    protected SoundEvent getAmbientSound() {
-      return SoundEvents.HORSE_AMBIENT;
+      return this.isBaby() ? SoundEvents.HORSE_AMBIENT_BABY : SoundEvents.HORSE_AMBIENT;
    }
 
    @Override
    protected SoundEvent getDeathSound() {
-      return SoundEvents.HORSE_DEATH;
+      return this.isBaby() ? SoundEvents.HORSE_DEATH_BABY : SoundEvents.HORSE_DEATH;
    }
 
    @Override
    protected SoundEvent getEatingSound() {
-      return SoundEvents.HORSE_EAT;
+      return this.isBaby() ? SoundEvents.HORSE_EAT_BABY : SoundEvents.HORSE_EAT;
    }
 
    @Override
    protected SoundEvent getHurtSound(final DamageSource source) {
-      return SoundEvents.HORSE_HURT;
+      return this.isBaby() ? SoundEvents.HORSE_HURT_BABY : SoundEvents.HORSE_HURT;
    }
 
    @Override
    protected SoundEvent getAngrySound() {
-      return SoundEvents.HORSE_ANGRY;
+      return this.isBaby() ? SoundEvents.HORSE_ANGRY_BABY : SoundEvents.HORSE_ANGRY;
    }
 
    @Override
    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
       boolean shouldOpenInventory = !this.isBaby() && this.isTamed() && player.isSecondaryUseActive();
-      if (!this.isVehicle() && !shouldOpenInventory) {
+      if (!this.isVehicle() && !shouldOpenInventory && (!this.isBaby() || !player.isHolding(Items.GOLDEN_DANDELION))) {
          ItemStack itemStack = player.getItemInHand(hand);
          if (!itemStack.isEmpty()) {
             if (this.isFood(itemStack)) {

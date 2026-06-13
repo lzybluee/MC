@@ -8,6 +8,8 @@ import net.minecraft.advancements.Criterion;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 
 public class SummonedEntityTrigger extends SimpleCriterionTrigger<SummonedEntityTrigger.TriggerInstance> {
    @Override
@@ -40,9 +42,9 @@ public class SummonedEntityTrigger extends SimpleCriterionTrigger<SummonedEntity
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         validator.validateEntity(this.entity, "entity");
+         Validatable.validate(validator.entityContext(), "entity", this.entity);
       }
    }
 }

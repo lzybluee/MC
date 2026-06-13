@@ -2,20 +2,19 @@ package net.minecraft.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import java.util.List;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.projectile.TridentModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.ThrownTridentRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.feature.ItemFeatureRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Unit;
 import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
 
 public class ThrownTridentRenderer extends EntityRenderer<ThrownTrident, ThrownTridentRenderState> {
-   public static final Identifier TRIDENT_LOCATION = Identifier.withDefaultNamespace("textures/entity/trident.png");
+   public static final Identifier TRIDENT_LOCATION = Identifier.withDefaultNamespace("textures/entity/trident/trident.png");
    private final TridentModel model;
 
    public ThrownTridentRenderer(final EntityRendererProvider.Context context) {
@@ -29,12 +28,19 @@ public class ThrownTridentRenderer extends EntityRenderer<ThrownTrident, ThrownT
       poseStack.pushPose();
       poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot - 90.0F));
       poseStack.mulPose(Axis.ZP.rotationDegrees(state.xRot + 90.0F));
-      List<RenderType> renderTypes = ItemRenderer.getFoilRenderTypes(this.model.renderType(TRIDENT_LOCATION), false, state.isFoil);
-
-      for (int i = 0; i < renderTypes.size(); i++) {
-         submitNodeCollector.order(i)
+      submitNodeCollector.order(0)
+         .submitModel(this.model, Unit.INSTANCE, poseStack, TRIDENT_LOCATION, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+      if (state.isFoil) {
+         submitNodeCollector.order(1)
             .submitModel(
-               this.model, Unit.INSTANCE, poseStack, renderTypes.get(i), state.lightCoords, OverlayTexture.NO_OVERLAY, -1, null, state.outlineColor, null
+               this.model,
+               Unit.INSTANCE,
+               poseStack,
+               ItemFeatureRenderer.getFoilRenderType(this.model.renderType(TRIDENT_LOCATION), false),
+               state.lightCoords,
+               OverlayTexture.NO_OVERLAY,
+               state.outlineColor,
+               null
             );
       }
 

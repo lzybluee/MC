@@ -119,7 +119,7 @@ public class VegetationPatchFeature extends Feature<VegetationPatchConfiguration
       final int depth
    ) {
       for (int i = 0; i < depth; i++) {
-         BlockState stateToPlace = config.groundState.getState(random, belowPos);
+         BlockState stateToPlace = config.groundState.getState(level, random, belowPos);
          BlockState belowState = level.getBlockState(belowPos);
          if (!stateToPlace.is(belowState.getBlock())) {
             if (!replaceable.test(belowState)) {

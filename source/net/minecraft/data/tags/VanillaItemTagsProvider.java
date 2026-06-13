@@ -1,11 +1,8 @@
 package net.minecraft.data.tags;
 
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.tags.ItemTags;
@@ -141,7 +138,8 @@ public class VanillaItemTagsProvider extends IntrinsicHolderTagsProvider<Item> {
             Items.GOLDEN_AXE,
             Items.GOLDEN_HOE,
             Items.RAW_GOLD,
-            Items.RAW_GOLD_BLOCK
+            Items.RAW_GOLD_BLOCK,
+            Items.GOLDEN_DANDELION
          );
       this.tag(ItemTags.IGNORED_BY_PIGLIN_BABIES).add(Items.LEATHER);
       this.tag(ItemTags.PIGLIN_FOOD).add(Items.PORKCHOP, Items.COOKED_PORKCHOP);
@@ -335,12 +333,18 @@ public class VanillaItemTagsProvider extends IntrinsicHolderTagsProvider<Item> {
          .add(Items.PLAYER_HEAD, Items.CREEPER_HEAD, Items.ZOMBIE_HEAD, Items.SKELETON_SKULL, Items.WITHER_SKELETON_SKULL, Items.DRAGON_HEAD, Items.PIGLIN_HEAD);
       this.tag(ItemTags.TRIMMABLE_ARMOR).addTag(ItemTags.FOOT_ARMOR).addTag(ItemTags.LEG_ARMOR).addTag(ItemTags.CHEST_ARMOR).addTag(ItemTags.HEAD_ARMOR);
       this.tag(ItemTags.TRIM_MATERIALS)
-         .addAll(
-            registries.lookupOrThrow(Registries.ITEM)
-               .listElements()
-               .filter(item -> item.value().components().has(DataComponents.PROVIDES_TRIM_MATERIAL))
-               .sorted(Comparator.comparing(holder -> holder.key().identifier()))
-               .map(Holder.Reference::value)
+         .add(
+            Items.AMETHYST_SHARD,
+            Items.COPPER_INGOT,
+            Items.DIAMOND,
+            Items.EMERALD,
+            Items.GOLD_INGOT,
+            Items.IRON_INGOT,
+            Items.LAPIS_LAZULI,
+            Items.NETHERITE_INGOT,
+            Items.QUARTZ,
+            Items.REDSTONE,
+            Items.RESIN_BRICK
          );
       this.tag(ItemTags.BOOKSHELF_BOOKS).add(Items.BOOK, Items.WRITTEN_BOOK, Items.ENCHANTED_BOOK, Items.WRITABLE_BOOK, Items.KNOWLEDGE_BOOK);
       this.tag(ItemTags.NOTE_BLOCK_TOP_INSTRUMENTS)
@@ -403,7 +407,26 @@ public class VanillaItemTagsProvider extends IntrinsicHolderTagsProvider<Item> {
          .add(Items.CARVED_PUMPKIN);
       this.tag(ItemTags.CROSSBOW_ENCHANTABLE).add(Items.CROSSBOW);
       this.tag(ItemTags.VANISHING_ENCHANTABLE).addTag(ItemTags.DURABILITY_ENCHANTABLE).add(Items.COMPASS).add(Items.CARVED_PUMPKIN).addTag(ItemTags.SKULLS);
-      this.tag(ItemTags.DYEABLE)
+      this.tag(ItemTags.DYES)
+         .add(
+            Items.WHITE_DYE,
+            Items.ORANGE_DYE,
+            Items.MAGENTA_DYE,
+            Items.LIGHT_BLUE_DYE,
+            Items.YELLOW_DYE,
+            Items.LIME_DYE,
+            Items.PINK_DYE,
+            Items.GRAY_DYE,
+            Items.LIGHT_GRAY_DYE,
+            Items.CYAN_DYE,
+            Items.PURPLE_DYE,
+            Items.BLUE_DYE,
+            Items.BROWN_DYE,
+            Items.GREEN_DYE,
+            Items.RED_DYE,
+            Items.BLACK_DYE
+         );
+      this.tag(ItemTags.CAULDRON_CAN_REMOVE_DYE)
          .add(Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS, Items.LEATHER_BOOTS, Items.LEATHER_HORSE_ARMOR, Items.WOLF_ARMOR);
       this.tag(ItemTags.FURNACE_MINECART_FUEL).add(Items.COAL, Items.CHARCOAL);
       this.tag(ItemTags.MEAT)
@@ -478,6 +501,23 @@ public class VanillaItemTagsProvider extends IntrinsicHolderTagsProvider<Item> {
       this.tag(ItemTags.MAP_INVISIBILITY_EQUIPMENT).add(Items.CARVED_PUMPKIN);
       this.tag(ItemTags.GAZE_DISGUISE_EQUIPMENT).add(Items.CARVED_PUMPKIN);
       this.tag(ItemTags.SHEARABLE_FROM_COPPER_GOLEM).add(Items.POPPY);
+      this.tag(ItemTags.METAL_NUGGETS).add(Items.COPPER_NUGGET, Items.IRON_NUGGET, Items.GOLD_NUGGET);
+      this.tag(ItemTags.LOOM_DYES).addTag(ItemTags.DYES);
+      this.tag(ItemTags.LOOM_PATTERNS)
+         .add(
+            Items.FLOWER_BANNER_PATTERN,
+            Items.CREEPER_BANNER_PATTERN,
+            Items.SKULL_BANNER_PATTERN,
+            Items.MOJANG_BANNER_PATTERN,
+            Items.GLOBE_BANNER_PATTERN,
+            Items.PIGLIN_BANNER_PATTERN,
+            Items.FLOW_BANNER_PATTERN,
+            Items.GUSTER_BANNER_PATTERN,
+            Items.FIELD_MASONED_BANNER_PATTERN,
+            Items.BORDURE_INDENTED_BANNER_PATTERN
+         );
+      this.tag(ItemTags.CAT_COLLAR_DYES).addTag(ItemTags.DYES);
+      this.tag(ItemTags.WOLF_COLLAR_DYES).addTag(ItemTags.DYES);
    }
 
    private static class BlockToItemConverter implements TagAppender<Block, Block> {

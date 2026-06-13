@@ -41,7 +41,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public class CeilingHangingSignBlock extends SignBlock {
+public class CeilingHangingSignBlock extends SignBlock implements HangingSignBlock {
    public static final MapCodec<CeilingHangingSignBlock> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(WoodType.CODEC.fieldOf("wood_type").forGetter(SignBlock::type), propertiesCodec()).apply(i, CeilingHangingSignBlock::new)
    );
@@ -60,7 +60,7 @@ public class CeilingHangingSignBlock extends SignBlock {
 
    public CeilingHangingSignBlock(final WoodType type, final BlockBehaviour.Properties properties) {
       super(type, properties.sound(type.hangingSignSoundType()));
-      this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 0).setValue(ATTACHED, false).setValue(WATERLOGGED, false));
+      this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 8).setValue(ATTACHED, false).setValue(WATERLOGGED, false));
    }
 
    @Override
@@ -121,7 +121,7 @@ public class CeilingHangingSignBlock extends SignBlock {
       return this.defaultBlockState()
          .setValue(ATTACHED, attachedToMiddle)
          .setValue(ROTATION, rotationSegment)
-         .setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+         .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
    }
 
    @Override
@@ -178,5 +178,14 @@ public class CeilingHangingSignBlock extends SignBlock {
    @Override
    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
       return createTickerHelper(type, BlockEntityType.HANGING_SIGN, SignBlockEntity::tick);
+   }
+
+   @Override
+   public HangingSignBlock.Attachment attachmentPoint(final BlockState state) {
+      return getAttachmentPoint(state.getValue(BlockStateProperties.ATTACHED));
+   }
+
+   public static HangingSignBlock.Attachment getAttachmentPoint(final boolean isAttached) {
+      return isAttached ? HangingSignBlock.Attachment.CEILING_MIDDLE : HangingSignBlock.Attachment.CEILING;
    }
 }

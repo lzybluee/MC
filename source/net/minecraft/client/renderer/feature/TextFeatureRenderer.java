@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 
 public class TextFeatureRenderer {
-   public void render(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
+   public void renderTranslucent(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
       Font font = Minecraft.getInstance().font;
 
       for (SubmitNodeStorage.TextSubmit textSubmit : nodeCollection.getTextSubmits()) {

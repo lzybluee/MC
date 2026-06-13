@@ -6,9 +6,12 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.RandomSource;
 
-public class BiasedToBottomInt extends IntProvider {
-   public static final MapCodec<BiasedToBottomInt> CODEC = RecordCodecBuilder.mapCodec(
-         i -> i.group(Codec.INT.fieldOf("min_inclusive").forGetter(u -> u.minInclusive), Codec.INT.fieldOf("max_inclusive").forGetter(u -> u.maxInclusive))
+public record BiasedToBottomInt(int minInclusive, int maxInclusive) implements IntProvider {
+   public static final MapCodec<BiasedToBottomInt> MAP_CODEC = RecordCodecBuilder.mapCodec(
+         i -> i.group(
+               Codec.INT.fieldOf("min_inclusive").forGetter(BiasedToBottomInt::minInclusive),
+               Codec.INT.fieldOf("max_inclusive").forGetter(BiasedToBottomInt::maxInclusive)
+            )
             .apply(i, BiasedToBottomInt::new)
       )
       .validate(
@@ -16,13 +19,6 @@ public class BiasedToBottomInt extends IntProvider {
             ? DataResult.error(() -> "Max must be at least min, min_inclusive: " + u.minInclusive + ", max_inclusive: " + u.maxInclusive)
             : DataResult.success(u)
       );
-   private final int minInclusive;
-   private final int maxInclusive;
-
-   private BiasedToBottomInt(final int minInclusive, final int maxInclusive) {
-      this.minInclusive = minInclusive;
-      this.maxInclusive = maxInclusive;
-   }
 
    public static BiasedToBottomInt of(final int minInclusive, final int maxInclusive) {
       return new BiasedToBottomInt(minInclusive, maxInclusive);
@@ -34,18 +30,8 @@ public class BiasedToBottomInt extends IntProvider {
    }
 
    @Override
-   public int getMinValue() {
-      return this.minInclusive;
-   }
-
-   @Override
-   public int getMaxValue() {
-      return this.maxInclusive;
-   }
-
-   @Override
-   public IntProviderType<?> getType() {
-      return IntProviderType.BIASED_TO_BOTTOM;
+   public MapCodec<BiasedToBottomInt> codec() {
+      return MAP_CODEC;
    }
 
    @Override

@@ -66,7 +66,7 @@ public class CampfireBlockEntity extends BlockEntity implements Clearable {
             entity.cookingProgress[slot]++;
             if (entity.cookingProgress[slot] >= entity.cookingTime[slot]) {
                SingleRecipeInput input = new SingleRecipeInput(itemStack);
-               ItemStack result = recipeCache.getRecipeFor(input, level).map(r -> r.value().assemble(input, level.registryAccess())).orElse(itemStack);
+               ItemStack result = recipeCache.getRecipeFor(input, level).map(r -> r.value().assemble(input)).orElse(itemStack);
                if (result.isItemEnabled(level.enabledFeatures())) {
                   Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), result);
                   entity.items.set(slot, ItemStack.EMPTY);
@@ -98,7 +98,7 @@ public class CampfireBlockEntity extends BlockEntity implements Clearable {
    }
 
    public static void particleTick(final Level level, final BlockPos pos, final BlockState state, final CampfireBlockEntity entity) {
-      RandomSource random = level.random;
+      RandomSource random = level.getRandom();
       if (random.nextFloat() < 0.11F) {
          for (int i = 0; i < random.nextInt(2) + 2; i++) {
             CampfireBlock.makeParticles(level, pos, state.getValue(CampfireBlock.SIGNAL_FIRE), false);

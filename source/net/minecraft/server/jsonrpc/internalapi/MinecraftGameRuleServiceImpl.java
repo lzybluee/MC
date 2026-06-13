@@ -15,7 +15,7 @@ public class MinecraftGameRuleServiceImpl implements MinecraftGameRuleService {
 
    public MinecraftGameRuleServiceImpl(final DedicatedServer server, final JsonRpcLogger jsonrpcLogger) {
       this.server = server;
-      this.gameRules = server.getWorldData().getGameRules();
+      this.gameRules = server.getGameRules();
       this.jsonrpcLogger = jsonrpcLogger;
    }
 

@@ -181,9 +181,9 @@ public abstract class Particle {
       this.z = (aabb.minZ + aabb.maxZ) / 2.0;
    }
 
-   protected int getLightColor(final float a) {
+   protected int getLightCoords(final float a) {
       BlockPos pos = BlockPos.containing(this.x, this.y, this.z);
-      return this.level.hasChunkAt(pos) ? LevelRenderer.getLightColor(this.level, pos) : 0;
+      return this.level.hasChunkAt(pos) ? LevelRenderer.getLightCoords(this.level, pos) : 15728640;
    }
 
    public boolean isAlive() {

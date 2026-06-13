@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
@@ -14,7 +15,7 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
@@ -35,7 +36,7 @@ import net.minecraft.world.entity.ai.behavior.StartAttacking;
 import net.minecraft.world.entity.ai.behavior.StopAttackingIfTargetInvalid;
 import net.minecraft.world.entity.ai.behavior.TryFindLand;
 import net.minecraft.world.entity.ai.behavior.TryFindLandNearWater;
-import net.minecraft.world.entity.ai.behavior.TryLaySpawnOnWaterNearLand;
+import net.minecraft.world.entity.ai.behavior.TryLaySpawnOnFluidNearLand;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
@@ -63,21 +64,12 @@ public class FrogAi {
       body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, TIME_BETWEEN_LONG_JUMPS.sample(random));
    }
 
-   protected static Brain<?> makeBrain(final Brain<Frog> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initSwimActivity(brain);
-      initLaySpawnActivity(brain);
-      initTongueActivity(brain);
-      initJumpActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Frog>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initSwimActivity(), initLaySpawnActivity(), initTongueActivity(), initJumpActivity());
    }
 
-   private static void initCoreActivity(final Brain<Frog> brain) {
-      brain.addActivity(
+   private static ActivityData<Frog> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -90,8 +82,8 @@ public class FrogAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Frog> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Frog> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
@@ -118,8 +110,8 @@ public class FrogAi {
       );
    }
 
-   private static void initSwimActivity(final Brain<Frog> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Frog> initSwimActivity() {
+      return ActivityData.create(
          Activity.SWIM,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
@@ -148,14 +140,14 @@ public class FrogAi {
       );
    }
 
-   private static void initLaySpawnActivity(final Brain<Frog> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Frog> initLaySpawnActivity() {
+      return ActivityData.create(
          Activity.LAY_SPAWN,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
             Pair.of(1, StartAttacking.create((level, body) -> canAttack(body), (level, body) -> body.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))),
             Pair.of(2, TryFindLandNearWater.create(8, 1.0F)),
-            Pair.of(3, TryLaySpawnOnWaterNearLand.create(Blocks.FROGSPAWN)),
+            Pair.of(3, TryLaySpawnOnFluidNearLand.create(Blocks.FROGSPAWN)),
             Pair.of(
                4,
                new RunOne(
@@ -174,8 +166,8 @@ public class FrogAi {
       );
    }
 
-   private static void initJumpActivity(final Brain<Frog> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Frog> initJumpActivity() {
+      return ActivityData.create(
          Activity.LONG_JUMP,
          ImmutableList.of(
             Pair.of(0, new LongJumpMidJump(TIME_BETWEEN_LONG_JUMPS, SoundEvents.FROG_STEP)),
@@ -186,7 +178,7 @@ public class FrogAi {
                   2,
                   4,
                   3.5714288F,
-                  frog -> SoundEvents.FROG_LONG_JUMP,
+                  var0 -> SoundEvents.FROG_LONG_JUMP,
                   BlockTags.FROG_PREFER_JUMP_TO,
                   0.5F,
                   FrogAi::isAcceptableLandingSpot
@@ -202,8 +194,8 @@ public class FrogAi {
       );
    }
 
-   private static void initTongueActivity(final Brain<Frog> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   private static ActivityData<Frog> initTongueActivity() {
+      return ActivityData.create(
          Activity.TONGUE,
          0,
          ImmutableList.of(StopAttackingIfTargetInvalid.create(), new ShootTongue(SoundEvents.FROG_TONGUE, SoundEvents.FROG_EAT)),
@@ -232,8 +224,8 @@ public class FrogAi {
       }
    }
 
-   private static boolean canAttack(final Frog e) {
-      return !BehaviorUtils.isBreeding(e);
+   private static boolean canAttack(final Mob mob) {
+      return !BehaviorUtils.isBreeding(mob);
    }
 
    public static void updateActivity(final Frog body) {

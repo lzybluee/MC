@@ -74,13 +74,13 @@ public class TurtleEggBlock extends Block {
       if (state.is(Blocks.TURTLE_EGG)
          && level instanceof ServerLevel serverLevel
          && this.canDestroyEgg(serverLevel, entity)
-         && level.random.nextInt(randomness) == 0) {
+         && level.getRandom().nextInt(randomness) == 0) {
          this.decreaseEggs(serverLevel, pos, state);
       }
    }
 
    private void decreaseEggs(final Level level, final BlockPos pos, final BlockState state) {
-      level.playSound(null, pos, SoundEvents.TURTLE_EGG_BREAK, SoundSource.BLOCKS, 0.7F, 0.9F + level.random.nextFloat() * 0.2F);
+      level.playSound(null, pos, SoundEvents.TURTLE_EGG_BREAK, SoundSource.BLOCKS, 0.7F, 0.9F + level.getRandom().nextFloat() * 0.2F);
       int numberOfEggs = state.getValue(EGGS);
       if (numberOfEggs <= 1) {
          level.destroyBlock(pos, false);
@@ -135,7 +135,7 @@ public class TurtleEggBlock extends Block {
 
    private boolean shouldUpdateHatchLevel(final Level level, final BlockPos pos) {
       float chance = level.environmentAttributes().getValue(EnvironmentAttributes.TURTLE_EGG_HATCH_CHANCE, pos);
-      return chance > 0.0F && level.random.nextFloat() < chance;
+      return chance > 0.0F && level.getRandom().nextFloat() < chance;
    }
 
    @Override

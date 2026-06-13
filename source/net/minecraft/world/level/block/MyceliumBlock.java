@@ -3,12 +3,13 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.references.BlockIds;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class MyceliumBlock extends SpreadingSnowyDirtBlock {
+public class MyceliumBlock extends SpreadingSnowyBlock {
    public static final MapCodec<MyceliumBlock> CODEC = simpleCodec(MyceliumBlock::new);
 
    @Override
@@ -17,7 +18,7 @@ public class MyceliumBlock extends SpreadingSnowyDirtBlock {
    }
 
    public MyceliumBlock(final BlockBehaviour.Properties properties) {
-      super(properties);
+      super(properties, BlockIds.DIRT);
    }
 
    @Override

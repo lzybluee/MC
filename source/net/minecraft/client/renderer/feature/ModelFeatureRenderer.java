@@ -25,14 +25,23 @@ import org.joml.Vector3f;
 public class ModelFeatureRenderer {
    private final PoseStack poseStack = new PoseStack();
 
-   public void render(
+   public void renderSolid(
       final SubmitNodeCollection nodeCollection,
       final MultiBufferSource.BufferSource bufferSource,
       final OutlineBufferSource outlineBufferSource,
       final MultiBufferSource.BufferSource crumblingBufferSource
    ) {
       ModelFeatureRenderer.Storage storage = nodeCollection.getModelSubmits();
-      this.renderBatch(bufferSource, outlineBufferSource, storage.opaqueModelSubmits, crumblingBufferSource);
+      this.renderBatch(bufferSource, outlineBufferSource, storage.solidModelSubmits, crumblingBufferSource);
+   }
+
+   public void renderTranslucent(
+      final SubmitNodeCollection nodeCollection,
+      final MultiBufferSource.BufferSource bufferSource,
+      final OutlineBufferSource outlineBufferSource,
+      final MultiBufferSource.BufferSource crumblingBufferSource
+   ) {
+      ModelFeatureRenderer.Storage storage = nodeCollection.getModelSubmits();
       storage.translucentModelSubmits.sort(Comparator.comparingDouble(submit -> -submit.position().lengthSquared()));
       this.renderTranslucents(bufferSource, outlineBufferSource, storage.translucentModelSubmits, crumblingBufferSource);
    }
@@ -117,13 +126,13 @@ public class ModelFeatureRenderer {
    }
 
    public static class Storage {
-      private final Map<RenderType, List<SubmitNodeStorage.ModelSubmit<?>>> opaqueModelSubmits = new HashMap<>();
+      private final Map<RenderType, List<SubmitNodeStorage.ModelSubmit<?>>> solidModelSubmits = new HashMap<>();
       private final List<SubmitNodeStorage.TranslucentModelSubmit<?>> translucentModelSubmits = new ArrayList<>();
       private final Set<RenderType> usedModelSubmitBuckets = new ObjectOpenHashSet();
 
       public void add(final RenderType renderType, final SubmitNodeStorage.ModelSubmit<?> modelSubmit) {
-         if (renderType.pipeline().getBlendFunction().isEmpty()) {
-            this.opaqueModelSubmits.computeIfAbsent(renderType, ignored -> new ArrayList<>()).add(modelSubmit);
+         if (!renderType.hasBlending()) {
+            this.solidModelSubmits.computeIfAbsent(renderType, ignored -> new ArrayList<>()).add(modelSubmit);
          } else {
             Vector3f position = modelSubmit.pose().pose().transformPosition(new Vector3f());
             this.translucentModelSubmits.add(new SubmitNodeStorage.TranslucentModelSubmit<>(modelSubmit, renderType, position));
@@ -133,7 +142,7 @@ public class ModelFeatureRenderer {
       public void clear() {
          this.translucentModelSubmits.clear();
 
-         for (Entry<RenderType, List<SubmitNodeStorage.ModelSubmit<?>>> bucketEntry : this.opaqueModelSubmits.entrySet()) {
+         for (Entry<RenderType, List<SubmitNodeStorage.ModelSubmit<?>>> bucketEntry : this.solidModelSubmits.entrySet()) {
             List<SubmitNodeStorage.ModelSubmit<?>> bucket = bucketEntry.getValue();
             if (!bucket.isEmpty()) {
                this.usedModelSubmitBuckets.add(bucketEntry.getKey());
@@ -143,7 +152,7 @@ public class ModelFeatureRenderer {
       }
 
       public void endFrame() {
-         this.opaqueModelSubmits.keySet().removeIf(renderType -> !this.usedModelSubmitBuckets.contains(renderType));
+         this.solidModelSubmits.keySet().removeIf(renderType -> !this.usedModelSubmitBuckets.contains(renderType));
          this.usedModelSubmitBuckets.clear();
       }
    }

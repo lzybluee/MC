@@ -5,7 +5,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.jsonrpc.internalapi.MinecraftApi;
 import net.minecraft.util.StringRepresentable;
@@ -21,7 +20,7 @@ public class GameRulesService {
 
    private static <T> void addGameRule(final MinecraftApi minecraftApi, final GameRule<T> gameRule, final List<GameRulesService.GameRuleUpdate<?>> rules) {
       T value = minecraftApi.gameRuleService().getRuleValue(gameRule);
-      rules.add(getTypedRule(minecraftApi, gameRule, Objects.requireNonNull(value)));
+      rules.add(getTypedRule(minecraftApi, gameRule, value));
    }
 
    public static <T> GameRulesService.GameRuleUpdate<T> getTypedRule(final MinecraftApi minecraftApi, final GameRule<T> gameRule, final T value) {

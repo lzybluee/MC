@@ -9,7 +9,6 @@ public class HumanoidRenderState extends ArmedEntityRenderState {
    public float speedValue = 1.0F;
    public float maxCrossbowChargeDuration;
    public float ticksUsingItem;
-   public HumanoidArm attackArm = HumanoidArm.RIGHT;
    public InteractionHand useItemHand = InteractionHand.MAIN_HAND;
    public boolean isCrouching;
    public boolean isFallFlying;

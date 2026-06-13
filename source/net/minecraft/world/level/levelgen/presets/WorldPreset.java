@@ -30,7 +30,7 @@ public class WorldPreset {
 
    private ImmutableMap<ResourceKey<LevelStem>, LevelStem> dimensionsInOrder() {
       Builder<ResourceKey<LevelStem>, LevelStem> builder = ImmutableMap.builder();
-      WorldDimensions.keysInOrder(this.dimensions.keySet().stream()).forEach(key -> {
+      WorldDimensions.keysInOrder(this.dimensions.keySet()).forEach(key -> {
          LevelStem levelStem = this.dimensions.get(key);
          if (levelStem != null) {
             builder.put(key, levelStem);

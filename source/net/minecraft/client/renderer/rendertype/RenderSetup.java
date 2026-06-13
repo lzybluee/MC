@@ -95,9 +95,7 @@ public final class RenderSetup {
       if (this.useLightmap) {
          result.put(
             "Sampler2",
-            new RenderSetup.TextureAndSampler(
-               Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-            )
+            new RenderSetup.TextureAndSampler(Minecraft.getInstance().gameRenderer.lightmap(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
          );
       }
 

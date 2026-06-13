@@ -91,7 +91,7 @@ public class SessionSearchTrees {
          () -> {
             CompletableFuture<?> previous = this.creativeByTagSearch;
             this.creativeByTagSearch = CompletableFuture.supplyAsync(
-               () -> new IdSearchTree<>(itemStack -> itemStack.getTags().map(TagKey::location), items), Util.backgroundExecutor()
+               () -> new IdSearchTree<>(itemStack -> itemStack.tags().map(TagKey::location), items), Util.backgroundExecutor()
             );
             previous.cancel(true);
          }
@@ -112,7 +112,7 @@ public class SessionSearchTrees {
             this.creativeByNameSearch = CompletableFuture.supplyAsync(
                () -> new FullTextSearchTree<>(
                   itemStack -> getTooltipLines(Stream.of(itemStack), tooltipContext, tooltipFlag),
-                  itemStack -> itemStack.getItemHolder().unwrapKey().map(ResourceKey::identifier).stream(),
+                  itemStack -> itemStack.typeHolder().unwrapKey().map(ResourceKey::identifier).stream(),
                   itemStacks
                ),
                Util.backgroundExecutor()

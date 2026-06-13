@@ -1,8 +1,8 @@
 package net.minecraft.world.entity.animal.armadillo;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Dynamic;
 import io.netty.buffer.ByteBuf;
+import java.util.List;
 import java.util.function.IntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -37,6 +37,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -56,6 +57,12 @@ public class Armadillo extends Animal {
    public static final int SCARE_CHECK_INTERVAL = 80;
    private static final double SCARE_DISTANCE_HORIZONTAL = 7.0;
    private static final double SCARE_DISTANCE_VERTICAL = 2.0;
+   private static final Brain.Provider<Armadillo> BRAIN_PROVIDER = Brain.provider(
+      List.of(
+         SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT, SensorType.ARMADILLO_SCARE_DETECTED
+      ),
+      var0 -> ArmadilloAi.getActivities()
+   );
    private static final EntityDataAccessor<Armadillo.ArmadilloState> ARMADILLO_STATE = SynchedEntityData.defineId(
       Armadillo.class, EntityDataSerializers.ARMADILLO_STATE
    );
@@ -117,20 +124,20 @@ public class Armadillo extends Animal {
    }
 
    @Override
-   protected Brain.Provider<Armadillo> brainProvider() {
-      return ArmadilloAi.brainProvider();
+   protected Brain<Armadillo> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return ArmadilloAi.makeBrain(this.brainProvider().makeBrain(input));
+   public Brain<Armadillo> getBrain() {
+      return super.getBrain();
    }
 
    @Override
    protected void customServerAiStep(final ServerLevel level) {
       ProfilerFiller profiler = Profiler.get();
       profiler.push("armadilloBrain");
-      ((Brain<Armadillo>)this.brain).tick(level, this);
+      this.getBrain().tick(level, this);
       profiler.pop();
       profiler.push("armadilloActivityUpdate");
       ArmadilloAi.updateActivity(this);
@@ -228,7 +235,7 @@ public class Armadillo extends Animal {
    public boolean isScaredBy(final LivingEntity livingEntity) {
       if (!this.getBoundingBox().inflate(7.0, 2.0, 7.0).intersects(livingEntity.getBoundingBox())) {
          return false;
-      } else if (livingEntity.getType().is(EntityTypeTags.UNDEAD)) {
+      } else if (livingEntity.is(EntityTypeTags.UNDEAD)) {
          return true;
       } else if (this.getLastHurtByMob() == livingEntity) {
          return true;

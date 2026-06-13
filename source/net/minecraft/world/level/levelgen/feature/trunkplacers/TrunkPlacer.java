@@ -11,10 +11,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.LevelSimulatedReader;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
@@ -45,7 +43,7 @@ public abstract class TrunkPlacer {
    protected abstract TrunkPlacerType<?> type();
 
    public abstract List<FoliagePlacer.FoliageAttachment> placeTrunk(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final int treeHeight,
@@ -53,28 +51,29 @@ public abstract class TrunkPlacer {
       final TreeConfiguration config
    );
 
+   public int getBaseHeight() {
+      return this.baseHeight;
+   }
+
    public int getTreeHeight(final RandomSource random) {
       return this.baseHeight + random.nextInt(this.heightRandA + 1) + random.nextInt(this.heightRandB + 1);
    }
 
-   private static boolean isDirt(final LevelSimulatedReader level, final BlockPos pos) {
-      return level.isStateAtPosition(pos, state -> Feature.isDirt(state) && !state.is(Blocks.GRASS_BLOCK) && !state.is(Blocks.MYCELIUM));
-   }
-
-   protected static void setDirtAt(
-      final LevelSimulatedReader level,
+   protected static void placeBelowTrunkBlock(
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final BlockPos pos,
       final TreeConfiguration config
    ) {
-      if (config.forceDirt || !isDirt(level, pos)) {
-         trunkSetter.accept(pos, config.dirtProvider.getState(random, pos));
+      BlockState blockBelowTrunk = config.belowTrunkProvider.getOptionalState(level, random, pos);
+      if (blockBelowTrunk != null) {
+         trunkSetter.accept(pos, blockBelowTrunk);
       }
    }
 
    protected boolean placeLog(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final BlockPos pos,
@@ -84,7 +83,7 @@ public abstract class TrunkPlacer {
    }
 
    protected boolean placeLog(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final BlockPos pos,
@@ -92,7 +91,7 @@ public abstract class TrunkPlacer {
       final Function<BlockState, BlockState> stateModifier
    ) {
       if (this.validTreePos(level, pos)) {
-         trunkSetter.accept(pos, stateModifier.apply(config.trunkProvider.getState(random, pos)));
+         trunkSetter.accept(pos, stateModifier.apply(config.trunkProvider.getState(level, random, pos)));
          return true;
       } else {
          return false;
@@ -100,7 +99,7 @@ public abstract class TrunkPlacer {
    }
 
    protected void placeLogIfFree(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final BlockPos.MutableBlockPos pos,
@@ -111,11 +110,11 @@ public abstract class TrunkPlacer {
       }
    }
 
-   protected boolean validTreePos(final LevelSimulatedReader level, final BlockPos pos) {
+   protected boolean validTreePos(final WorldGenLevel level, final BlockPos pos) {
       return TreeFeature.validTreePos(level, pos);
    }
 
-   public boolean isFree(final LevelSimulatedReader level, final BlockPos pos) {
+   public boolean isFree(final WorldGenLevel level, final BlockPos pos) {
       return this.validTreePos(level, pos) || level.isStateAtPosition(pos, state -> state.is(BlockTags.LOGS));
    }
 }

@@ -1,5 +1,7 @@
 package net.minecraft.world.item;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Block;
 
@@ -10,6 +12,6 @@ public class AirItem extends Item {
 
    @Override
    public Component getName(final ItemStack itemStack) {
-      return this.getName();
+      return itemStack.typeHolder().components().getOrDefault(DataComponents.ITEM_NAME, CommonComponents.EMPTY);
    }
 }

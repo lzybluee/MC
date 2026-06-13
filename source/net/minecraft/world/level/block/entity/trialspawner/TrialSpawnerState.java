@@ -63,6 +63,7 @@ public enum TrialSpawnerState implements StringRepresentable {
    TrialSpawnerState tickAndGetNext(final BlockPos spawnerPos, final TrialSpawner trialSpawner, final ServerLevel serverLevel) {
       TrialSpawnerStateData data = trialSpawner.getStateData();
       TrialSpawnerConfig config = trialSpawner.activeConfig();
+      RandomSource random = serverLevel.getRandom();
 
       return switch (this) {
          case INACTIVE -> data.getOrCreateDisplayEntity(trialSpawner, serverLevel, WAITING_FOR_PLAYERS) == null ? this : WAITING_FOR_PLAYERS;
@@ -70,7 +71,7 @@ public enum TrialSpawnerState implements StringRepresentable {
             if (!trialSpawner.canSpawnInLevel(serverLevel)) {
                data.resetStatistics();
                yield this;
-            } else if (!data.hasMobToSpawn(trialSpawner, serverLevel.random)) {
+            } else if (!data.hasMobToSpawn(trialSpawner, random)) {
                yield INACTIVE;
             } else {
                data.tryDetectPlayers(serverLevel, spawnerPos, trialSpawner);
@@ -81,7 +82,7 @@ public enum TrialSpawnerState implements StringRepresentable {
             if (!trialSpawner.canSpawnInLevel(serverLevel)) {
                data.resetStatistics();
                yield WAITING_FOR_PLAYERS;
-            } else if (!data.hasMobToSpawn(trialSpawner, serverLevel.random)) {
+            } else if (!data.hasMobToSpawn(trialSpawner, random)) {
                yield INACTIVE;
             } else {
                int additionalPlayers = data.countAdditionalPlayers(spawnerPos);
@@ -102,7 +103,7 @@ public enum TrialSpawnerState implements StringRepresentable {
                      data.currentMobs.add(entityId);
                      data.totalMobsSpawned++;
                      data.nextMobSpawnsAt = serverLevel.getGameTime() + config.ticksBetweenSpawn();
-                     config.spawnPotentialsDefinition().getRandom(serverLevel.getRandom()).ifPresent(entry -> {
+                     config.spawnPotentialsDefinition().getRandom(random).ifPresent(entry -> {
                         data.nextSpawnData = Optional.of(entry);
                         trialSpawner.markUpdated();
                      });
@@ -129,7 +130,7 @@ public enum TrialSpawnerState implements StringRepresentable {
                yield COOLDOWN;
             } else {
                if (data.ejectingLootTable.isEmpty()) {
-                  data.ejectingLootTable = config.lootTablesToEject().getRandom(serverLevel.getRandom());
+                  data.ejectingLootTable = config.lootTablesToEject().getRandom(random);
                }
 
                data.ejectingLootTable.ifPresent(lootTable -> trialSpawner.ejectReward(serverLevel, spawnerPos, (ResourceKey<LootTable>)lootTable));
@@ -157,7 +158,7 @@ public enum TrialSpawnerState implements StringRepresentable {
    private void spawnOminousOminousItemSpawner(final ServerLevel level, final BlockPos trialSpawnerPos, final TrialSpawner trialSpawner) {
       TrialSpawnerStateData data = trialSpawner.getStateData();
       TrialSpawnerConfig config = trialSpawner.activeConfig();
-      ItemStack itemToDispense = data.getDispensingItems(level, config, trialSpawnerPos).getRandom(level.random).orElse(ItemStack.EMPTY);
+      ItemStack itemToDispense = data.getDispensingItems(level, config, trialSpawnerPos).getRandom(level.getRandom()).orElse(ItemStack.EMPTY);
       if (!itemToDispense.isEmpty()) {
          if (this.timeToSpawnItemSpawner(level, data)) {
             calculatePositionToSpawnSpawner(level, trialSpawnerPos, trialSpawner, data).ifPresent(pos -> {
@@ -196,7 +197,7 @@ public enum TrialSpawnerState implements StringRepresentable {
 
    private static Optional<Vec3> calculatePositionAbove(final Entity entityToSpawnItemAbove, final ServerLevel level) {
       Vec3 entityPos = entityToSpawnItemAbove.position();
-      Vec3 trySpawnPos = entityPos.relative(Direction.UP, entityToSpawnItemAbove.getBbHeight() + 2.0F + level.random.nextInt(4));
+      Vec3 trySpawnPos = entityPos.relative(Direction.UP, entityToSpawnItemAbove.getBbHeight() + 2.0F + level.getRandom().nextInt(4));
       BlockHitResult hitResult = level.clip(new ClipContext(entityPos, trySpawnPos, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, CollisionContext.empty()));
       Vec3 down = hitResult.getBlockPos().getCenter().relative(Direction.DOWN, 1.0);
       BlockPos blockPosDown = BlockPos.containing(down);
@@ -210,11 +211,12 @@ public enum TrialSpawnerState implements StringRepresentable {
          .map(level::getEntity)
          .filter(Objects::nonNull)
          .filter(target -> target.isAlive() && target.distanceToSqr(spawnerPos.getCenter()) <= Mth.square(trialSpawner.getRequiredPlayerRange()));
-      List<? extends Entity> eligibleEntities = level.random.nextBoolean() ? nearbyMobs.toList() : nearbyPlayers;
+      RandomSource random = level.getRandom();
+      List<? extends Entity> eligibleEntities = random.nextBoolean() ? nearbyMobs.toList() : nearbyPlayers;
       if (eligibleEntities.isEmpty()) {
          return null;
       } else {
-         return eligibleEntities.size() == 1 ? eligibleEntities.getFirst() : Util.getRandom(eligibleEntities, level.random);
+         return eligibleEntities.size() == 1 ? eligibleEntities.getFirst() : Util.getRandom(eligibleEntities, random);
       }
    }
 

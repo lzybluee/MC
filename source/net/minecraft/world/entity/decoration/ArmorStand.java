@@ -33,6 +33,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -181,10 +183,10 @@ public class ArmorStand extends LivingEntity {
    }
 
    @Override
-   public InteractionResult interactAt(final Player player, final Vec3 location, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       ItemStack itemStack = player.getItemInHand(hand);
       if (this.isMarker() || itemStack.is(Items.NAME_TAG)) {
-         return InteractionResult.PASS;
+         return super.interact(player, hand, location);
       }
 
       if (player.isSpectator()) {
@@ -216,7 +218,7 @@ public class ArmorStand extends LivingEntity {
          }
       }
 
-      return InteractionResult.PASS;
+      return super.interact(player, hand, location);
    }
 
    private EquipmentSlot getClickedSlot(final Vec3 location) {
@@ -404,7 +406,7 @@ public class ArmorStand extends LivingEntity {
 
       for (EquipmentSlot slot : EquipmentSlot.VALUES) {
          ItemStack itemStack = this.equipment.set(slot, ItemStack.EMPTY);
-         if (!itemStack.isEmpty()) {
+         if (!itemStack.isEmpty() && !EnchantmentHelper.has(itemStack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP)) {
             Block.popResource(this.level(), this.blockPosition().above(), itemStack);
          }
       }

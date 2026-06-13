@@ -7,7 +7,6 @@ import com.mojang.realmsclient.exception.RealmsServiceException;
 import com.mojang.realmsclient.util.task.RealmCreationTask;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.layouts.CommonLayouts;
@@ -52,9 +51,7 @@ public class RealmsCreateRealmScreen extends RealmsScreen {
       LinearLayout bottomButtons = this.layout.addToFooter(LinearLayout.horizontal().spacing(10));
       bottomButtons.addChild(createButton);
       bottomButtons.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

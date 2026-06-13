@@ -125,7 +125,7 @@ public record Equippable(
    }
 
    public InteractionResult swapWithEquipmentSlot(final ItemStack inHand, final Player player) {
-      if (player.canUseSlot(this.slot) && this.canBeEquippedBy(player.getType())) {
+      if (player.canUseSlot(this.slot) && this.canBeEquippedBy(player.typeHolder())) {
          ItemStack inEquipmentSlot = player.getItemBySlot(this.slot);
          if ((!EnchantmentHelper.has(inEquipmentSlot, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE) || player.isCreative())
             && !ItemStack.isSameItemSameComponents(inHand, inEquipmentSlot)) {
@@ -171,8 +171,8 @@ public record Equippable(
       }
    }
 
-   public boolean canBeEquippedBy(final EntityType<?> type) {
-      return this.allowedEntities.isEmpty() || this.allowedEntities.get().contains(type.builtInRegistryHolder());
+   public boolean canBeEquippedBy(final Holder<EntityType<?>> type) {
+      return this.allowedEntities.isEmpty() || this.allowedEntities.get().contains(type);
    }
 
    public static class Builder {

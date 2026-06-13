@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -84,7 +85,7 @@ public class BrushableBlockEntity extends BlockEntity {
       return false;
    }
 
-   private void unpackLootTable(final ServerLevel level, final LivingEntity user, final ItemStack brush) {
+   private void unpackLootTable(final ServerLevel level, final LivingEntity user, final ItemInstance brush) {
       if (this.lootTable != null) {
          LootTable lootTable = level.getServer().reloadableRegistries().getLootTable(this.lootTable);
          if (user instanceof ServerPlayer serverPlayer) {
@@ -137,7 +138,7 @@ public class BrushableBlockEntity extends BlockEntity {
          double xo = dropPos.getX() + 0.5 * centerRange + halfSize;
          double yo = dropPos.getY() + 0.5 + EntityType.ITEM.getHeight() / 2.0F;
          double zo = dropPos.getZ() + 0.5 * centerRange + halfSize;
-         ItemEntity entity = new ItemEntity(level, xo, yo, zo, this.item.split(level.random.nextInt(21) + 10));
+         ItemEntity entity = new ItemEntity(level, xo, yo, zo, this.item.split(level.getRandom().nextInt(21) + 10));
          entity.setDeltaMovement(Vec3.ZERO);
          level.addFreshEntity(entity);
          this.item = ItemStack.EMPTY;

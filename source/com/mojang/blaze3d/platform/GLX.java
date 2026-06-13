@@ -1,21 +1,20 @@
 package com.mojang.blaze3d.platform;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
+import com.mojang.blaze3d.GLFWErrorCapture;
+import com.mojang.blaze3d.GLFWErrorScope;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
-import java.util.List;
 import java.util.Locale;
-import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
+import net.minecraft.SharedConstants;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.Version;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
@@ -39,26 +38,31 @@ public class GLX {
       return Version.getVersion();
    }
 
-   public static LongSupplier _initGlfw() {
+   public static LongSupplier _initGlfw(final BackendOptions options) {
       Window.checkGlfwError((errorx, description) -> {
          throw new IllegalStateException(String.format(Locale.ROOT, "GLFW error before init: [0x%X]%s", errorx, description));
       });
-      List<String> collectedErrors = Lists.newArrayList();
-      GLFWErrorCallback prevCallback = GLFW.glfwSetErrorCallback((errorx, descriptionPtr) -> {
-         String description = descriptionPtr == 0L ? "" : MemoryUtil.memUTF8(descriptionPtr);
-         collectedErrors.add(String.format(Locale.ROOT, "GLFW error during init: [0x%X]%s", errorx, description));
-      });
-      if (!GLFW.glfwInit()) {
-         throw new IllegalStateException("Failed to initialize GLFW, errors: " + Joiner.on(",").join(collectedErrors));
+      GLFWErrorCapture collectedErrors = new GLFWErrorCapture();
+
+      LongSupplier timeSource;
+      try (GLFWErrorScope var3 = new GLFWErrorScope(collectedErrors)) {
+         if (GLFW.glfwPlatformSupported(393219) && GLFW.glfwPlatformSupported(393220) && !SharedConstants.DEBUG_PREFER_WAYLAND) {
+            GLFW.glfwInitHint(327683, 393220);
+         }
+
+         if (!GLFW.glfwInit()) {
+            throw new IllegalStateException("Failed to initialize GLFW, errors: " + Joiner.on(",").join(collectedErrors));
+         }
+
+         timeSource = () -> (long)(GLFW.glfwGetTime() * 1.0E9);
+         GLFW.glfwDefaultWindowHints();
+         GLFW.glfwWindowHint(131088, glfwBool(!options.exclusiveFullScreen()));
       }
 
-      LongSupplier timeSource = () -> (long)(GLFW.glfwGetTime() * 1.0E9);
-
-      for (String error : collectedErrors) {
+      for (GLFWErrorCapture.Error error : collectedErrors) {
          LOGGER.error("GLFW error collected during initialization: {}", error);
       }
 
-      RenderSystem.setErrorCallback(prevCallback);
       return timeSource;
    }
 
@@ -92,8 +96,7 @@ public class GLX {
       return factory.get();
    }
 
-   public static <T> T make(final T t, final Consumer<T> consumer) {
-      consumer.accept(t);
-      return t;
+   public static int glfwBool(final boolean value) {
+      return value ? 1 : 0;
    }
 }

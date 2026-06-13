@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -42,6 +41,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.effects.DamageImmunity;
 import net.minecraft.world.item.enchantment.effects.EnchantmentAttributeEffect;
@@ -63,7 +63,7 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       i -> i.group(
             ComponentSerialization.CODEC.fieldOf("description").forGetter(Enchantment::description),
             Enchantment.EnchantmentDefinition.CODEC.forGetter(Enchantment::definition),
-            RegistryCodecs.homogeneousList(Registries.ENCHANTMENT).optionalFieldOf("exclusive_set", HolderSet.direct()).forGetter(Enchantment::exclusiveSet),
+            RegistryCodecs.homogeneousList(Registries.ENCHANTMENT).optionalFieldOf("exclusive_set", HolderSet.empty()).forGetter(Enchantment::exclusiveSet),
             EnchantmentEffectComponents.CODEC.optionalFieldOf("effects", DataComponentMap.EMPTY).forGetter(Enchantment::effects)
          )
          .apply(i, Enchantment::new)
@@ -184,7 +184,7 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
    }
 
    public boolean canEnchant(final ItemStack itemStack) {
-      return this.definition.supportedItems().contains(itemStack.getItemHolder());
+      return this.definition.supportedItems().contains(itemStack.typeHolder());
    }
 
    public <T> List<T> getEffects(final DataComponentType<List<T>> type) {
@@ -211,13 +211,12 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       final DamageSource source,
       final MutableFloat protection
    ) {
-      LootContext context = damageContext(serverLevel, enchantmentLevel, victim, source);
-
-      for (ConditionalEffect<EnchantmentValueEffect> conditionalEffect : this.getEffects(EnchantmentEffectComponents.DAMAGE_PROTECTION)) {
-         if (conditionalEffect.matches(context)) {
-            protection.setValue(conditionalEffect.effect().process(enchantmentLevel, victim.getRandom(), protection.floatValue()));
-         }
-      }
+      applyEffects(
+         this.getEffects(EnchantmentEffectComponents.DAMAGE_PROTECTION),
+         damageContext(serverLevel, enchantmentLevel, victim, source),
+         protection,
+         (e, v) -> e.process(enchantmentLevel, victim.getRandom(), v)
+      );
    }
 
    public void modifyDurabilityChange(final ServerLevel serverLevel, final int enchantmentLevel, final ItemStack itemStack, final MutableFloat change) {
@@ -349,7 +348,7 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       }
    }
 
-   public void doLunge(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity user) {
+   public void doPostPiercingAttack(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity user) {
       applyEffects(
          this.getEffects(EnchantmentEffectComponents.POST_PIERCING_ATTACK),
          entityContext(serverLevel, enchantmentLevel, user, user.position()),
@@ -417,13 +416,14 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       final DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> effectType,
       final ServerLevel serverLevel,
       final int enchantmentLevel,
-      final ItemStack itemStack,
+      final ItemInstance itemStack,
       final MutableFloat value
    ) {
       applyEffects(
          this.getEffects(effectType),
          itemContext(serverLevel, enchantmentLevel, itemStack),
-         e -> value.setValue(e.process(enchantmentLevel, serverLevel.getRandom(), value.floatValue()))
+         value,
+         (e, v) -> e.process(enchantmentLevel, serverLevel.getRandom(), v)
       );
    }
 
@@ -438,7 +438,8 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       applyEffects(
          this.getEffects(effectType),
          entityContext(serverLevel, enchantmentLevel, entity, entity.position()),
-         e -> value.setValue(e.process(enchantmentLevel, entity.getRandom(), value.floatValue()))
+         value,
+         (e, v) -> e.process(enchantmentLevel, entity.getRandom(), v)
       );
    }
 
@@ -454,7 +455,8 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       applyEffects(
          this.getEffects(effectType),
          damageContext(serverLevel, enchantmentLevel, victim, damageSource),
-         e -> value.setValue(e.process(enchantmentLevel, victim.getRandom(), value.floatValue()))
+         value,
+         (e, v) -> e.process(enchantmentLevel, victim.getRandom(), v)
       );
    }
 
@@ -470,7 +472,7 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       return new LootContext.Builder(params).create(Optional.empty());
    }
 
-   private static LootContext itemContext(final ServerLevel serverLevel, final int enchantmentLevel, final ItemStack itemStack) {
+   private static LootContext itemContext(final ServerLevel serverLevel, final int enchantmentLevel, final ItemInstance itemStack) {
       LootParams params = new LootParams.Builder(serverLevel)
          .withParameter(LootContextParams.TOOL, itemStack)
          .withParameter(LootContextParams.ENCHANTMENT_LEVEL, enchantmentLevel)
@@ -509,12 +511,18 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
       return new LootContext.Builder(params).create(Optional.empty());
    }
 
-   private static <T> void applyEffects(final List<ConditionalEffect<T>> effects, final LootContext filterData, final Consumer<T> action) {
+   private static <T> void applyEffects(final List<ConditionalEffect<T>> effects, final LootContext filterData, final Enchantment.GenericAction<T> action) {
       for (ConditionalEffect<T> conditionalEffect : effects) {
          if (conditionalEffect.matches(filterData)) {
-            action.accept(conditionalEffect.effect());
+            action.apply(conditionalEffect.effect());
          }
       }
+   }
+
+   private static <T> void applyEffects(
+      final List<ConditionalEffect<T>> effects, final LootContext filterData, final MutableFloat value, final Enchantment.FloatAction<T> action
+   ) {
+      applyEffects(effects, filterData, action.asGeneric(value));
    }
 
    public void runLocationChangedEffects(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final LivingEntity entity) {
@@ -573,7 +581,7 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
 
    public static class Builder {
       private final Enchantment.EnchantmentDefinition definition;
-      private HolderSet<Enchantment> exclusiveSet = HolderSet.direct();
+      private HolderSet<Enchantment> exclusiveSet = HolderSet.empty();
       private final Map<DataComponentType<?>, List<?>> effectLists = new HashMap<>();
       private final DataComponentMap.Builder effectMapBuilder = DataComponentMap.builder();
 
@@ -683,5 +691,19 @@ public record Enchantment(Component description, Enchantment.EnchantmentDefiniti
             )
             .apply(i, Enchantment.EnchantmentDefinition::new)
       );
+   }
+
+   @FunctionalInterface
+   private interface FloatAction<T> {
+      float apply(T effect, float value);
+
+      default Enchantment.GenericAction<T> asGeneric(final MutableFloat v) {
+         return effect -> v.setValue(this.apply(effect, v.floatValue()));
+      }
+   }
+
+   @FunctionalInterface
+   private interface GenericAction<T> {
+      void apply(T effect);
    }
 }

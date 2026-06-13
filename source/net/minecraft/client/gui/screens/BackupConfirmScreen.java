@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens;
 
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
@@ -65,21 +65,20 @@ public class BackupConfirmScreen extends Screen {
             .bounds(this.width / 2 - 155, 100 + textSize, 150, 20)
             .build()
       );
-      this.addRenderableWidget(
-         Button.builder(SKIP_AND_JOIN, button -> this.onProceed.proceed(false, this.eraseCache.selected()))
-            .bounds(this.width / 2 - 155 + 160, 100 + textSize, 150, 20)
-            .build()
-      );
+      Button skipAndJoinButton = Button.builder(SKIP_AND_JOIN, button -> this.onProceed.proceed(false, this.eraseCache.selected()))
+         .bounds(this.width / 2 - 155 + 160, 100 + textSize, 150, 20)
+         .build();
+      this.addRenderableWidget(skipAndJoinButton);
       this.addRenderableWidget(
          Button.builder(CommonComponents.GUI_CANCEL, button -> this.onCancel.run()).bounds(this.width / 2 - 155 + 80, 124 + textSize, 150, 20).build()
       );
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       ActiveTextCollector textRenderer = graphics.textRenderer();
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 50, -1);
+      graphics.centeredText(this.font, this.title, this.width / 2, 50, -1);
       this.message.visitLines(TextAlignment.CENTER, this.width / 2, 70, 9, textRenderer);
    }
 
@@ -90,7 +89,7 @@ public class BackupConfirmScreen extends Screen {
 
    @Override
    public boolean keyPressed(final KeyEvent event) {
-      if (event.key() == 256) {
+      if (event.isEscape()) {
          this.onCancel.run();
          return true;
       } else {

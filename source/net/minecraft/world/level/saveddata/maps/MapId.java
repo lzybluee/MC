@@ -20,7 +20,7 @@ public record MapId(int id) implements TooltipProvider {
    private static final Component LOCKED_TEXT = Component.translatable("filled_map.locked").withStyle(ChatFormatting.GRAY);
 
    public String key() {
-      return "map_" + this.id;
+      return "maps/" + this.id;
    }
 
    @Override

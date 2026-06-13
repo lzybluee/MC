@@ -4,6 +4,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 public class LavaParticle extends SingleQuadParticle {
@@ -25,11 +26,8 @@ public class LavaParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
-      int br = super.getLightColor(a);
-      int br1 = 240;
-      int br2 = br >> 16 & 0xFF;
-      return 240 | br2 << 16;
+   public int getLightCoords(final float a) {
+      return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
    }
 
    @Override

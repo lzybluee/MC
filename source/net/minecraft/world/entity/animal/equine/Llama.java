@@ -58,7 +58,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -71,7 +70,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
    private static final EntityDataAccessor<Integer> DATA_VARIANT_ID = SynchedEntityData.defineId(Llama.class, EntityDataSerializers.INT);
    private static final EntityDimensions BABY_DIMENSIONS = EntityType.LLAMA
       .getDimensions()
-      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.LLAMA.getHeight() - 0.8125F, -0.3F))
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.LLAMA.getHeight() - 0.25F, -0.3F))
       .scale(0.5F);
    private boolean didSpit;
    private @Nullable Llama caravanHead;
@@ -185,7 +184,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
          ageUp = 10;
          temper = 3;
          heal = 2.0F;
-      } else if (itemStack.is(Blocks.HAY_BLOCK.asItem())) {
+      } else if (itemStack.is(Items.HAY_BLOCK)) {
          ageUp = 90;
          temper = 6;
          heal = 10.0F;
@@ -200,7 +199,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
          itemUsed = true;
       }
 
-      if (this.isBaby() && ageUp > 0) {
+      if (this.isBaby() && ageUp > 0 && !this.isAgeLocked()) {
          this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
          if (!this.level().isClientSide()) {
             this.ageUp(ageUp);

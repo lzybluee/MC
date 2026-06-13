@@ -6,12 +6,14 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.state.BlockState;
@@ -78,10 +80,12 @@ public class DecoratedPotBlockEntity extends BlockEntity implements ContainerSin
       return this.decorations;
    }
 
-   public static ItemStack createDecoratedPotItem(final PotDecorations decorations) {
-      ItemStack potItem = Items.DECORATED_POT.getDefaultInstance();
-      potItem.set(DataComponents.POT_DECORATIONS, decorations);
-      return potItem;
+   public static ItemStackTemplate createDecoratedPotTemplate(final PotDecorations decorations) {
+      return new ItemStackTemplate(Items.DECORATED_POT, DataComponentPatch.builder().set(DataComponents.POT_DECORATIONS, decorations).build());
+   }
+
+   public static ItemStack createDecoratedPotInstance(final PotDecorations decorations) {
+      return createDecoratedPotTemplate(decorations).create();
    }
 
    @Override

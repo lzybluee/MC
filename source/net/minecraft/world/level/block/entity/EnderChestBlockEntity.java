@@ -23,7 +23,7 @@ public class EnderChestBlockEntity extends BlockEntity implements LidBlockEntity
             SoundEvents.ENDER_CHEST_OPEN,
             SoundSource.BLOCKS,
             0.5F,
-            level.random.nextFloat() * 0.1F + 0.9F
+            level.getRandom().nextFloat() * 0.1F + 0.9F
          );
       }
 
@@ -37,7 +37,7 @@ public class EnderChestBlockEntity extends BlockEntity implements LidBlockEntity
             SoundEvents.ENDER_CHEST_CLOSE,
             SoundSource.BLOCKS,
             0.5F,
-            level.random.nextFloat() * 0.1F + 0.9F
+            level.getRandom().nextFloat() * 0.1F + 0.9F
          );
       }
 

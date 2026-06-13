@@ -400,20 +400,20 @@ public class FriendlyByteBuf extends ByteBuf {
    }
 
    public ChunkPos readChunkPos() {
-      return new ChunkPos(this.readLong());
+      return ChunkPos.unpack(this.readLong());
    }
 
    public FriendlyByteBuf writeChunkPos(final ChunkPos pos) {
-      this.writeLong(pos.toLong());
+      this.writeLong(pos.pack());
       return this;
    }
 
    public static ChunkPos readChunkPos(final ByteBuf input) {
-      return new ChunkPos(input.readLong());
+      return ChunkPos.unpack(input.readLong());
    }
 
    public static void writeChunkPos(final ByteBuf output, final ChunkPos chunkPos) {
-      output.writeLong(chunkPos.toLong());
+      output.writeLong(chunkPos.pack());
    }
 
    public GlobalPos readGlobalPos() {
@@ -462,32 +462,6 @@ public class FriendlyByteBuf extends ByteBuf {
       output.writeFloat(value.y());
       output.writeFloat(value.z());
       output.writeFloat(value.w());
-   }
-
-   public static Vec3 readVec3(final ByteBuf input) {
-      return new Vec3(input.readDouble(), input.readDouble(), input.readDouble());
-   }
-
-   public Vec3 readVec3() {
-      return readVec3(this);
-   }
-
-   public static void writeVec3(final ByteBuf output, final Vec3 v) {
-      output.writeDouble(v.x());
-      output.writeDouble(v.y());
-      output.writeDouble(v.z());
-   }
-
-   public void writeVec3(final Vec3 v) {
-      writeVec3(this, v);
-   }
-
-   public Vec3 readLpVec3() {
-      return LpVec3.read(this);
-   }
-
-   public void writeLpVec3(final Vec3 v) {
-      LpVec3.write(this, v);
    }
 
    public <T extends Enum<T>> T readEnum(final Class<T> clazz) {

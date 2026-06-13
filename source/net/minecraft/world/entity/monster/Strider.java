@@ -59,8 +59,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
@@ -70,6 +70,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 public class Strider extends Animal implements ItemSteerable {
@@ -89,8 +90,8 @@ public class Strider extends Animal implements ItemSteerable {
       this.blocksBuilding = true;
       this.setPathfindingMalus(PathType.WATER, -1.0F);
       this.setPathfindingMalus(PathType.LAVA, 0.0F);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, 0.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE, 0.0F);
    }
 
    public static boolean checkStriderSpawnRules(
@@ -300,8 +301,8 @@ public class Strider extends Animal implements ItemSteerable {
          boolean inWarmBlocks = stateInside.is(BlockTags.STRIDER_WARM_BLOCKS)
             || stateOn.is(BlockTags.STRIDER_WARM_BLOCKS)
             || this.getFluidHeight(FluidTags.LAVA) > 0.0;
-         boolean vehicleSuffocating = this.getVehicle() instanceof Strider strider && strider.isSuffocating();
-         this.setSuffocating(!inWarmBlocks || vehicleSuffocating);
+         boolean onWarmStrider = this.getVehicle() instanceof Strider strider && !strider.isSuffocating();
+         this.setSuffocating(!inWarmBlocks && !onWarmStrider);
       }
 
       super.tick();
@@ -320,13 +321,18 @@ public class Strider extends Animal implements ItemSteerable {
    private void floatStrider() {
       if (this.isInLava()) {
          CollisionContext context = CollisionContext.of(this);
-         if (context.isAbove(LiquidBlock.SHAPE_STABLE, this.blockPosition(), true)
+         if (context.isAbove(this.getLiquidCollisionShape(), this.blockPosition(), true)
             && !this.level().getFluidState(this.blockPosition().above()).is(FluidTags.LAVA)) {
             this.setOnGround(true);
          } else {
             this.setDeltaMovement(this.getDeltaMovement().scale(0.5).add(0.0, 0.05, 0.0));
          }
       }
+   }
+
+   @Override
+   public VoxelShape getLiquidCollisionShape() {
+      return Block.column(16.0, 0.0, 8.0);
    }
 
    public static AttributeSupplier.Builder createAttributes() {
@@ -511,7 +517,7 @@ public class Strider extends Animal implements ItemSteerable {
 
       @Override
       protected boolean hasValidPathType(final PathType pathType) {
-         return pathType != PathType.LAVA && pathType != PathType.DAMAGE_FIRE && pathType != PathType.DANGER_FIRE ? super.hasValidPathType(pathType) : true;
+         return pathType != PathType.LAVA && pathType != PathType.FIRE && pathType != PathType.FIRE_IN_NEIGHBOR ? super.hasValidPathType(pathType) : true;
       }
 
       @Override

@@ -6,9 +6,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.Weighted;
 import net.minecraft.util.random.WeightedList;
 
-public class WeightedListInt extends IntProvider {
-   public static final MapCodec<WeightedListInt> CODEC = RecordCodecBuilder.mapCodec(
-      i -> i.group(WeightedList.nonEmptyCodec(IntProvider.CODEC).fieldOf("distribution").forGetter(c -> c.distribution)).apply(i, WeightedListInt::new)
+public class WeightedListInt implements IntProvider {
+   public static final MapCodec<WeightedListInt> MAP_CODEC = RecordCodecBuilder.mapCodec(
+      i -> i.group(WeightedList.nonEmptyCodec(IntProviders.CODEC).fieldOf("distribution").forGetter(c -> c.distribution)).apply(i, WeightedListInt::new)
    );
    private final WeightedList<IntProvider> distribution;
    private final int minValue;
@@ -20,8 +20,8 @@ public class WeightedListInt extends IntProvider {
       int max = Integer.MIN_VALUE;
 
       for (Weighted<IntProvider> value : distribution.unwrap()) {
-         int entryMin = value.value().getMinValue();
-         int entryMax = value.value().getMaxValue();
+         int entryMin = value.value().minInclusive();
+         int entryMax = value.value().maxInclusive();
          min = Math.min(min, entryMin);
          max = Math.max(max, entryMax);
       }
@@ -36,17 +36,17 @@ public class WeightedListInt extends IntProvider {
    }
 
    @Override
-   public int getMinValue() {
+   public int minInclusive() {
       return this.minValue;
    }
 
    @Override
-   public int getMaxValue() {
+   public int maxInclusive() {
       return this.maxValue;
    }
 
    @Override
-   public IntProviderType<?> getType() {
-      return IntProviderType.WEIGHTED_LIST;
+   public MapCodec<WeightedListInt> codec() {
+      return MAP_CODEC;
    }
 }

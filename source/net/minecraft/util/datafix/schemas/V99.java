@@ -277,6 +277,13 @@ public class V99 extends Schema {
       schema.registerType(false, References.ITEM_NAME, () -> DSL.constType(NamespacedSchema.namespacedString()));
       schema.registerType(false, References.STATS, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_COMMAND_STORAGE, DSL::remainder);
+      schema.registerType(
+         false,
+         References.SAVED_DATA_CUSTOM_BOSS_EVENTS,
+         () -> DSL.optionalFields("data", DSL.compoundList(DSL.optionalFields("Name", References.TEXT_COMPONENT.in(schema))))
+      );
+      schema.registerType(false, References.SAVED_DATA_ENDER_DRAGON_FIGHT, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_GAME_RULES, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_TICKETS, DSL::remainder);
       schema.registerType(
          false,
@@ -286,6 +293,7 @@ public class V99 extends Schema {
       schema.registerType(false, References.SAVED_DATA_MAP_INDEX, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_RAIDS, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_RANDOM_SEQUENCES, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_SCHEDULED_EVENTS, DSL::remainder);
       schema.registerType(
          false,
          References.SAVED_DATA_SCOREBOARD,
@@ -307,7 +315,11 @@ public class V99 extends Schema {
          References.SAVED_DATA_STRUCTURE_FEATURE_INDICES,
          () -> DSL.optionalFields("data", DSL.optionalFields("Features", DSL.compoundList(References.STRUCTURE_FEATURE.in(schema))))
       );
+      schema.registerType(false, References.SAVED_DATA_WANDERING_TRADER, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WEATHER, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_WORLD_BORDER, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WORLD_CLOCKS, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WORLD_GEN_SETTINGS, () -> DSL.fields("data", References.WORLD_GEN_SETTINGS.in(schema)));
       schema.registerType(false, References.DEBUG_PROFILE, DSL::remainder);
       schema.registerType(false, References.STRUCTURE_FEATURE, DSL::remainder);
       schema.registerType(false, References.OBJECTIVE, DSL::remainder);

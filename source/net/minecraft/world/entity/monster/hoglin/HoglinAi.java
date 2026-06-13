@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.monster.hoglin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +13,7 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -54,23 +54,16 @@ public class HoglinAi {
    private static final float SPEED_MULTIPLIER_WHEN_IDLING = 0.4F;
    private static final float SPEED_MULTIPLIER_WHEN_FOLLOWING_ADULT = 0.6F;
 
-   protected static Brain<?> makeBrain(final Brain<Hoglin> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initFightActivity(brain);
-      initRetreatActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Hoglin>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity(), initRetreatActivity());
    }
 
-   private static void initCoreActivity(final Brain<Hoglin> brain) {
-      brain.addActivity(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
+   private static ActivityData<Hoglin> initCoreActivity() {
+      return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
    }
 
-   private static void initIdleActivity(final Brain<Hoglin> brain) {
-      brain.addActivity(
+   private static ActivityData<Hoglin> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          10,
          ImmutableList.of(
@@ -86,8 +79,8 @@ public class HoglinAi {
       );
    }
 
-   private static void initFightActivity(final Brain<Hoglin> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   private static ActivityData<Hoglin> initFightActivity() {
+      return ActivityData.create(
          Activity.FIGHT,
          10,
          ImmutableList.of(
@@ -103,8 +96,8 @@ public class HoglinAi {
       );
    }
 
-   private static void initRetreatActivity(final Brain<Hoglin> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   private static ActivityData<Hoglin> initRetreatActivity() {
+      return ActivityData.create(
          Activity.AVOID,
          10,
          ImmutableList.of(
@@ -137,7 +130,7 @@ public class HoglinAi {
 
    protected static void onHitTarget(final Hoglin attackerBody, final LivingEntity target) {
       if (!attackerBody.isBaby()) {
-         if (target.getType() == EntityType.PIGLIN && piglinsOutnumberHoglins(attackerBody)) {
+         if (target.is(EntityType.PIGLIN) && piglinsOutnumberHoglins(attackerBody)) {
             setAvoidTarget(attackerBody, target);
             broadcastRetreat(attackerBody, target);
          } else {
@@ -161,7 +154,7 @@ public class HoglinAi {
    private static void setAvoidTarget(final Hoglin body, final LivingEntity avoidTarget) {
       body.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
       body.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-      body.getBrain().setMemoryWithExpiry(MemoryModuleType.AVOID_TARGET, avoidTarget, RETREAT_DURATION.sample(body.level().random));
+      body.getBrain().setMemoryWithExpiry(MemoryModuleType.AVOID_TARGET, avoidTarget, RETREAT_DURATION.sample(body.level().getRandom()));
    }
 
    private static Optional<? extends LivingEntity> findNearestValidAttackTarget(final ServerLevel level, final Hoglin body) {
@@ -199,8 +192,8 @@ public class HoglinAi {
    }
 
    private static void maybeRetaliate(final ServerLevel level, final Hoglin body, final LivingEntity attacker) {
-      if (!body.getBrain().isActive(Activity.AVOID) || attacker.getType() != EntityType.PIGLIN) {
-         if (attacker.getType() != EntityType.HOGLIN) {
+      if (!body.getBrain().isActive(Activity.AVOID) || !attacker.is(EntityType.PIGLIN)) {
+         if (!attacker.is(EntityType.HOGLIN)) {
             if (!BehaviorUtils.isOtherTargetMuchFurtherAwayThanCurrentAttackTarget(body, attacker, 4.0)) {
                if (Sensor.isEntityAttackable(level, body, attacker)) {
                   setAttackTarget(body, attacker);

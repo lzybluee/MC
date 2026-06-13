@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.Map;
+import net.minecraft.client.model.animal.panda.BabyPandaModel;
 import net.minecraft.client.model.animal.panda.PandaModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.layers.PandaHoldsItemLayer;
@@ -19,27 +20,46 @@ public class PandaRenderer extends AgeableMobRenderer<Panda, PandaRenderState, P
          Panda.Gene.NORMAL,
          Identifier.withDefaultNamespace("textures/entity/panda/panda.png"),
          Panda.Gene.LAZY,
-         Identifier.withDefaultNamespace("textures/entity/panda/lazy_panda.png"),
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_lazy.png"),
          Panda.Gene.WORRIED,
-         Identifier.withDefaultNamespace("textures/entity/panda/worried_panda.png"),
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_worried.png"),
          Panda.Gene.PLAYFUL,
-         Identifier.withDefaultNamespace("textures/entity/panda/playful_panda.png"),
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_playful.png"),
          Panda.Gene.BROWN,
-         Identifier.withDefaultNamespace("textures/entity/panda/brown_panda.png"),
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_brown.png"),
          Panda.Gene.WEAK,
-         Identifier.withDefaultNamespace("textures/entity/panda/weak_panda.png"),
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_weak.png"),
          Panda.Gene.AGGRESSIVE,
-         Identifier.withDefaultNamespace("textures/entity/panda/aggressive_panda.png")
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_aggressive.png")
+      )
+   );
+   private static final Map<Panda.Gene, Identifier> BABY_TEXTURES = Maps.newEnumMap(
+      Map.of(
+         Panda.Gene.NORMAL,
+         Identifier.withDefaultNamespace("textures/entity/panda/panda_baby.png"),
+         Panda.Gene.LAZY,
+         Identifier.withDefaultNamespace("textures/entity/panda/lazy_panda_baby.png"),
+         Panda.Gene.WORRIED,
+         Identifier.withDefaultNamespace("textures/entity/panda/worried_panda_baby.png"),
+         Panda.Gene.PLAYFUL,
+         Identifier.withDefaultNamespace("textures/entity/panda/playful_panda_baby.png"),
+         Panda.Gene.BROWN,
+         Identifier.withDefaultNamespace("textures/entity/panda/brown_panda_baby.png"),
+         Panda.Gene.WEAK,
+         Identifier.withDefaultNamespace("textures/entity/panda/weak_panda_baby.png"),
+         Panda.Gene.AGGRESSIVE,
+         Identifier.withDefaultNamespace("textures/entity/panda/aggressive_panda_baby.png")
       )
    );
 
    public PandaRenderer(final EntityRendererProvider.Context context) {
-      super(context, new PandaModel(context.bakeLayer(ModelLayers.PANDA)), new PandaModel(context.bakeLayer(ModelLayers.PANDA_BABY)), 0.9F);
+      super(context, new PandaModel(context.bakeLayer(ModelLayers.PANDA)), new BabyPandaModel(context.bakeLayer(ModelLayers.PANDA_BABY)), 0.9F);
       this.addLayer(new PandaHoldsItemLayer(this));
    }
 
    public Identifier getTextureLocation(final PandaRenderState state) {
-      return TEXTURES.getOrDefault(state.variant, TEXTURES.get(Panda.Gene.NORMAL));
+      Map<Panda.Gene, Identifier> textures = state.isBaby ? BABY_TEXTURES : TEXTURES;
+      return textures.getOrDefault(state.variant, textures.get(Panda.Gene.NORMAL));
    }
 
    public PandaRenderState createRenderState() {

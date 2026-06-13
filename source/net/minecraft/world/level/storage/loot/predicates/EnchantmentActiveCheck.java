@@ -9,7 +9,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record EnchantmentActiveCheck(boolean active) implements LootItemCondition {
-   public static final MapCodec<EnchantmentActiveCheck> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<EnchantmentActiveCheck> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(Codec.BOOL.fieldOf("active").forGetter(EnchantmentActiveCheck::active)).apply(i, EnchantmentActiveCheck::new)
    );
 
@@ -18,8 +18,8 @@ public record EnchantmentActiveCheck(boolean active) implements LootItemConditio
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.ENCHANTMENT_ACTIVE_CHECK;
+   public MapCodec<EnchantmentActiveCheck> codec() {
+      return MAP_CODEC;
    }
 
    @Override

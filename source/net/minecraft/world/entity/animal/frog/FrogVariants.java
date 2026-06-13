@@ -23,9 +23,9 @@ public interface FrogVariants {
    }
 
    static void bootstrap(final BootstrapContext<FrogVariant> registry) {
-      register(registry, TEMPERATE, "entity/frog/temperate_frog", SpawnPrioritySelectors.fallback(0));
-      register(registry, WARM, "entity/frog/warm_frog", BiomeTags.SPAWNS_WARM_VARIANT_FROGS);
-      register(registry, COLD, "entity/frog/cold_frog", BiomeTags.SPAWNS_COLD_VARIANT_FROGS);
+      register(registry, TEMPERATE, "entity/frog/frog_temperate", SpawnPrioritySelectors.fallback(0));
+      register(registry, WARM, "entity/frog/frog_warm", BiomeTags.SPAWNS_WARM_VARIANT_FROGS);
+      register(registry, COLD, "entity/frog/frog_cold", BiomeTags.SPAWNS_COLD_VARIANT_FROGS);
    }
 
    private static void register(

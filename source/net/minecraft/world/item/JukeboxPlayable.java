@@ -4,10 +4,9 @@ import com.mojang.serialization.Codec;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
@@ -24,22 +23,15 @@ import net.minecraft.world.level.block.entity.JukeboxBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 
-public record JukeboxPlayable(EitherHolder<JukeboxSong> song) implements TooltipProvider {
-   public static final Codec<JukeboxPlayable> CODEC = EitherHolder.codec(Registries.JUKEBOX_SONG, JukeboxSong.CODEC)
-      .xmap(JukeboxPlayable::new, JukeboxPlayable::song);
+public record JukeboxPlayable(Holder<JukeboxSong> song) implements TooltipProvider {
+   public static final Codec<JukeboxPlayable> CODEC = JukeboxSong.CODEC.xmap(JukeboxPlayable::new, JukeboxPlayable::song);
    public static final StreamCodec<RegistryFriendlyByteBuf, JukeboxPlayable> STREAM_CODEC = StreamCodec.composite(
-      EitherHolder.streamCodec(Registries.JUKEBOX_SONG, JukeboxSong.STREAM_CODEC), JukeboxPlayable::song, JukeboxPlayable::new
+      JukeboxSong.STREAM_CODEC, JukeboxPlayable::song, JukeboxPlayable::new
    );
 
    @Override
    public void addToTooltip(final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components) {
-      HolderLookup.Provider registries = context.registries();
-      if (registries != null) {
-         this.song.unwrap(registries).ifPresent(reference -> {
-            Component description = ComponentUtils.mergeStyles(reference.value().description(), Style.EMPTY.withColor(ChatFormatting.GRAY));
-            consumer.accept(description);
-         });
-      }
+      consumer.accept(ComponentUtils.mergeStyles(this.song.value().description(), Style.EMPTY.withColor(ChatFormatting.GRAY)));
    }
 
    public static InteractionResult tryInsertIntoJukebox(final Level level, final BlockPos pos, final ItemStack toInsert, final Player player) {

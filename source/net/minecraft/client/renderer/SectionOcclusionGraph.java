@@ -197,14 +197,14 @@ public class SectionOcclusionGraph {
    }
 
    private void addNeighbors(final SectionOcclusionGraph.GraphEvents events, final ChunkPos pos) {
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x - 1, pos.z));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x, pos.z - 1));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x + 1, pos.z));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x, pos.z + 1));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x - 1, pos.z - 1));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x - 1, pos.z + 1));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x + 1, pos.z - 1));
-      events.chunksWhichReceivedNeighbors.add(ChunkPos.asLong(pos.x + 1, pos.z + 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() - 1, pos.z()));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x(), pos.z() - 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() + 1, pos.z()));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x(), pos.z() + 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() - 1, pos.z() - 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() - 1, pos.z() + 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() + 1, pos.z() - 1));
+      events.chunksWhichReceivedNeighbors.add(ChunkPos.pack(pos.x() + 1, pos.z() + 1));
    }
 
    private void initializeQueueForFullUpdate(final Camera camera, final Queue<SectionOcclusionGraph.Node> queue) {

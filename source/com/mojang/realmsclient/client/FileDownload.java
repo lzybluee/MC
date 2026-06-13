@@ -19,6 +19,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpRequest.Builder;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.OptionalLong;
@@ -32,7 +33,9 @@ import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.NbtException;
 import net.minecraft.nbt.ReportedNbtException;
+import net.minecraft.util.FileUtil;
 import net.minecraft.util.Util;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.validation.ContentValidationException;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -296,22 +299,33 @@ public class FileDownload {
       }
 
       TarArchiveInputStream tarIn = null;
-      File saves = new File(Minecraft.getInstance().gameDirectory.getAbsolutePath(), "saves");
+      Path worldPath = Minecraft.getInstance().getLevelSource().getLevelPath(finalName).normalize();
 
       try {
-         saves.mkdir();
+         FileUtil.createDirectoriesSafe(worldPath);
          tarIn = new TarArchiveInputStream(new GzipCompressorInputStream(new BufferedInputStream(new FileInputStream(file))));
+         TarArchiveEntry tarEntry = tarIn.getNextTarEntry();
 
-         for (TarArchiveEntry tarEntry = tarIn.getNextTarEntry(); tarEntry != null; tarEntry = tarIn.getNextTarEntry()) {
-            File destPath = new File(saves, tarEntry.getName().replace("world", finalName));
-            if (tarEntry.isDirectory()) {
-               destPath.mkdirs();
+         while (tarEntry != null) {
+            Path destPath = worldPath.resolve(Path.of("world").relativize(Path.of(tarEntry.getName()))).normalize();
+            if (!destPath.startsWith(worldPath)) {
+               LOGGER.warn("Unexpected entry in Realms world download: {}", tarEntry.getName());
+               tarEntry = tarIn.getNextTarEntry();
             } else {
-               destPath.createNewFile();
+               if (tarEntry.isDirectory()) {
+                  FileUtil.createDirectoriesSafe(destPath);
+               } else {
+                  Path parent = destPath.getParent();
+                  if (parent != null) {
+                     FileUtil.createDirectoriesSafe(parent);
+                  }
 
-               try (FileOutputStream output = new FileOutputStream(destPath)) {
-                  IOUtils.copy(tarIn, output);
+                  try (FileOutputStream output = new FileOutputStream(destPath.toFile())) {
+                     IOUtils.copy(tarIn, output);
+                  }
                }
+
+               tarEntry = tarIn.getNextTarEntry();
             }
          }
       } catch (Exception e) {
@@ -334,7 +348,7 @@ public class FileDownload {
             LOGGER.warn("Failed to download file", e);
          }
 
-         this.resourcePackPath = new File(saves, finalName + File.separator + "resources.zip");
+         this.resourcePackPath = worldPath.resolve(LevelResource.MAP_RESOURCE_FILE.id()).toFile();
       }
    }
 

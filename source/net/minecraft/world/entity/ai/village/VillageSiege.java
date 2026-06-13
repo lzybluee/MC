@@ -1,10 +1,15 @@
 package net.minecraft.world.entity.ai.village;
 
 import com.mojang.logging.LogUtils;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.clock.ClockTimeMarkers;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Monster;
@@ -29,9 +34,9 @@ public class VillageSiege implements CustomSpawner {
    @Override
    public void tick(final ServerLevel level, final boolean spawnEnemies) {
       if (!level.isBrightOutside() && spawnEnemies) {
-         long dayTime = level.getDayTime() % 24000L;
-         if (dayTime == 18000L) {
-            this.siegeState = level.random.nextInt(10) == 0 ? VillageSiege.State.SIEGE_TONIGHT : VillageSiege.State.SIEGE_DONE;
+         Optional<Holder<WorldClock>> defaultClock = level.dimensionType().defaultClock();
+         if (defaultClock.isPresent() && level.clockManager().isAtTimeMarker(defaultClock.get(), ClockTimeMarkers.ROLL_VILLAGE_SIEGE)) {
+            this.siegeState = level.getRandom().nextInt(10) == 0 ? VillageSiege.State.SIEGE_TONIGHT : VillageSiege.State.SIEGE_DONE;
          }
 
          if (this.siegeState != VillageSiege.State.SIEGE_DONE) {
@@ -62,12 +67,14 @@ public class VillageSiege implements CustomSpawner {
    }
 
    private boolean tryToSetupSiege(final ServerLevel level) {
+      RandomSource random = level.getRandom();
+
       for (Player player : level.players()) {
          if (!player.isSpectator()) {
             BlockPos center = player.blockPosition();
             if (level.isVillage(center) && !level.getBiome(center).is(BiomeTags.WITHOUT_ZOMBIE_SIEGES)) {
                for (int i = 0; i < 10; i++) {
-                  float angle = level.random.nextFloat() * (float) (Math.PI * 2);
+                  float angle = random.nextFloat() * (float) (Math.PI * 2);
                   this.spawnX = center.getX() + Mth.floor(Mth.cos(angle) * 32.0F);
                   this.spawnY = center.getY();
                   this.spawnZ = center.getZ() + Mth.floor(Mth.sin(angle) * 32.0F);
@@ -98,18 +105,20 @@ public class VillageSiege implements CustomSpawner {
             return;
          }
 
-         zombie.snapTo(spawnPos.x, spawnPos.y, spawnPos.z, level.random.nextFloat() * 360.0F, 0.0F);
+         zombie.snapTo(spawnPos.x, spawnPos.y, spawnPos.z, level.getRandom().nextFloat() * 360.0F, 0.0F);
          level.addFreshEntityWithPassengers(zombie);
       }
    }
 
    private @Nullable Vec3 findRandomSpawnPos(final ServerLevel level, final BlockPos pos) {
+      RandomSource random = level.getRandom();
+
       for (int i = 0; i < 10; i++) {
-         int x = pos.getX() + level.random.nextInt(16) - 8;
-         int z = pos.getZ() + level.random.nextInt(16) - 8;
+         int x = pos.getX() + random.nextInt(16) - 8;
+         int z = pos.getZ() + random.nextInt(16) - 8;
          int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
          BlockPos offset = new BlockPos(x, y, z);
-         if (level.isVillage(offset) && Monster.checkMonsterSpawnRules(EntityType.ZOMBIE, level, EntitySpawnReason.EVENT, offset, level.random)) {
+         if (level.isVillage(offset) && Monster.checkMonsterSpawnRules(EntityType.ZOMBIE, level, EntitySpawnReason.EVENT, offset, random)) {
             return Vec3.atBottomCenterOf(offset);
          }
       }

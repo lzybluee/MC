@@ -3,6 +3,7 @@ package net.minecraft.world.entity.animal.feline;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -13,7 +14,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
@@ -54,10 +54,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -77,6 +74,9 @@ public class Cat extends TamableAnimal {
    private static final EntityDataAccessor<Boolean> IS_LYING = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.BOOLEAN);
    private static final EntityDataAccessor<Boolean> RELAX_STATE_ONE = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.BOOLEAN);
    private static final EntityDataAccessor<Integer> DATA_COLLAR_COLOR = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.INT);
+   private static final EntityDataAccessor<Holder<CatSoundVariant>> DATA_SOUND_VARIANT_ID = SynchedEntityData.defineId(
+      Cat.class, EntityDataSerializers.CAT_SOUND_VARIANT
+   );
    private static final ResourceKey<CatVariant> DEFAULT_VARIANT = CatVariants.BLACK;
    private static final DyeColor DEFAULT_COLLAR_COLOR = DyeColor.RED;
    private Cat.@Nullable CatAvoidEntityGoal<Player> avoidPlayersGoal;
@@ -122,10 +122,24 @@ public class Cat extends TamableAnimal {
       this.entityData.set(DATA_VARIANT_ID, variant);
    }
 
+   private Holder<CatSoundVariant> getSoundVariant() {
+      return this.entityData.get(DATA_SOUND_VARIANT_ID);
+   }
+
+   private void setSoundVariant(final Holder<CatSoundVariant> soundVariant) {
+      this.entityData.set(DATA_SOUND_VARIANT_ID, soundVariant);
+   }
+
+   private CatSoundVariant.CatSoundSet getSoundSet() {
+      return this.isBaby() ? this.getSoundVariant().value().babySounds() : this.getSoundVariant().value().adultSounds();
+   }
+
    @Override
    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
       if (type == DataComponents.CAT_VARIANT) {
          return castComponentValue((DataComponentType<T>)type, this.getVariant());
+      } else if (type == DataComponents.CAT_SOUND_VARIANT) {
+         return castComponentValue((DataComponentType<T>)type, this.getSoundVariant());
       } else {
          return type == DataComponents.CAT_COLLAR ? castComponentValue((DataComponentType<T>)type, this.getCollarColor()) : super.get(type);
       }
@@ -134,6 +148,7 @@ public class Cat extends TamableAnimal {
    @Override
    protected void applyImplicitComponents(final DataComponentGetter components) {
       this.applyImplicitComponentIfPresent(components, DataComponents.CAT_VARIANT);
+      this.applyImplicitComponentIfPresent(components, DataComponents.CAT_SOUND_VARIANT);
       this.applyImplicitComponentIfPresent(components, DataComponents.CAT_COLLAR);
       super.applyImplicitComponents(components);
    }
@@ -142,6 +157,9 @@ public class Cat extends TamableAnimal {
    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
       if (type == DataComponents.CAT_VARIANT) {
          this.setVariant(castComponentValue(DataComponents.CAT_VARIANT, value));
+         return true;
+      } else if (type == DataComponents.CAT_SOUND_VARIANT) {
+         this.setSoundVariant(castComponentValue(DataComponents.CAT_SOUND_VARIANT, value));
          return true;
       } else if (type == DataComponents.CAT_COLLAR) {
          this.setCollarColor(castComponentValue(DataComponents.CAT_COLLAR, value));
@@ -178,7 +196,9 @@ public class Cat extends TamableAnimal {
    @Override
    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
       super.defineSynchedData(entityData);
+      Registry<CatSoundVariant> catSoundVariants = this.registryAccess().lookupOrThrow(Registries.CAT_SOUND_VARIANT);
       entityData.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), DEFAULT_VARIANT));
+      entityData.define(DATA_SOUND_VARIANT_ID, catSoundVariants.get(CatSoundVariants.CLASSIC).or(catSoundVariants::getAny).orElseThrow());
       entityData.define(IS_LYING, false);
       entityData.define(RELAX_STATE_ONE, false);
       entityData.define(DATA_COLLAR_COLOR, DEFAULT_COLLAR_COLOR.getId());
@@ -188,6 +208,9 @@ public class Cat extends TamableAnimal {
    protected void addAdditionalSaveData(final ValueOutput output) {
       super.addAdditionalSaveData(output);
       VariantUtils.writeVariant(output, this.getVariant());
+      this.getSoundVariant()
+         .unwrapKey()
+         .ifPresent(soundVariant -> output.store("sound_variant", ResourceKey.codec(Registries.CAT_SOUND_VARIANT), soundVariant));
       output.store("CollarColor", DyeColor.LEGACY_ID_CODEC, this.getCollarColor());
    }
 
@@ -195,6 +218,9 @@ public class Cat extends TamableAnimal {
    protected void readAdditionalSaveData(final ValueInput input) {
       super.readAdditionalSaveData(input);
       VariantUtils.readVariant(input, Registries.CAT_VARIANT).ifPresent(this::setVariant);
+      input.<ResourceKey>read("sound_variant", ResourceKey.codec(Registries.CAT_SOUND_VARIANT))
+         .flatMap(soundVariant -> this.registryAccess().lookupOrThrow(Registries.CAT_SOUND_VARIANT).get((ResourceKey<CatSoundVariant>)soundVariant))
+         .ifPresent(this::setSoundVariant);
       this.setCollarColor(input.<DyeColor>read("CollarColor", DyeColor.LEGACY_ID_CODEC).orElse(DEFAULT_COLLAR_COLOR));
    }
 
@@ -222,12 +248,12 @@ public class Cat extends TamableAnimal {
    protected @Nullable SoundEvent getAmbientSound() {
       if (this.isTame()) {
          if (this.isInLove()) {
-            return SoundEvents.CAT_PURR;
+            return this.getSoundSet().purrSound().value();
          } else {
-            return this.random.nextInt(4) == 0 ? SoundEvents.CAT_PURREOW : SoundEvents.CAT_AMBIENT;
+            return this.random.nextInt(4) == 0 ? this.getSoundSet().purreowSound().value() : this.getSoundSet().ambientSound().value();
          }
       } else {
-         return SoundEvents.CAT_STRAY_AMBIENT;
+         return this.getSoundSet().strayAmbientSound().value();
       }
    }
 
@@ -237,17 +263,17 @@ public class Cat extends TamableAnimal {
    }
 
    public void hiss() {
-      this.makeSound(SoundEvents.CAT_HISS);
+      this.makeSound(this.getSoundSet().hissSound().value());
    }
 
    @Override
    protected SoundEvent getHurtSound(final DamageSource source) {
-      return SoundEvents.CAT_HURT;
+      return this.getSoundSet().hurtSound().value();
    }
 
    @Override
    protected SoundEvent getDeathSound() {
-      return SoundEvents.CAT_DEATH;
+      return this.getSoundSet().deathSound().value();
    }
 
    public static AttributeSupplier.Builder createAttributes() {
@@ -256,14 +282,14 @@ public class Cat extends TamableAnimal {
 
    @Override
    protected void playEatingSound() {
-      this.playSound(SoundEvents.CAT_EAT, 1.0F, 1.0F);
+      this.playSound(this.getSoundSet().eatSound().value(), 1.0F, 1.0F);
    }
 
    @Override
    public void tick() {
       super.tick();
       if (this.temptGoal != null && this.temptGoal.isRunning() && !this.isTame() && this.tickCount % 100 == 0) {
-         this.playSound(SoundEvents.CAT_BEG_FOR_FOOD, 1.0F, 1.0F);
+         this.playSound(this.getSoundSet().begForFoodSound().value(), 1.0F, 1.0F);
       }
 
       this.handleLieDown();
@@ -271,7 +297,7 @@ public class Cat extends TamableAnimal {
 
    private void handleLieDown() {
       if ((this.isLying() || this.isRelaxStateOne()) && this.tickCount % 5 == 0) {
-         this.playSound(SoundEvents.CAT_PURR, 0.6F + 0.4F * (this.random.nextFloat() - this.random.nextFloat()), 1.0F);
+         this.playSound(this.getSoundSet().purrSound().value(), 0.6F + 0.4F * (this.random.nextFloat() - this.random.nextFloat()), 1.0F);
       }
 
       this.updateLieDownAmount();
@@ -362,18 +388,18 @@ public class Cat extends TamableAnimal {
    ) {
       groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
       VariantUtils.selectVariantToSpawn(SpawnContext.create(level, this.blockPosition()), Registries.CAT_VARIANT).ifPresent(this::setVariant);
+      this.setSoundVariant(CatSoundVariants.pickRandomSoundVariant(this.registryAccess(), level.getRandom()));
       return groupData;
    }
 
    @Override
    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
       ItemStack itemStack = player.getItemInHand(hand);
-      Item item = itemStack.getItem();
       if (this.isTame()) {
          if (this.isOwnedBy(player)) {
-            if (item instanceof DyeItem dyeItem) {
-               DyeColor color = dyeItem.getDyeColor();
-               if (color != this.getCollarColor()) {
+            if (itemStack.is(ItemTags.CAT_COLLAR_DYES)) {
+               DyeColor color = itemStack.get(DataComponents.DYE);
+               if (color != null && color != this.getCollarColor()) {
                   if (!this.level().isClientSide()) {
                      this.setCollarColor(color);
                      itemStack.consume(1, player);
@@ -384,10 +410,7 @@ public class Cat extends TamableAnimal {
                }
             } else if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
                if (!this.level().isClientSide()) {
-                  this.usePlayerItem(player, hand, itemStack);
-                  FoodProperties foodProperties = itemStack.get(DataComponents.FOOD);
-                  this.heal(foodProperties != null ? foodProperties.nutrition() : 1.0F);
-                  this.playEatingSound();
+                  this.feed(player, hand, itemStack, 1.0F, 1.0F);
                }
 
                return InteractionResult.SUCCESS;

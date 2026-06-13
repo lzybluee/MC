@@ -5,7 +5,6 @@ import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import java.nio.ByteBuffer;
-import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -22,10 +21,9 @@ public class GlobalSettingsUniform implements AutoCloseable {
       final long gameTime,
       final DeltaTracker deltaTracker,
       final int menuBlurRadius,
-      final Camera mainCamera,
+      final Vec3 cameraPos,
       final boolean useRgss
    ) {
-      Vec3 cameraPos = mainCamera.position();
       MemoryStack stack = MemoryStack.stackPush();
 
       try {
@@ -42,16 +40,16 @@ public class GlobalSettingsUniform implements AutoCloseable {
             .putInt(useRgss ? 1 : 0)
             .get();
          RenderSystem.getDevice().createCommandEncoder().writeToBuffer(this.buffer.slice(), data);
-      } catch (Throwable var18) {
+      } catch (Throwable var17) {
          if (stack != null) {
             try {
                stack.close();
-            } catch (Throwable var17) {
-               var18.addSuppressed(var17);
+            } catch (Throwable var16) {
+               var17.addSuppressed(var16);
             }
          }
 
-         throw var18;
+         throw var17;
       }
 
       if (stack != null) {

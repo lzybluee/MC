@@ -3,6 +3,7 @@ package net.minecraft.world.level.levelgen.feature.configurations;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.level.levelgen.GeodeBlockSettings;
 import net.minecraft.world.level.levelgen.GeodeCrackSettings;
@@ -18,9 +19,9 @@ public class GeodeConfiguration implements FeatureConfiguration {
             CHANCE_RANGE.fieldOf("use_potential_placements_chance").orElse(0.35).forGetter(c -> c.usePotentialPlacementsChance),
             CHANCE_RANGE.fieldOf("use_alternate_layer0_chance").orElse(0.0).forGetter(c -> c.useAlternateLayer0Chance),
             Codec.BOOL.fieldOf("placements_require_layer0_alternate").orElse(true).forGetter(c -> c.placementsRequireLayer0Alternate),
-            IntProvider.codec(1, 20).fieldOf("outer_wall_distance").orElse(UniformInt.of(4, 5)).forGetter(c -> c.outerWallDistance),
-            IntProvider.codec(1, 20).fieldOf("distribution_points").orElse(UniformInt.of(3, 4)).forGetter(c -> c.distributionPoints),
-            IntProvider.codec(0, 10).fieldOf("point_offset").orElse(UniformInt.of(1, 2)).forGetter(c -> c.pointOffset),
+            IntProviders.codec(1, 20).fieldOf("outer_wall_distance").orElse(UniformInt.of(4, 5)).forGetter(c -> c.outerWallDistance),
+            IntProviders.codec(1, 20).fieldOf("distribution_points").orElse(UniformInt.of(3, 4)).forGetter(c -> c.distributionPoints),
+            IntProviders.codec(0, 10).fieldOf("point_offset").orElse(UniformInt.of(1, 2)).forGetter(c -> c.pointOffset),
             Codec.INT.fieldOf("min_gen_offset").orElse(-16).forGetter(c -> c.minGenOffset),
             Codec.INT.fieldOf("max_gen_offset").orElse(16).forGetter(c -> c.maxGenOffset),
             CHANCE_RANGE.fieldOf("noise_multiplier").orElse(0.05).forGetter(c -> c.noiseMultiplier),

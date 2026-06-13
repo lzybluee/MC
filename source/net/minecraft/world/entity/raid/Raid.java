@@ -21,6 +21,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.CommonComponents;
@@ -49,6 +50,7 @@ import net.minecraft.world.entity.SpawnPlacementType;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.component.TooltipDisplay;
@@ -111,10 +113,12 @@ public class Raid {
    private int raidOmenLevel;
    private boolean active;
    private int groupsSpawned;
-   private final ServerBossEvent raidEvent = new ServerBossEvent(RAID_NAME_COMPONENT, BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
    private int postRaidTicks;
    private int raidCooldownTicks;
    private final RandomSource random = RandomSource.create();
+   private final ServerBossEvent raidEvent = new ServerBossEvent(
+      Mth.createInsecureUUID(this.random), RAID_NAME_COMPONENT, BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10
+   );
    private final int numGroups;
    private Raid.RaidStatus status;
    private int celebrationTicks;
@@ -625,8 +629,8 @@ public class Raid {
       level.getRaids().setDirty();
    }
 
-   public static ItemStack getOminousBannerInstance(final HolderGetter<BannerPattern> patternGetter) {
-      ItemStack banner = new ItemStack(Items.WHITE_BANNER);
+   public static DataComponentPatch getBannerComponentPatch(final HolderGetter<BannerPattern> patternGetter) {
+      DataComponentPatch.Builder builder = DataComponentPatch.builder();
       BannerPatternLayers patterns = new BannerPatternLayers.Builder()
          .addIfRegistered(patternGetter, BannerPatterns.RHOMBUS_MIDDLE, DyeColor.CYAN)
          .addIfRegistered(patternGetter, BannerPatterns.STRIPE_BOTTOM, DyeColor.LIGHT_GRAY)
@@ -637,11 +641,19 @@ public class Raid {
          .addIfRegistered(patternGetter, BannerPatterns.CIRCLE_MIDDLE, DyeColor.LIGHT_GRAY)
          .addIfRegistered(patternGetter, BannerPatterns.BORDER, DyeColor.BLACK)
          .build();
-      banner.set(DataComponents.BANNER_PATTERNS, patterns);
-      banner.set(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT.withHidden(DataComponents.BANNER_PATTERNS, true));
-      banner.set(DataComponents.ITEM_NAME, OMINOUS_BANNER_PATTERN_NAME);
-      banner.set(DataComponents.RARITY, Rarity.UNCOMMON);
-      return banner;
+      builder.set(DataComponents.BANNER_PATTERNS, patterns);
+      builder.set(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT.withHidden(DataComponents.BANNER_PATTERNS, true));
+      builder.set(DataComponents.ITEM_NAME, OMINOUS_BANNER_PATTERN_NAME);
+      builder.set(DataComponents.RARITY, Rarity.UNCOMMON);
+      return builder.build();
+   }
+
+   public static ItemStackTemplate getOminousBannerTemplate(final HolderGetter<BannerPattern> patternGetter) {
+      return new ItemStackTemplate(Items.WHITE_BANNER, getBannerComponentPatch(patternGetter));
+   }
+
+   public static ItemStack getOminousBannerInstance(final HolderGetter<BannerPattern> patternGetter) {
+      return getOminousBannerTemplate(patternGetter).create();
    }
 
    public @Nullable Raider getLeader(final int wave) {
@@ -652,12 +664,12 @@ public class Raid {
       int secondsRemaining = this.raidCooldownTicks / 20;
       float howFar = 0.22F * secondsRemaining - 0.24F;
       BlockPos.MutableBlockPos spawnPos = new BlockPos.MutableBlockPos();
-      float startAngle = level.random.nextFloat() * (float) (Math.PI * 2);
+      float startAngle = this.random.nextFloat() * (float) (Math.PI * 2);
 
       for (int i = 0; i < maxTries; i++) {
          float angle = startAngle + (float) Math.PI * i / 8.0F;
-         int spawnX = this.center.getX() + Mth.floor(Mth.cos(angle) * 32.0F * howFar) + level.random.nextInt(3) * Mth.floor(howFar);
-         int spawnZ = this.center.getZ() + Mth.floor(Mth.sin(angle) * 32.0F * howFar) + level.random.nextInt(3) * Mth.floor(howFar);
+         int spawnX = this.center.getX() + Mth.floor(Mth.cos(angle) * 32.0F * howFar) + this.random.nextInt(3) * Mth.floor(howFar);
+         int spawnZ = this.center.getZ() + Mth.floor(Mth.sin(angle) * 32.0F * howFar) + this.random.nextInt(3) * Mth.floor(howFar);
          int spawnY = level.getHeight(Heightmap.Types.WORLD_SURFACE, spawnX, spawnZ);
          if (Mth.abs(spawnY - this.center.getY()) <= 96) {
             spawnPos.set(spawnX, spawnY, spawnZ);

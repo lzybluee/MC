@@ -29,8 +29,8 @@ import org.slf4j.Logger;
 public abstract class TemplateStructurePiece extends StructurePiece {
    private static final Logger LOGGER = LogUtils.getLogger();
    protected final String templateName;
-   protected StructureTemplate template;
-   protected StructurePlaceSettings placeSettings;
+   protected final StructureTemplate template;
+   protected final StructurePlaceSettings placeSettings;
    protected BlockPos templatePosition;
 
    public TemplateStructurePiece(

@@ -14,7 +14,7 @@ import net.minecraft.util.Unit;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.Behavior;
@@ -32,8 +32,6 @@ import net.minecraft.world.entity.ai.behavior.Swim;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.entity.ai.sensing.Sensor;
-import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.schedule.Activity;
 import org.slf4j.Logger;
@@ -41,39 +39,14 @@ import org.slf4j.Logger;
 public class SnifferAi {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final int MAX_LOOK_DISTANCE = 6;
-   static final List<SensorType<? extends Sensor<? super Sniffer>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.NEAREST_PLAYERS, SensorType.FOOD_TEMPTATIONS
-   );
-   static final List<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.IS_PANICKING,
-      MemoryModuleType.SNIFFER_SNIFFING_TARGET,
-      MemoryModuleType.SNIFFER_DIGGING,
-      MemoryModuleType.SNIFFER_HAPPY,
-      MemoryModuleType.SNIFF_COOLDOWN,
-      MemoryModuleType.SNIFFER_EXPLORED_POSITIONS,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.BREED_TARGET,
-      new MemoryModuleType[]{MemoryModuleType.TEMPTING_PLAYER, MemoryModuleType.TEMPTATION_COOLDOWN_TICKS, MemoryModuleType.IS_TEMPTED}
-   );
    private static final int SNIFFING_COOLDOWN_TICKS = 9600;
    private static final float SPEED_MULTIPLIER_WHEN_IDLING = 1.0F;
    private static final float SPEED_MULTIPLIER_WHEN_PANICKING = 2.0F;
    private static final float SPEED_MULTIPLIER_WHEN_SNIFFING = 1.25F;
    private static final float SPEED_MULTIPLIER_WHEN_TEMPTED = 1.25F;
 
-   protected static Brain<?> makeBrain(final Brain<Sniffer> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initSniffingActivity(brain);
-      initDigActivity(brain);
-      brain.setCoreActivities(Set.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   public static List<ActivityData<Sniffer>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initSniffingActivity(), initDigActivity());
    }
 
    private static Sniffer resetSniffing(final Sniffer body) {
@@ -82,8 +55,8 @@ public class SnifferAi {
       return body.transitionTo(Sniffer.State.IDLING);
    }
 
-   private static void initCoreActivity(final Brain<Sniffer> brain) {
-      brain.addActivity(Activity.CORE, 0, ImmutableList.of(new Swim(0.8F), new AnimalPanic<Sniffer>(2.0F) {
+   private static ActivityData<Sniffer> initCoreActivity() {
+      return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new Swim(0.8F), new AnimalPanic<Sniffer>(2.0F) {
          protected void start(final ServerLevel level, final Sniffer body, final long timestamp) {
             SnifferAi.resetSniffing(body);
             super.start(level, body, timestamp);
@@ -91,8 +64,8 @@ public class SnifferAi {
       }, new MoveToTargetSink(500, 700), new CountDownCooldownTicks(MemoryModuleType.TEMPTATION_COOLDOWN_TICKS)));
    }
 
-   private static void initSniffingActivity(final Brain<Sniffer> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Sniffer> initSniffingActivity() {
+      return ActivityData.create(
          Activity.SNIFF,
          ImmutableList.of(Pair.of(0, new SnifferAi.Searching())),
          Set.of(
@@ -103,8 +76,8 @@ public class SnifferAi {
       );
    }
 
-   private static void initDigActivity(final Brain<Sniffer> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Sniffer> initDigActivity() {
+      return ActivityData.create(
          Activity.DIG,
          ImmutableList.of(Pair.of(0, new SnifferAi.Digging(160, 180)), Pair.of(0, new SnifferAi.FinishedDigging(40))),
          Set.of(
@@ -115,8 +88,8 @@ public class SnifferAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Sniffer> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Sniffer> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, new AnimalMakeLove(EntityType.SNIFFER) {

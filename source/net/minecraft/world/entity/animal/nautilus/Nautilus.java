@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.animal.nautilus;
 
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -11,29 +11,31 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class Nautilus extends AbstractNautilus {
    private static final int NAUTILUS_TOTAL_AIR_SUPPLY = 300;
+   private static final Brain.Provider<Nautilus> BRAIN_PROVIDER = Brain.provider(
+      List.of(MemoryModuleType.ANGRY_AT, MemoryModuleType.ATTACK_TARGET_COOLDOWN),
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.NAUTILUS_TEMPTATIONS),
+      var0 -> NautilusAi.getActivities()
+   );
 
    public Nautilus(final EntityType<? extends Nautilus> type, final Level level) {
       super(type, level);
    }
 
    @Override
-   protected Brain.Provider<Nautilus> brainProvider() {
-      return NautilusAi.brainProvider();
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return NautilusAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Nautilus> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Nautilus> getBrain() {
-      return (Brain<Nautilus>)super.getBrain();
+      return super.getBrain();
    }
 
    public @Nullable Nautilus getBreedOffspring(final ServerLevel level, final AgeableMob partner) {

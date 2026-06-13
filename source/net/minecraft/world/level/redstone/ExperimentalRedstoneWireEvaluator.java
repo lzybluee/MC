@@ -99,7 +99,7 @@ public class ExperimentalRedstoneWireEvaluator extends RedstoneWireEvaluator {
       if (incomingOrigination != null) {
          orientation = incomingOrigination;
       } else {
-         orientation = Orientation.random(level.random);
+         orientation = Orientation.random(level.getRandom());
       }
 
       return orientation.withUp(Direction.UP).withSideBias(Orientation.SideBias.LEFT);

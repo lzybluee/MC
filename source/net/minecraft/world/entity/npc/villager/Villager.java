@@ -1,19 +1,16 @@
 package net.minecraft.world.entity.npc.villager;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Dynamic;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 import net.minecraft.SharedConstants;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
@@ -48,14 +45,17 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.ConversionParams;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ReputationEventHandler;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -66,7 +66,6 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.sensing.GolemSensor;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.village.ReputationEventType;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
@@ -78,26 +77,27 @@ import net.minecraft.world.entity.npc.InventoryCarrier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.entity.schedule.Activity;
-import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.TradeSet;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.timeline.Timelines;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class Villager extends AbstractVillager implements VillagerDataHolder, ReputationEventHandler {
    private static final Logger LOGGER = LogUtils.getLogger();
    private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.VILLAGER_DATA);
+   private static final EntityDataAccessor<Boolean> DATA_VILLAGER_DATA_FINALIZED = SynchedEntityData.defineId(Villager.class, EntityDataSerializers.BOOLEAN);
    public static final int BREEDING_FOOD_THRESHOLD = 12;
    public static final Map<Item, Integer> FOOD_POINTS = ImmutableMap.of(Items.BREAD, 4, Items.POTATO, 1, Items.CARROT, 1, Items.BEETROOT, 1);
-   private static final int TRADES_PER_LEVEL = 2;
    private static final int MAX_GOSSIP_TOPICS = 10;
    private static final int GOSSIP_COOLDOWN = 1200;
    private static final int GOSSIP_DECAY_INTERVAL = 24000;
@@ -112,6 +112,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    private static final int DEFAULT_LAST_GOSSIP_DECAY = 0;
    private static final int DEFAULT_RESTOCKS_TODAY = 0;
    private static final boolean DEFAULT_ASSIGN_PROFESSION_WHEN_SPAWNED = false;
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.99F).withEyeHeight(0.63F);
    private int updateMerchantTimer;
    private boolean increaseProfessionLevelOnUpdate;
    private @Nullable Player lastTradedPlayer;
@@ -125,50 +126,47 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    private int numberOfRestocksToday = 0;
    private long lastRestockCheckDay;
    private boolean assignProfessionWhenSpawned = false;
-   private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.HOME,
-      MemoryModuleType.JOB_SITE,
-      MemoryModuleType.POTENTIAL_JOB_SITE,
-      MemoryModuleType.MEETING_POINT,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.VISIBLE_VILLAGER_BABIES,
-      MemoryModuleType.NEAREST_PLAYERS,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM,
-      MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS,
-      new MemoryModuleType[]{
-         MemoryModuleType.WALK_TARGET,
-         MemoryModuleType.LOOK_TARGET,
-         MemoryModuleType.INTERACTION_TARGET,
-         MemoryModuleType.BREED_TARGET,
-         MemoryModuleType.PATH,
-         MemoryModuleType.DOORS_TO_CLOSE,
-         MemoryModuleType.NEAREST_BED,
-         MemoryModuleType.HURT_BY,
-         MemoryModuleType.HURT_BY_ENTITY,
-         MemoryModuleType.NEAREST_HOSTILE,
-         MemoryModuleType.SECONDARY_JOB_SITE,
-         MemoryModuleType.HIDING_PLACE,
-         MemoryModuleType.HEARD_BELL_TIME,
-         MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-         MemoryModuleType.LAST_SLEPT,
-         MemoryModuleType.LAST_WOKEN,
-         MemoryModuleType.LAST_WORKED_AT_POI,
-         MemoryModuleType.GOLEM_DETECTED_RECENTLY
+   private static final Brain.Provider<Villager> BRAIN_PROVIDER = Brain.provider(
+      List.of(
+         SensorType.NEAREST_LIVING_ENTITIES,
+         SensorType.NEAREST_PLAYERS,
+         SensorType.NEAREST_ITEMS,
+         SensorType.NEAREST_BED,
+         SensorType.HURT_BY,
+         SensorType.VILLAGER_HOSTILES,
+         SensorType.VILLAGER_BABIES,
+         SensorType.SECONDARY_POIS,
+         SensorType.GOLEM_DETECTED
+      ),
+      body -> {
+         Holder<VillagerProfession> profession = body.getVillagerData().profession();
+         List<ActivityData<Villager>> activities = new ArrayList<>();
+         if (body.isBaby()) {
+            activities.add(ActivityData.create(Activity.PLAY, VillagerGoalPackages.getPlayPackage(0.5F)));
+         } else {
+            activities.add(
+               ActivityData.create(
+                  Activity.WORK,
+                  VillagerGoalPackages.getWorkPackage(profession, 0.5F),
+                  ImmutableSet.of(Pair.of(MemoryModuleType.JOB_SITE, MemoryStatus.VALUE_PRESENT))
+               )
+            );
+         }
+
+         activities.add(ActivityData.create(Activity.CORE, VillagerGoalPackages.getCorePackage(profession, 0.5F)));
+         activities.add(
+            ActivityData.create(
+               Activity.MEET, VillagerGoalPackages.getMeetPackage(0.5F), ImmutableSet.of(Pair.of(MemoryModuleType.MEETING_POINT, MemoryStatus.VALUE_PRESENT))
+            )
+         );
+         activities.add(ActivityData.create(Activity.REST, VillagerGoalPackages.getRestPackage(0.5F)));
+         activities.add(ActivityData.create(Activity.IDLE, VillagerGoalPackages.getIdlePackage(0.5F)));
+         activities.add(ActivityData.create(Activity.PANIC, VillagerGoalPackages.getPanicPackage(0.5F)));
+         activities.add(ActivityData.create(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(0.5F)));
+         activities.add(ActivityData.create(Activity.RAID, VillagerGoalPackages.getRaidPackage(0.5F)));
+         activities.add(ActivityData.create(Activity.HIDE, VillagerGoalPackages.getHidePackage(0.5F)));
+         return activities;
       }
-   );
-   private static final ImmutableList<SensorType<? extends Sensor<? super Villager>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES,
-      SensorType.NEAREST_PLAYERS,
-      SensorType.NEAREST_ITEMS,
-      SensorType.NEAREST_BED,
-      SensorType.HURT_BY,
-      SensorType.VILLAGER_HOSTILES,
-      SensorType.VILLAGER_BABIES,
-      SensorType.SECONDARY_POIS,
-      SensorType.GOLEM_DETECTED
    );
    public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<Villager, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
       MemoryModuleType.HOME,
@@ -200,17 +198,12 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
 
    @Override
    public Brain<Villager> getBrain() {
-      return (Brain<Villager>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
-   protected Brain.Provider<Villager> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      Brain<Villager> brain = this.brainProvider().makeBrain(input);
+   protected Brain<Villager> makeBrain(final Brain.Packed packedBrain) {
+      Brain<Villager> brain = BRAIN_PROVIDER.makeBrain(this, packedBrain);
       this.registerBrainGoals(brain);
       return brain;
    }
@@ -218,39 +211,17 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    public void refreshBrain(final ServerLevel level) {
       Brain<Villager> oldBrain = this.getBrain();
       oldBrain.stopAll(level, this);
-      this.brain = oldBrain.copyWithoutBehaviors();
+      this.brain = BRAIN_PROVIDER.makeBrain(this, oldBrain.pack());
       this.registerBrainGoals(this.getBrain());
    }
 
    private void registerBrainGoals(final Brain<Villager> brain) {
-      Holder<VillagerProfession> profession = this.getVillagerData().profession();
       if (this.isBaby()) {
          brain.setSchedule(EnvironmentAttributes.BABY_VILLAGER_ACTIVITY);
-         brain.addActivity(Activity.PLAY, VillagerGoalPackages.getPlayPackage(0.5F));
       } else {
          brain.setSchedule(EnvironmentAttributes.VILLAGER_ACTIVITY);
-         brain.addActivityWithConditions(
-            Activity.WORK,
-            VillagerGoalPackages.getWorkPackage(profession, 0.5F),
-            ImmutableSet.of(Pair.of(MemoryModuleType.JOB_SITE, MemoryStatus.VALUE_PRESENT))
-         );
       }
 
-      brain.addActivity(Activity.CORE, VillagerGoalPackages.getCorePackage(profession, 0.5F));
-      brain.addActivityWithConditions(
-         Activity.MEET,
-         VillagerGoalPackages.getMeetPackage(profession, 0.5F),
-         ImmutableSet.of(Pair.of(MemoryModuleType.MEETING_POINT, MemoryStatus.VALUE_PRESENT))
-      );
-      brain.addActivity(Activity.REST, VillagerGoalPackages.getRestPackage(profession, 0.5F));
-      brain.addActivity(Activity.IDLE, VillagerGoalPackages.getIdlePackage(profession, 0.5F));
-      brain.addActivity(Activity.PANIC, VillagerGoalPackages.getPanicPackage(profession, 0.5F));
-      brain.addActivity(Activity.PRE_RAID, VillagerGoalPackages.getPreRaidPackage(profession, 0.5F));
-      brain.addActivity(Activity.RAID, VillagerGoalPackages.getRaidPackage(profession, 0.5F));
-      brain.addActivity(Activity.HIDE, VillagerGoalPackages.getHidePackage(profession, 0.5F));
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.setActiveActivityIfPossible(Activity.IDLE);
       brain.updateActivityFromSchedule(this.level().environmentAttributes(), this.level().getGameTime(), this.position());
    }
 
@@ -391,6 +362,11 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    }
 
    @Override
+   public EntityDimensions getDefaultDimensions(final Pose pose) {
+      return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+   }
+
+   @Override
    public boolean canRestock() {
       return true;
    }
@@ -435,7 +411,12 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
       long halfDayPassedTime = this.lastRestockGameTime + 12000L;
       long gameTime = this.level().getGameTime();
       boolean isNewDay = gameTime > halfDayPassedTime;
-      long currentDay = level.getDayCount();
+      long currentDay = this.level()
+         .registryAccess()
+         .get(Timelines.OVERWORLD_DAY)
+         .map(timeline -> timeline.value().getPeriodCount(level.clockManager()))
+         .orElse(0)
+         .intValue();
       isNewDay |= this.lastRestockCheckDay > 0L && currentDay > this.lastRestockCheckDay;
       this.lastRestockCheckDay = currentDay;
       if (isNewDay) {
@@ -491,6 +472,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
       super.defineSynchedData(entityData);
       entityData.define(DATA_VILLAGER_DATA, createDefaultVillagerData());
+      entityData.define(DATA_VILLAGER_DATA_FINALIZED, false);
    }
 
    public static VillagerData createDefaultVillagerData() {
@@ -503,6 +485,7 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    protected void addAdditionalSaveData(final ValueOutput output) {
       super.addAdditionalSaveData(output);
       output.store("VillagerData", VillagerData.CODEC, this.getVillagerData());
+      output.putBoolean("VillagerDataFinalized", this.entityData.get(DATA_VILLAGER_DATA_FINALIZED));
       output.putByte("FoodLevel", (byte)this.foodLevel);
       output.store("Gossips", GossipContainer.CODEC, this.gossips);
       output.putInt("Xp", this.villagerXp);
@@ -517,7 +500,13 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    @Override
    protected void readAdditionalSaveData(final ValueInput input) {
       super.readAdditionalSaveData(input);
-      this.entityData.set(DATA_VILLAGER_DATA, input.<VillagerData>read("VillagerData", VillagerData.CODEC).orElseGet(Villager::createDefaultVillagerData));
+      Optional<VillagerData> villagerDataOptional = input.read("VillagerData", VillagerData.CODEC);
+      if (input.getBooleanOr("VillagerDataFinalized", false) || villagerDataOptional.isPresent()) {
+         this.entityData.set(DATA_VILLAGER_DATA_FINALIZED, true);
+         VillagerData villagerData = villagerDataOptional.orElseGet(Villager::createDefaultVillagerData);
+         this.entityData.set(DATA_VILLAGER_DATA, villagerData);
+      }
+
       this.foodLevel = input.getByteOr("FoodLevel", (byte)0);
       this.gossips.clear();
       input.<GossipContainer>read("Gossips", GossipContainer.CODEC).ifPresent(this.gossips::putAll);
@@ -737,11 +726,9 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
          this.setVillagerData(this.getVillagerData().withProfession(level.registryAccess(), VillagerProfession.NONE));
       }
 
-      if (spawnReason == EntitySpawnReason.COMMAND
-         || spawnReason == EntitySpawnReason.SPAWN_ITEM_USE
-         || EntitySpawnReason.isSpawner(spawnReason)
-         || spawnReason == EntitySpawnReason.DISPENSER) {
+      if (!this.entityData.get(DATA_VILLAGER_DATA_FINALIZED)) {
          this.setVillagerData(this.getVillagerData().withType(level.registryAccess(), VillagerType.byBiome(level.getBiome(this.blockPosition()))));
+         this.entityData.set(DATA_VILLAGER_DATA_FINALIZED, true);
       }
 
       if (spawnReason == EntitySpawnReason.STRUCTURE) {
@@ -752,19 +739,17 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    }
 
    public @Nullable Villager getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
-      double random = this.random.nextDouble();
+      double biomeRoll = this.random.nextDouble();
       Holder<VillagerType> type;
-      if (random < 0.5) {
+      if (biomeRoll < 0.5) {
          type = level.registryAccess().getOrThrow(VillagerType.byBiome(level.getBiome(this.blockPosition())));
-      } else if (random < 0.75) {
+      } else if (biomeRoll < 0.75) {
          type = this.getVillagerData().type();
       } else {
          type = ((Villager)partner).getVillagerData().type();
       }
 
-      Villager villager = new Villager(EntityType.VILLAGER, level, type);
-      villager.finalizeSpawn(level, level.getCurrentDifficultyAt(villager.blockPosition()), EntitySpawnReason.BREEDING, null);
-      return villager;
+      return new Villager(EntityType.VILLAGER, level, type);
    }
 
    @Override
@@ -816,25 +801,12 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
    @Override
    protected void updateTrades(final ServerLevel level) {
       VillagerData data = this.getVillagerData();
-      ResourceKey<VillagerProfession> profession = data.profession().unwrapKey().orElse(null);
-      if (profession != null) {
-         Int2ObjectMap<VillagerTrades.ItemListing[]> tradesByLevel;
-         if (this.level().enabledFeatures().contains(FeatureFlags.TRADE_REBALANCE)) {
-            Int2ObjectMap<VillagerTrades.ItemListing[]> experimentalTrades = VillagerTrades.EXPERIMENTAL_TRADES.get(profession);
-            tradesByLevel = experimentalTrades != null ? experimentalTrades : VillagerTrades.TRADES.get(profession);
-         } else {
-            tradesByLevel = VillagerTrades.TRADES.get(profession);
-         }
-
-         if (tradesByLevel != null && !tradesByLevel.isEmpty()) {
-            VillagerTrades.ItemListing[] itemListings = (VillagerTrades.ItemListing[])tradesByLevel.get(data.level());
-            if (itemListings != null) {
-               MerchantOffers offers = this.getOffers();
-               this.addOffersFromItemListings(level, offers, itemListings, 2);
-               if (SharedConstants.DEBUG_UNLOCK_ALL_TRADES && data.level() < tradesByLevel.size()) {
-                  this.increaseMerchantCareer(level);
-               }
-            }
+      VillagerProfession profession = data.profession().value();
+      ResourceKey<TradeSet> trades = profession.getTrades(data.level());
+      if (trades != null) {
+         this.addOffersFromTradeSet(level, this.getOffers(), trades);
+         if (SharedConstants.DEBUG_UNLOCK_ALL_TRADES && data.level() < 5) {
+            this.increaseMerchantCareer(level);
          }
       }
    }
@@ -913,14 +885,6 @@ public class Villager extends AbstractVillager implements VillagerDataHolder, Re
 
    public void setGossips(final GossipContainer gossips) {
       this.gossips.putAll(gossips);
-   }
-
-   @Override
-   public void startSleeping(final BlockPos bedPosition) {
-      super.startSleeping(bedPosition);
-      this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level().getGameTime());
-      this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-      this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
    }
 
    @Override

@@ -52,7 +52,7 @@ public class BlockTintCache {
 
          for (int offsetX = -1; offsetX <= 1; offsetX++) {
             for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
-               long key = ChunkPos.asLong(chunkX + offsetX, chunkZ + offsetZ);
+               long key = ChunkPos.pack(chunkX + offsetX, chunkZ + offsetZ);
                BlockTintCache.CacheData removed = (BlockTintCache.CacheData)this.cache.remove(key);
                if (removed != null) {
                   removed.invalidate();
@@ -75,7 +75,7 @@ public class BlockTintCache {
    }
 
    private BlockTintCache.CacheData findOrCreateChunkCache(final int x, final int z) {
-      long key = ChunkPos.asLong(x, z);
+      long key = ChunkPos.pack(x, z);
       this.lock.readLock().lock();
 
       try {

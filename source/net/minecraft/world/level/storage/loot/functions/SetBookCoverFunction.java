@@ -14,7 +14,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetBookCoverFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetBookCoverFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetBookCoverFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -55,7 +55,7 @@ public class SetBookCoverFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetBookCoverFunction> getType() {
-      return LootItemFunctions.SET_BOOK_COVER;
+   public MapCodec<SetBookCoverFunction> codec() {
+      return MAP_CODEC;
    }
 }

@@ -23,8 +23,8 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -118,10 +118,10 @@ public class LeavesFix extends DataFix {
                         queue.add(new IntOpenHashSet());
                      }
 
-                     ObjectIterator var25 = sectionMap.values().iterator();
+                     Iterator i$ = sectionMap.values().iterator();
 
-                     while (var25.hasNext()) {
-                        LeavesFix.LeavesSection section = (LeavesFix.LeavesSection)var25.next();
+                     while (i$.hasNext()) {
+                        LeavesFix.LeavesSection section = (LeavesFix.LeavesSection)i$.next();
                         if (!section.isSkippable()) {
                            for (int i = 0; i < 4096; i++) {
                               int block = section.getBlock(i);

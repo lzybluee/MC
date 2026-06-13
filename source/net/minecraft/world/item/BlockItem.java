@@ -11,7 +11,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.component.BlockItemStateProperties;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.component.TypedEntityData;
@@ -200,7 +199,7 @@ public class BlockItem extends Item {
    public void onDestroyed(final ItemEntity entity) {
       ItemContainerContents container = entity.getItem().set(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
       if (container != null) {
-         ItemUtils.onContainerDestroyed(entity, container.nonEmptyItemsCopy());
+         ItemUtils.onContainerDestroyed(entity, container.nonEmptyItemCopyStream());
       }
    }
 
@@ -212,10 +211,5 @@ public class BlockItem extends Item {
          BlockEntity.addEntityType(output, type);
          stack.set(DataComponents.BLOCK_ENTITY_DATA, TypedEntityData.of(type, output.buildResult()));
       }
-   }
-
-   @Override
-   public FeatureFlagSet requiredFeatures() {
-      return this.getBlock().requiredFeatures();
    }
 }

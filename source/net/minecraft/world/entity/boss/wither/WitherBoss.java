@@ -19,6 +19,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
@@ -71,11 +72,11 @@ public class WitherBoss extends Monster implements RangedAttackMob {
    private final int[] nextHeadUpdate = new int[2];
    private final int[] idleHeadUpdates = new int[2];
    private int destroyBlocksTick;
-   private final ServerBossEvent bossEvent = (ServerBossEvent)new ServerBossEvent(
-         this.getDisplayName(), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.PROGRESS
-      )
-      .setDarkenScreen(true);
-   private static final TargetingConditions.Selector LIVING_ENTITY_SELECTOR = (target, level) -> !target.getType().is(EntityTypeTags.WITHER_FRIENDS)
+   private final ServerBossEvent bossEvent = Util.make(
+      new ServerBossEvent(Mth.createInsecureUUID(this.random), this.getDisplayName(), BossEvent.BossBarColor.PURPLE, BossEvent.BossBarOverlay.PROGRESS),
+      e -> e.setDarkenScreen(true)
+   );
+   private static final TargetingConditions.Selector LIVING_ENTITY_SELECTOR = (target, level) -> !target.is(EntityTypeTags.WITHER_FRIENDS)
       && target.attackable();
    private static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forCombat().range(20.0).selector(LIVING_ENTITY_SELECTOR);
 
@@ -224,7 +225,7 @@ public class WitherBoss extends Monster implements RangedAttackMob {
                0.0,
                0.0
             );
-         if (isPowered && this.level().random.nextInt(4) == 0) {
+         if (isPowered && this.level().getRandom().nextInt(4) == 0) {
             this.level()
                .addParticle(
                   ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0.7F, 0.7F, 0.5F),
@@ -468,7 +469,7 @@ public class WitherBoss extends Monster implements RangedAttackMob {
       }
 
       Entity sourceEntity = source.getEntity();
-      if (sourceEntity != null && sourceEntity.getType().is(EntityTypeTags.WITHER_FRIENDS)) {
+      if (sourceEntity != null && sourceEntity.is(EntityTypeTags.WITHER_FRIENDS)) {
          return false;
       }
 

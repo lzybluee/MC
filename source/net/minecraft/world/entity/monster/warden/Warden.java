@@ -1,8 +1,8 @@
 package net.minecraft.world.entity.monster.warden;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.mojang.serialization.Dynamic;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import net.minecraft.core.BlockPos;
@@ -48,6 +48,7 @@ import net.minecraft.world.entity.ai.behavior.warden.SonicBoom;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Explosion;
@@ -95,16 +96,23 @@ public class Warden extends Monster implements VibrationSystem {
    private static final float DIGGING_PARTICLES_DURATION = 4.5F;
    private static final float DIGGING_PARTICLES_OFFSET = 0.7F;
    private static final int PROJECTILE_ANGER_DISTANCE = 30;
+   private static final Brain.Provider<Warden> BRAIN_PROVIDER = Brain.provider(
+      List.of(
+         MemoryModuleType.NEAREST_VISIBLE_NEMESIS, MemoryModuleType.RECENT_PROJECTILE, MemoryModuleType.TOUCH_COOLDOWN, MemoryModuleType.VIBRATION_COOLDOWN
+      ),
+      List.of(SensorType.NEAREST_PLAYERS, SensorType.WARDEN_ENTITY_SENSOR),
+      WardenAi::getActivities
+   );
    private int tendrilAnimation;
    private int tendrilAnimationO;
    private int heartAnimation;
    private int heartAnimationO;
-   public AnimationState roarAnimationState = new AnimationState();
-   public AnimationState sniffAnimationState = new AnimationState();
-   public AnimationState emergeAnimationState = new AnimationState();
-   public AnimationState diggingAnimationState = new AnimationState();
-   public AnimationState attackAnimationState = new AnimationState();
-   public AnimationState sonicBoomAnimationState = new AnimationState();
+   public final AnimationState roarAnimationState = new AnimationState();
+   public final AnimationState sniffAnimationState = new AnimationState();
+   public final AnimationState emergeAnimationState = new AnimationState();
+   public final AnimationState diggingAnimationState = new AnimationState();
+   public final AnimationState attackAnimationState = new AnimationState();
+   public final AnimationState sonicBoomAnimationState = new AnimationState();
    private final DynamicGameEventListener<VibrationSystem.Listener> dynamicGameEventListener;
    private final VibrationSystem.User vibrationUser;
    private VibrationSystem.Data vibrationData;
@@ -118,11 +126,11 @@ public class Warden extends Monster implements VibrationSystem {
       this.xpReward = 5;
       this.getNavigation().setCanFloat(true);
       this.setPathfindingMalus(PathType.UNPASSABLE_RAIL, 0.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_OTHER, 8.0F);
+      this.setPathfindingMalus(PathType.DAMAGING, 8.0F);
       this.setPathfindingMalus(PathType.POWDER_SNOW, 8.0F);
       this.setPathfindingMalus(PathType.LAVA, 8.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, 0.0F);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 0.0F);
    }
 
    @Override
@@ -289,7 +297,7 @@ public class Warden extends Monster implements VibrationSystem {
          this.syncClientAngerLevel();
       }
 
-      WardenAi.updateActivity(this);
+      WardenAi.updateActivity(this.getBrain());
    }
 
    @Override
@@ -361,13 +369,13 @@ public class Warden extends Monster implements VibrationSystem {
    }
 
    @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return WardenAi.makeBrain(this, input);
+   protected Brain<Warden> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Warden> getBrain() {
-      return (Brain<Warden>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -383,8 +391,8 @@ public class Warden extends Monster implements VibrationSystem {
          && this.level() == entity.level()
          && EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)
          && !this.isAlliedTo(entity)
-         && livingEntity.getType() != EntityType.ARMOR_STAND
-         && livingEntity.getType() != EntityType.WARDEN
+         && !livingEntity.is(EntityType.ARMOR_STAND)
+         && !livingEntity.is(EntityType.WARDEN)
          && !livingEntity.isInvulnerable()
          && !livingEntity.isDeadOrDying()
          && this.level().getWorldBorder().isWithinBounds(livingEntity.getBoundingBox());

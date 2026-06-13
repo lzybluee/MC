@@ -279,7 +279,7 @@ public class Sheep extends Animal implements Shearable {
    public void ate() {
       super.ate();
       this.setSheared(false);
-      if (this.isBaby()) {
+      if (this.canAgeUp()) {
          this.ageUp(60);
       }
    }

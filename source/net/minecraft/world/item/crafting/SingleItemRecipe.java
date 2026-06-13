@@ -1,24 +1,22 @@
 package net.minecraft.world.item.crafting;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public abstract class SingleItemRecipe implements Recipe<SingleRecipeInput> {
+   protected final Recipe.CommonInfo commonInfo;
    private final Ingredient input;
-   private final ItemStack result;
-   private final String group;
+   private final ItemStackTemplate result;
    private @Nullable PlacementInfo placementInfo;
 
-   public SingleItemRecipe(final String group, final Ingredient input, final ItemStack result) {
-      this.group = group;
+   public SingleItemRecipe(final Recipe.CommonInfo commonInfo, final Ingredient input, final ItemStackTemplate result) {
+      this.commonInfo = commonInfo;
       this.input = input;
       this.result = result;
    }
@@ -34,15 +32,15 @@ public abstract class SingleItemRecipe implements Recipe<SingleRecipeInput> {
    }
 
    @Override
-   public String group() {
-      return this.group;
+   public boolean showNotification() {
+      return this.commonInfo.showNotification();
    }
 
    public Ingredient input() {
       return this.input;
    }
 
-   protected ItemStack result() {
+   protected ItemStackTemplate result() {
       return this.result;
    }
 
@@ -55,47 +53,35 @@ public abstract class SingleItemRecipe implements Recipe<SingleRecipeInput> {
       return this.placementInfo;
    }
 
-   public ItemStack assemble(final SingleRecipeInput input, final HolderLookup.Provider registries) {
-      return this.result.copy();
+   public ItemStack assemble(final SingleRecipeInput input) {
+      return this.result.create();
+   }
+
+   public static <T extends SingleItemRecipe> MapCodec<T> simpleMapCodec(final SingleItemRecipe.Factory<T> factory) {
+      return RecordCodecBuilder.mapCodec(
+         i -> i.group(
+               Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+               Ingredient.CODEC.fieldOf("ingredient").forGetter(SingleItemRecipe::input),
+               ItemStackTemplate.CODEC.fieldOf("result").forGetter(SingleItemRecipe::result)
+            )
+            .apply(i, factory::create)
+      );
+   }
+
+   public static <T extends SingleItemRecipe> StreamCodec<RegistryFriendlyByteBuf, T> simpleStreamCodec(final SingleItemRecipe.Factory<T> factory) {
+      return StreamCodec.composite(
+         Recipe.CommonInfo.STREAM_CODEC,
+         o -> o.commonInfo,
+         Ingredient.CONTENTS_STREAM_CODEC,
+         SingleItemRecipe::input,
+         ItemStackTemplate.STREAM_CODEC,
+         SingleItemRecipe::result,
+         factory::create
+      );
    }
 
    @FunctionalInterface
    public interface Factory<T extends SingleItemRecipe> {
-      T create(String group, Ingredient ingredient, ItemStack result);
-   }
-
-   public static class Serializer<T extends SingleItemRecipe> implements RecipeSerializer<T> {
-      private final MapCodec<T> codec;
-      private final StreamCodec<RegistryFriendlyByteBuf, T> streamCodec;
-
-      protected Serializer(final SingleItemRecipe.Factory<T> factory) {
-         this.codec = RecordCodecBuilder.mapCodec(
-            r -> r.group(
-                  Codec.STRING.optionalFieldOf("group", "").forGetter(SingleItemRecipe::group),
-                  Ingredient.CODEC.fieldOf("ingredient").forGetter(SingleItemRecipe::input),
-                  ItemStack.STRICT_CODEC.fieldOf("result").forGetter(SingleItemRecipe::result)
-               )
-               .apply(r, factory::create)
-         );
-         this.streamCodec = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8,
-            SingleItemRecipe::group,
-            Ingredient.CONTENTS_STREAM_CODEC,
-            SingleItemRecipe::input,
-            ItemStack.STREAM_CODEC,
-            SingleItemRecipe::result,
-            factory::create
-         );
-      }
-
-      @Override
-      public MapCodec<T> codec() {
-         return this.codec;
-      }
-
-      @Override
-      public StreamCodec<RegistryFriendlyByteBuf, T> streamCodec() {
-         return this.streamCodec;
-      }
+      T create(Recipe.CommonInfo commonInfo, Ingredient ingredient, ItemStackTemplate result);
    }
 }

@@ -3,18 +3,17 @@ package net.minecraft.client.gui.components;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
@@ -33,12 +32,9 @@ public class EditBox extends AbstractWidget {
    );
    public static final int BACKWARDS = -1;
    public static final int FORWARDS = 1;
-   private static final int CURSOR_INSERT_WIDTH = 1;
-   private static final String CURSOR_APPEND_CHARACTER = "_";
    public static final int DEFAULT_TEXT_COLOR = -2039584;
    public static final Style DEFAULT_HINT_STYLE = Style.EMPTY.withColor(ChatFormatting.DARK_GRAY);
    public static final Style SEARCH_HINT_STYLE = Style.EMPTY.applyFormats(ChatFormatting.GRAY, ChatFormatting.ITALIC);
-   private static final int CURSOR_BLINK_INTERVAL_MS = 300;
    private final Font font;
    private String value = "";
    private int maxLength = 32;
@@ -55,9 +51,9 @@ public class EditBox extends AbstractWidget {
    private int textColorUneditable = -9408400;
    private @Nullable String suggestion;
    private @Nullable Consumer<String> responder;
-   private Predicate<String> filter = Objects::nonNull;
    private final List<EditBox.TextFormatter> formatters = new ArrayList<>();
    private @Nullable Component hint;
+   private @Nullable IMEPreeditOverlay preeditOverlay;
    private long focusedTime = Util.getMillis();
    private int textX;
    private int textY;
@@ -95,17 +91,15 @@ public class EditBox extends AbstractWidget {
    }
 
    public void setValue(final String value) {
-      if (this.filter.test(value)) {
-         if (value.length() > this.maxLength) {
-            this.value = value.substring(0, this.maxLength);
-         } else {
-            this.value = value;
-         }
-
-         this.moveCursorToEnd(false);
-         this.setHighlightPos(this.cursorPos);
-         this.onValueChange(value);
+      if (value.length() > this.maxLength) {
+         this.value = value.substring(0, this.maxLength);
+      } else {
+         this.value = value;
       }
+
+      this.moveCursorToEnd(false);
+      this.setHighlightPos(this.cursorPos);
+      this.onValueChange(value);
    }
 
    public String getValue() {
@@ -130,10 +124,6 @@ public class EditBox extends AbstractWidget {
       this.updateTextPosition();
    }
 
-   public void setFilter(final Predicate<String> filter) {
-      this.filter = filter;
-   }
-
    public void insertText(final String input) {
       int start = Math.min(this.cursorPos, this.highlightPos);
       int end = Math.max(this.cursorPos, this.highlightPos);
@@ -150,13 +140,10 @@ public class EditBox extends AbstractWidget {
             insertionLength = maxInsertionLength;
          }
 
-         String newValue = new StringBuilder(this.value).replace(start, end, text).toString();
-         if (this.filter.test(newValue)) {
-            this.value = newValue;
-            this.setCursorPosition(start + insertionLength);
-            this.setHighlightPos(this.cursorPos);
-            this.onValueChange(this.value);
-         }
+         this.value = new StringBuilder(this.value).replace(start, end, text).toString();
+         this.setCursorPosition(start + insertionLength);
+         this.setHighlightPos(this.cursorPos);
+         this.onValueChange(this.value);
       }
    }
 
@@ -198,11 +185,10 @@ public class EditBox extends AbstractWidget {
             int start = Math.min(pos, this.cursorPos);
             int end = Math.max(pos, this.cursorPos);
             if (start != end) {
-               String newValue = new StringBuilder(this.value).delete(start, end).toString();
-               if (this.filter.test(newValue)) {
-                  this.value = newValue;
-                  this.moveCursorTo(start, false);
-               }
+               this.value = new StringBuilder(this.value).delete(start, end).toString();
+               this.setCursorPosition(start);
+               this.onValueChange(this.value);
+               this.moveCursorTo(start, false);
             }
          }
       }
@@ -260,7 +246,7 @@ public class EditBox extends AbstractWidget {
          this.setHighlightPos(this.cursorPos);
       }
 
-      this.onValueChange(this.value);
+      this.updateTextPosition();
    }
 
    public void setCursorPosition(final int pos) {
@@ -372,6 +358,12 @@ public class EditBox extends AbstractWidget {
       }
    }
 
+   @Override
+   public boolean preeditUpdated(final @Nullable PreeditEvent event) {
+      this.preeditOverlay = event != null ? new IMEPreeditOverlay(event, this.font, 9 + 1) : null;
+      return true;
+   }
+
    private int findClickedPositionInText(final MouseButtonEvent event) {
       int positionInText = Math.min(Mth.floor(event.x()) - this.textX, this.getInnerWidth());
       String displayed = this.value.substring(this.displayPos);
@@ -405,7 +397,7 @@ public class EditBox extends AbstractWidget {
    }
 
    @Override
-   public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.isVisible()) {
          if (this.isBordered()) {
             Identifier sprite = SPRITES.get(this.isActive(), this.isFocused());
@@ -416,13 +408,13 @@ public class EditBox extends AbstractWidget {
          int relCursorPos = this.cursorPos - this.displayPos;
          String displayed = this.font.plainSubstrByWidth(this.value.substring(this.displayPos), this.getInnerWidth());
          boolean cursorOnScreen = relCursorPos >= 0 && relCursorPos <= displayed.length();
-         boolean showCursor = this.isFocused() && (Util.getMillis() - this.focusedTime) / 300L % 2L == 0L && cursorOnScreen;
+         boolean showCursor = this.isFocused() && TextCursorUtils.isCursorVisible(Util.getMillis() - this.focusedTime) && cursorOnScreen;
          int drawX = this.textX;
          int relHighlightPos = Mth.clamp(this.highlightPos - this.displayPos, 0, displayed.length());
          if (!displayed.isEmpty()) {
             String half = cursorOnScreen ? displayed.substring(0, relCursorPos) : displayed;
             FormattedCharSequence charSequence = this.applyFormat(half, this.displayPos);
-            graphics.drawString(this.font, charSequence, drawX, this.textY, color, this.textShadow);
+            graphics.text(this.font, charSequence, drawX, this.textY, color, this.textShadow);
             drawX += this.font.width(charSequence) + 1;
          }
 
@@ -436,15 +428,15 @@ public class EditBox extends AbstractWidget {
          }
 
          if (!displayed.isEmpty() && cursorOnScreen && relCursorPos < displayed.length()) {
-            graphics.drawString(this.font, this.applyFormat(displayed.substring(relCursorPos), this.cursorPos), drawX, this.textY, color, this.textShadow);
+            graphics.text(this.font, this.applyFormat(displayed.substring(relCursorPos), this.cursorPos), drawX, this.textY, color, this.textShadow);
          }
 
          if (this.hint != null && displayed.isEmpty() && !this.isFocused()) {
-            graphics.drawString(this.font, this.hint, drawX, this.textY, color);
+            graphics.text(this.font, this.hint, drawX, this.textY, color);
          }
 
          if (!insert && this.suggestion != null) {
-            graphics.drawString(this.font, this.suggestion, cursorX - 1, this.textY, -8355712, this.textShadow);
+            graphics.text(this.font, this.suggestion, cursorX - 1, this.textY, -8355712, this.textShadow);
          }
 
          if (relHighlightPos != relCursorPos) {
@@ -460,14 +452,19 @@ public class EditBox extends AbstractWidget {
 
          if (showCursor) {
             if (insert) {
-               graphics.fill(cursorX, this.textY - 1, cursorX + 1, this.textY + 1 + 9, color);
+               TextCursorUtils.extractInsertCursor(graphics, cursorX, this.textY, color, 9 + 1);
             } else {
-               graphics.drawString(this.font, "_", cursorX, this.textY, color, this.textShadow);
+               TextCursorUtils.extractAppendCursor(graphics, this.font, cursorX, this.textY, color, this.textShadow);
             }
          }
 
          if (this.isHovered()) {
             graphics.requestCursor(this.isEditable() ? CursorTypes.IBEAM : CursorTypes.NOT_ALLOWED);
+         }
+
+         if (this.preeditOverlay != null) {
+            this.preeditOverlay.updateInputPosition(cursorX, this.textY);
+            graphics.setPreeditOverlay(this.preeditOverlay);
          }
       }
    }
@@ -531,6 +528,10 @@ public class EditBox extends AbstractWidget {
          if (focused) {
             this.focusedTime = Util.getMillis();
          }
+
+         if (this.isEditable()) {
+            Minecraft.getInstance().onTextInputFocusChange(this, focused);
+         }
       }
    }
 
@@ -539,6 +540,10 @@ public class EditBox extends AbstractWidget {
    }
 
    public void setEditable(final boolean isEditable) {
+      if (this.isFocused()) {
+         Minecraft.getInstance().onTextInputFocusChange(this, isEditable);
+      }
+
       this.isEditable = isEditable;
    }
 

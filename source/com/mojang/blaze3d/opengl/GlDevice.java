@@ -5,10 +5,12 @@ import com.mojang.blaze3d.GraphicsWorkarounds;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.preprocessor.GlslPreprocessor;
+import com.mojang.blaze3d.shaders.GpuDebugOptions;
 import com.mojang.blaze3d.shaders.ShaderSource;
 import com.mojang.blaze3d.shaders.ShaderType;
-import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.CommandEncoderBackend;
 import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.GpuDeviceBackend;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
@@ -39,7 +41,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GLCapabilities;
 import org.slf4j.Logger;
 
-public class GlDevice implements GpuDevice {
+class GlDevice implements GpuDeviceBackend {
    private static final Logger LOGGER = LogUtils.getLogger();
    protected static boolean USE_GL_ARB_vertex_attrib_binding = true;
    protected static boolean USE_GL_KHR_debug = true;
@@ -47,7 +49,7 @@ public class GlDevice implements GpuDevice {
    protected static boolean USE_GL_ARB_debug_output = true;
    protected static boolean USE_GL_ARB_direct_state_access = true;
    protected static boolean USE_GL_ARB_buffer_storage = true;
-   private final CommandEncoder encoder;
+   private final CommandEncoderBackend encoder;
    private final @Nullable GlDebug debugLog;
    private final GlDebugLabel debugLabels;
    private final int maxSupportedTextureSize;
@@ -60,17 +62,17 @@ public class GlDevice implements GpuDevice {
    private final Set<String> enabledExtensions = new HashSet<>();
    private final int uniformOffsetAlignment;
    private final int maxSupportedAnisotropy;
+   private final long windowHandle;
 
-   public GlDevice(
-      final long windowHandle, final int debugLevel, final boolean synchronousLogs, final ShaderSource defaultShaderSource, final boolean wantsDebugLabels
-   ) {
+   public GlDevice(final long windowHandle, final ShaderSource defaultShaderSource, final GpuDebugOptions debugOptions) {
       GLFW.glfwMakeContextCurrent(windowHandle);
       GLCapabilities capabilities = GL.createCapabilities();
       int maxSize = getMaxSupportedTextureSize();
       GLFW.glfwSetWindowSizeLimits(windowHandle, -1, -1, maxSize, maxSize);
-      GraphicsWorkarounds workarounds = GraphicsWorkarounds.get(this);
-      this.debugLog = GlDebug.enableDebugCallback(debugLevel, synchronousLogs, this.enabledExtensions);
-      this.debugLabels = GlDebugLabel.create(capabilities, wantsDebugLabels, this.enabledExtensions);
+      GraphicsWorkarounds workarounds = GraphicsWorkarounds.get(new GpuDevice(this));
+      this.windowHandle = windowHandle;
+      this.debugLog = GlDebug.enableDebugCallback(debugOptions.logLevel(), debugOptions.synchronousLogs(), this.enabledExtensions);
+      this.debugLabels = GlDebugLabel.create(capabilities, debugOptions.useLabels(), this.enabledExtensions);
       this.vertexArrayCache = VertexArrayCache.create(capabilities, this.debugLabels, this.enabledExtensions);
       this.bufferStorage = BufferStorage.create(capabilities, this.enabledExtensions);
       this.directStateAccess = DirectStateAccess.create(capabilities, this.enabledExtensions, workarounds);
@@ -93,7 +95,7 @@ public class GlDevice implements GpuDevice {
    }
 
    @Override
-   public CommandEncoder createCommandEncoder() {
+   public CommandEncoderBackend createCommandEncoder() {
       return this.encoder;
    }
 
@@ -111,13 +113,7 @@ public class GlDevice implements GpuDevice {
       final int maxAnisotropy,
       final OptionalDouble maxLod
    ) {
-      if (maxAnisotropy >= 1 && maxAnisotropy <= this.maxSupportedAnisotropy) {
-         return new GlSampler(addressModeU, addressModeV, minFilter, magFilter, maxAnisotropy, maxLod);
-      } else {
-         throw new IllegalArgumentException(
-            "maxAnisotropy out of range; must be >= 1 and <= " + this.getMaxSupportedAnisotropy() + ", but was " + maxAnisotropy
-         );
-      }
+      return new GlSampler(addressModeU, addressModeV, minFilter, magFilter, maxAnisotropy, maxLod);
    }
 
    @Override
@@ -143,37 +139,13 @@ public class GlDevice implements GpuDevice {
       final int depthOrLayers,
       final int mipLevels
    ) {
-      if (mipLevels < 1) {
-         throw new IllegalArgumentException("mipLevels must be at least 1");
-      }
-
-      if (depthOrLayers < 1) {
-         throw new IllegalArgumentException("depthOrLayers must be at least 1");
-      }
-
-      boolean isCubemap = (usage & 16) != 0;
-      if (isCubemap) {
-         if (width != height) {
-            throw new IllegalArgumentException("Cubemap compatible textures must be square, but size is " + width + "x" + height);
-         }
-
-         if (depthOrLayers % 6 != 0) {
-            throw new IllegalArgumentException("Cubemap compatible textures must have a layer count with a multiple of 6, was " + depthOrLayers);
-         }
-
-         if (depthOrLayers > 6) {
-            throw new UnsupportedOperationException("Array textures are not yet supported");
-         }
-      } else if (depthOrLayers > 1) {
-         throw new UnsupportedOperationException("Array or 3D textures are not yet supported");
-      }
-
       GlStateManager.clearGlErrors();
       int id = GlStateManager._genTexture();
       if (label == null) {
          label = String.valueOf(id);
       }
 
+      boolean isCubemap = (usage & 16) != 0;
       int target;
       if (isCubemap) {
          GL11.glBindTexture(34067, id);
@@ -227,23 +199,11 @@ public class GlDevice implements GpuDevice {
 
    @Override
    public GpuTextureView createTextureView(final GpuTexture texture, final int baseMipLevel, final int mipLevels) {
-      if (texture.isClosed()) {
-         throw new IllegalArgumentException("Can't create texture view with closed texture");
-      } else if (baseMipLevel >= 0 && baseMipLevel + mipLevels <= texture.getMipLevels()) {
-         return new GlTextureView((GlTexture)texture, baseMipLevel, mipLevels);
-      } else {
-         throw new IllegalArgumentException(
-            mipLevels + " mip levels starting from " + baseMipLevel + " would be out of range for texture with only " + texture.getMipLevels() + " mip levels"
-         );
-      }
+      return new GlTextureView((GlTexture)texture, baseMipLevel, mipLevels);
    }
 
    @Override
    public GpuBuffer createBuffer(final @Nullable Supplier<String> label, @GpuBuffer.Usage final int usage, final long size) {
-      if (size <= 0L) {
-         throw new IllegalArgumentException("Buffer size must be greater than zero");
-      }
-
       GlStateManager.clearGlErrors();
       GlBuffer buffer = this.bufferStorage.createBuffer(this.directStateAccess, label, usage, size);
       int error = GlStateManager._getError();
@@ -261,10 +221,6 @@ public class GlDevice implements GpuDevice {
 
    @Override
    public GpuBuffer createBuffer(final @Nullable Supplier<String> label, @GpuBuffer.Usage final int usage, final ByteBuffer data) {
-      if (!data.hasRemaining()) {
-         throw new IllegalArgumentException("Buffer source must not be empty");
-      }
-
       GlStateManager.clearGlErrors();
       long size = data.remaining();
       GlBuffer buffer = this.bufferStorage.createBuffer(this.directStateAccess, label, usage, data);
@@ -383,6 +339,21 @@ public class GlDevice implements GpuDevice {
    @Override
    public void close() {
       this.clearPipelineCache();
+   }
+
+   @Override
+   public void setVsync(final boolean enabled) {
+      GLFW.glfwSwapInterval(enabled ? 1 : 0);
+   }
+
+   @Override
+   public void presentFrame() {
+      GLFW.glfwSwapBuffers(this.windowHandle);
+   }
+
+   @Override
+   public boolean isZZeroToOne() {
+      return false;
    }
 
    public DirectStateAccess directStateAccess() {

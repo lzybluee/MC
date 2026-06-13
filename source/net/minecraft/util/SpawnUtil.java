@@ -28,10 +28,11 @@ public class SpawnUtil {
       final boolean checkCollisions
    ) {
       BlockPos.MutableBlockPos searchPos = start.mutable();
+      RandomSource random = level.getRandom();
 
       for (int i = 0; i < spawnAttempts; i++) {
-         int dx = Mth.randomBetweenInclusive(level.random, -spawnRangeXZ, spawnRangeXZ);
-         int dz = Mth.randomBetweenInclusive(level.random, -spawnRangeXZ, spawnRangeXZ);
+         int dx = Mth.randomBetweenInclusive(random, -spawnRangeXZ, spawnRangeXZ);
+         int dz = Mth.randomBetweenInclusive(random, -spawnRangeXZ, spawnRangeXZ);
          searchPos.setWithOffset(start, dx, spawnRangeY, dz);
          if (level.getWorldBorder().isWithinBounds(searchPos)
             && moveToPossibleSpawnPosition(level, spawnRangeY, searchPos, strategy)

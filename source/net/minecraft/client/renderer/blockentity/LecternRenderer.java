@@ -7,22 +7,21 @@ import net.minecraft.client.model.object.book.BookModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.state.LecternRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class LecternRenderer implements BlockEntityRenderer<LecternBlockEntity, LecternRenderState> {
-   private final MaterialSet materials;
+   private final SpriteGetter sprites;
    private final BookModel bookModel;
-   private final BookModel.State bookState = new BookModel.State(0.0F, 0.1F, 0.9F, 1.2F);
+   private static final BookModel.State BOOK_STATE = BookModel.State.forAnimation(0.0F, 0.1F, 0.9F, 1.2F);
 
    public LecternRenderer(final BlockEntityRendererProvider.Context context) {
-      this.materials = context.materials();
+      this.sprites = context.sprites();
       this.bookModel = new BookModel(context.bakeLayer(ModelLayers.BOOK));
    }
 
@@ -51,13 +50,13 @@ public class LecternRenderer implements BlockEntityRenderer<LecternBlockEntity, 
          poseStack.translate(0.0F, -0.125F, 0.0F);
          submitNodeCollector.submitModel(
             this.bookModel,
-            this.bookState,
+            BOOK_STATE,
             poseStack,
-            EnchantTableRenderer.BOOK_TEXTURE.renderType(RenderTypes::entitySolid),
             state.lightCoords,
             OverlayTexture.NO_OVERLAY,
             -1,
-            this.materials.get(EnchantTableRenderer.BOOK_TEXTURE),
+            EnchantTableRenderer.BOOK_TEXTURE,
+            this.sprites,
             0,
             state.breakProgress
          );

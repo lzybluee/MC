@@ -6,8 +6,7 @@ import net.minecraft.client.Minecraft;
 
 public enum ChunkSectionLayerGroup {
    OPAQUE(ChunkSectionLayer.SOLID, ChunkSectionLayer.CUTOUT),
-   TRANSLUCENT(ChunkSectionLayer.TRANSLUCENT),
-   TRIPWIRE(ChunkSectionLayer.TRIPWIRE);
+   TRANSLUCENT(ChunkSectionLayer.TRANSLUCENT);
 
    private final String label;
    private final ChunkSectionLayer[] layers;
@@ -30,7 +29,6 @@ public enum ChunkSectionLayerGroup {
 
       RenderTarget renderTarget = switch (this) {
          case TRANSLUCENT -> minecraft.levelRenderer.getTranslucentTarget();
-         case TRIPWIRE -> minecraft.levelRenderer.getWeatherTarget();
          default -> minecraft.getMainRenderTarget();
       };
       return renderTarget != null ? renderTarget : minecraft.getMainRenderTarget();

@@ -35,7 +35,7 @@ public abstract class GrowingPlantBlock extends Block {
    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
       BlockState growthDirectionState = context.getLevel().getBlockState(context.getClickedPos().relative(this.growthDirection));
       return !growthDirectionState.is(this.getHeadBlock()) && !growthDirectionState.is(this.getBodyBlock())
-         ? this.getStateForPlacement(context.getLevel().random)
+         ? this.getStateForPlacement(context.getLevel().getRandom())
          : this.getBodyBlock().defaultBlockState();
    }
 

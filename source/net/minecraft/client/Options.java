@@ -42,6 +42,7 @@ import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.client.input.InputQuirks;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GpuWarnlistManager;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -82,7 +83,8 @@ public class Options {
    public static final int RENDER_DISTANCE_REALLY_FAR = 16;
    public static final int RENDER_DISTANCE_EXTREME = 32;
    private static final Splitter OPTION_SPLITTER = Splitter.on(':').limit(2);
-   public static final String DEFAULT_SOUND_DEVICE = "";
+   private static final String DEFAULT_SOUND_DEVICE = "";
+   private static final Component TOOLTIP_NEEDS_RESTART = Component.translatable("options.needsRestart");
    private static final Component ACCESSIBILITY_TOOLTIP_DARK_MOJANG_BACKGROUND = Component.translatable("options.darkMojangStudiosBackgroundColor.tooltip");
    private final OptionInstance<Boolean> darkMojangStudiosBackground = OptionInstance.createBoolean(
       "options.darkMojangStudiosBackgroundColor", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_DARK_MOJANG_BACKGROUND), false
@@ -197,7 +199,7 @@ public class Options {
       "options.improvedTransparency", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_IMPROVED_TRANSPARENCY), false, value -> {
          Minecraft minecraftx = Minecraft.getInstance();
          GpuWarnlistManager gpuWarnlistManager = minecraftx.getGpuWarnlistManager();
-         if (value && gpuWarnlistManager.willShowWarning()) {
+         if (!this.isApplyingGraphicsPreset && value && gpuWarnlistManager.willShowWarning()) {
             gpuWarnlistManager.showWarning();
          } else {
             operateOnLevelRenderer(LevelRenderer::allChanged);
@@ -246,7 +248,12 @@ public class Options {
       (caption, value) -> value.caption(),
       new OptionInstance.Enum<>(Arrays.asList(ChatVisiblity.values()), ChatVisiblity.LEGACY_CODEC),
       ChatVisiblity.FULL,
-      value -> {}
+      var0 -> {
+         LocalPlayer player = Minecraft.getInstance().player;
+         if (player != null) {
+            player.refreshChatAbilities();
+         }
+      }
    );
    private final OptionInstance<Double> chatOpacity = new OptionInstance<>(
       "options.chat.opacity",
@@ -536,6 +543,24 @@ public class Options {
          this.fullscreen().set(minecraftx.getWindow().isFullscreen());
       }
    });
+   private boolean initialExclusiveFullscreen;
+   private static final Component TOOLTIP_EXCLUSIVE_FULLSCREEN_WARNING = Component.translatable("options.exclusiveFullscreen.warningTooltip");
+   private final OptionInstance<Boolean> exclusiveFullscreen = OptionInstance.createBoolean("options.exclusiveFullscreen", value -> {
+      List<Component> tooltipLines = new ArrayList<>();
+      if (value != this.initialExclusiveFullscreen) {
+         tooltipLines.add(TOOLTIP_NEEDS_RESTART);
+      }
+
+      if (value) {
+         if (!tooltipLines.isEmpty()) {
+            tooltipLines.add(CommonComponents.EMPTY);
+         }
+
+         tooltipLines.add(TOOLTIP_EXCLUSIVE_FULLSCREEN_WARNING);
+      }
+
+      return !tooltipLines.isEmpty() ? Tooltip.create(CommonComponents.joinLines(tooltipLines)) : null;
+   }, false);
    private final OptionInstance<Boolean> bobView = OptionInstance.createBoolean("options.viewBobbing", true);
    private static final Component KEY_TOGGLE = Component.translatable("options.key.toggle");
    private static final Component KEY_HOLD = Component.translatable("options.key.hold");
@@ -647,6 +672,7 @@ public class Options {
    public final KeyMapping keyDebugPofilingChart = new KeyMapping("key.debug.profilingChart", InputConstants.Type.KEYSYM, 49, KeyMapping.Category.DEBUG, 1);
    public final KeyMapping keyDebugFpsCharts = new KeyMapping("key.debug.fpsCharts", InputConstants.Type.KEYSYM, 50, KeyMapping.Category.DEBUG, 2);
    public final KeyMapping keyDebugNetworkCharts = new KeyMapping("key.debug.networkCharts", InputConstants.Type.KEYSYM, 51, KeyMapping.Category.DEBUG, 3);
+   public final KeyMapping keyDebugLightmapTexture = new KeyMapping("key.debug.lightmapTexture", InputConstants.Type.KEYSYM, 52, KeyMapping.Category.DEBUG, 4);
    public final KeyMapping[] debugKeys = new KeyMapping[]{
       this.keyDebugReloadChunk,
       this.keyDebugShowHitboxes,
@@ -666,7 +692,8 @@ public class Options {
       this.keyDebugDumpVersion,
       this.keyDebugPofilingChart,
       this.keyDebugFpsCharts,
-      this.keyDebugNetworkCharts
+      this.keyDebugNetworkCharts,
+      this.keyDebugLightmapTexture
    };
    public final KeyMapping[] keyMappings = Stream.of(
          new KeyMapping[]{
@@ -832,7 +859,7 @@ public class Options {
          return !minecraftx.isRunning() ? 2147483646 : minecraftx.getWindow().calculateScale(0, minecraftx.isEnforceUnicode());
       }, 2147483646),
       0,
-      value -> this.minecraft.resizeDisplay()
+      value -> this.minecraft.resizeGui()
    );
    private final OptionInstance<ParticleStatus> particles = new OptionInstance<>(
       "options.particles",
@@ -864,7 +891,7 @@ public class Options {
       new OptionInstance.LazyEnum<>(
          () -> Stream.concat(Stream.of(""), Minecraft.getInstance().getSoundManager().getAvailableSoundDevices().stream()).toList(),
          device -> Minecraft.getInstance().isRunning()
-               && device != ""
+               && !isSoundDeviceDefault(device)
                && !Minecraft.getInstance().getSoundManager().getAvailableSoundDevices().contains(device)
             ? Optional.empty()
             : Optional.of(device),
@@ -897,6 +924,10 @@ public class Options {
    );
    public boolean syncWrites;
    public boolean startedCleanly = true;
+
+   public static boolean isSoundDeviceDefault(final String deviceName) {
+      return deviceName.equals("");
+   }
 
    private static void operateOnLevelRenderer(final Consumer<LevelRenderer> consumer) {
       LevelRenderer levelRenderer = Minecraft.getInstance().levelRenderer;
@@ -1160,7 +1191,7 @@ public class Options {
       Minecraft instance = Minecraft.getInstance();
       if (instance.getWindow() != null) {
          instance.updateFontOptions();
-         instance.resizeDisplay();
+         instance.resizeGui();
       }
    }
 
@@ -1247,6 +1278,10 @@ public class Options {
 
    public OptionInstance<Boolean> fullscreen() {
       return this.fullscreen;
+   }
+
+   public OptionInstance<Boolean> exclusiveFullscreen() {
+      return this.exclusiveFullscreen;
    }
 
    public OptionInstance<Boolean> bobView() {
@@ -1388,6 +1423,7 @@ public class Options {
       );
       this.syncWrites = Util.getPlatform() == Util.OS.WINDOWS;
       this.load();
+      this.initialExclusiveFullscreen = this.exclusiveFullscreen.get();
    }
 
    public float getBackgroundOpacity(final float defaultOpacity) {
@@ -1420,6 +1456,7 @@ public class Options {
       access.process("graphicsPreset", this.graphicsPreset);
       access.process("prioritizeChunkUpdates", this.prioritizeChunkUpdates);
       access.process("fullscreen", this.fullscreen);
+      access.process("exclusiveFullscreen", this.exclusiveFullscreen);
       access.process("gamma", this.gamma);
       access.process("guiScale", this.guiScale);
       access.process("maxAnisotropyBit", this.maxAnisotropyBit);
@@ -1779,7 +1816,7 @@ public class Options {
       return this.modelParts.contains(part);
    }
 
-   public CloudStatus getCloudsType() {
+   public CloudStatus getCloudStatus() {
       return this.cloudStatus.get();
    }
 

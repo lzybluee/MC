@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.FishingHookRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -19,8 +19,8 @@ import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.phys.Vec3;
 
 public class FishingHookRenderer extends EntityRenderer<FishingHook, FishingHookRenderState> {
-   private static final Identifier TEXTURE_LOCATION = Identifier.withDefaultNamespace("textures/entity/fishing_hook.png");
-   private static final RenderType RENDER_TYPE = RenderTypes.entityCutout(TEXTURE_LOCATION);
+   private static final Identifier TEXTURE_LOCATION = Identifier.withDefaultNamespace("textures/entity/fishing/fishing_hook.png");
+   private static final RenderType RENDER_TYPE = RenderTypes.entityCutoutCull(TEXTURE_LOCATION);
    private static final double VIEW_BOBBING_SCALE = 960.0;
 
    public FishingHookRenderer(final EntityRendererProvider.Context context) {
@@ -48,7 +48,7 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook, FishingHook
       float xa = (float)state.lineOriginOffset.x;
       float ya = (float)state.lineOriginOffset.y;
       float za = (float)state.lineOriginOffset.z;
-      float width = Minecraft.getInstance().getWindow().getAppropriateLineWidth();
+      float width = Minecraft.getInstance().gameRenderer.getGameRenderState().windowRenderState.appropriateLineWidth;
       submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, buffer) -> {
          int steps = 16;
 
@@ -70,10 +70,11 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook, FishingHook
    private Vec3 getPlayerHandPos(final Player owner, final float swing, final float partialTicks) {
       int invert = getHoldingArm(owner) == HumanoidArm.RIGHT ? 1 : -1;
       if (this.entityRenderDispatcher.options.getCameraType().isFirstPerson() && owner == Minecraft.getInstance().player) {
-         double viewBobbingScale = 960.0 / this.entityRenderDispatcher.options.fov().get().intValue();
+         float fov = this.entityRenderDispatcher.options.fov().get().intValue();
+         double viewBobbingScale = 960.0 / fov;
          Vec3 viewVec = this.entityRenderDispatcher
             .camera
-            .getNearPlane()
+            .getNearPlane(fov)
             .getPointOnPlane(invert * 0.525F, -0.1F)
             .scale(viewBobbingScale)
             .yRot(swing * 0.5F)

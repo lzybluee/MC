@@ -1,7 +1,5 @@
 package net.minecraft.client.model.animal.polarbear;
 
-import java.util.Set;
-import net.minecraft.client.model.BabyModelTransform;
 import net.minecraft.client.model.QuadrupedModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -13,14 +11,11 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.PolarBearRenderState;
 
 public class PolarBearModel extends QuadrupedModel<PolarBearRenderState> {
-   private static final float BABY_HEAD_SCALE = 2.25F;
-   private static final MeshTransformer BABY_TRANSFORMER = new BabyModelTransform(true, 16.0F, 4.0F, 2.25F, 2.0F, 24.0F, Set.of("head"));
-
    public PolarBearModel(final ModelPart root) {
       super(root);
    }
 
-   public static LayerDefinition createBodyLayer(final boolean baby) {
+   public static LayerDefinition createBodyLayer() {
       MeshDefinition mesh = new MeshDefinition();
       PartDefinition root = mesh.getRoot();
       root.addOrReplaceChild(
@@ -53,14 +48,13 @@ public class PolarBearModel extends QuadrupedModel<PolarBearRenderState> {
       CubeListBuilder frontLeg = CubeListBuilder.create().texOffs(50, 40).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 10.0F, 6.0F);
       root.addOrReplaceChild("right_front_leg", frontLeg, PartPose.offset(-3.5F, 14.0F, -8.0F));
       root.addOrReplaceChild("left_front_leg", frontLeg, PartPose.offset(3.5F, 14.0F, -8.0F));
-      return LayerDefinition.create(mesh, 128, 64).apply(baby ? BABY_TRANSFORMER : MeshTransformer.IDENTITY).apply(MeshTransformer.scaling(1.2F));
+      return LayerDefinition.create(mesh, 128, 64).apply(MeshTransformer.scaling(1.2F));
    }
 
    public void setupAnim(final PolarBearRenderState state) {
       super.setupAnim(state);
       float standScale = state.standScale * state.standScale;
       float bodyAgeScale = state.ageScale;
-      float headAgeScale = state.isBaby ? 0.44444445F : 1.0F;
       this.body.xRot -= standScale * (float) Math.PI * 0.35F;
       this.body.y += standScale * bodyAgeScale * 2.0F;
       this.rightFrontLeg.y -= standScale * bodyAgeScale * 20.0F;
@@ -69,8 +63,8 @@ public class PolarBearModel extends QuadrupedModel<PolarBearRenderState> {
       this.leftFrontLeg.y = this.rightFrontLeg.y;
       this.leftFrontLeg.z = this.rightFrontLeg.z;
       this.leftFrontLeg.xRot -= standScale * (float) Math.PI * 0.45F;
-      this.head.y -= standScale * headAgeScale * 24.0F;
-      this.head.z += standScale * headAgeScale * 13.0F;
+      this.head.y -= standScale * 24.0F;
+      this.head.z += standScale * 13.0F;
       this.head.xRot += standScale * (float) Math.PI * 0.15F;
    }
 }

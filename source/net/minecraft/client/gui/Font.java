@@ -26,7 +26,7 @@ import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringDecomposer;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 
 public class Font {
@@ -64,7 +64,7 @@ public class Font {
       final float y,
       final int color,
       final boolean dropShadow,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final MultiBufferSource bufferSource,
       final Font.DisplayMode displayMode,
       final int backgroundColor,
@@ -80,7 +80,7 @@ public class Font {
       final float y,
       final int color,
       final boolean dropShadow,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final MultiBufferSource bufferSource,
       final Font.DisplayMode displayMode,
       final int backgroundColor,
@@ -96,7 +96,7 @@ public class Font {
       final float y,
       final int color,
       final boolean dropShadow,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final MultiBufferSource bufferSource,
       final Font.DisplayMode displayMode,
       final int backgroundColor,
@@ -112,7 +112,7 @@ public class Font {
       final float y,
       final int color,
       final int outlineColor,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final MultiBufferSource bufferSource,
       final int packedLightCoords
    ) {
@@ -234,7 +234,7 @@ public class Font {
 
    public interface GlyphVisitor {
       static Font.GlyphVisitor forMultiBufferSource(
-         final MultiBufferSource bufferSource, final Matrix4f pose, final Font.DisplayMode displayMode, final int lightCoords
+         final MultiBufferSource bufferSource, final Matrix4fc pose, final Font.DisplayMode displayMode, final int lightCoords
       ) {
          return new Font.GlyphVisitor() {
             @Override

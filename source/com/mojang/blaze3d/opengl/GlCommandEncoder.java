@@ -4,13 +4,14 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.systems.CommandEncoder;
+import com.mojang.blaze3d.systems.CommandEncoderBackend;
 import com.mojang.blaze3d.systems.GpuQuery;
 import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderPassBackend;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
@@ -35,7 +36,7 @@ import org.lwjgl.opengl.GL32C;
 import org.lwjgl.opengl.GL33C;
 import org.slf4j.Logger;
 
-public class GlCommandEncoder implements CommandEncoder {
+class GlCommandEncoder implements CommandEncoderBackend {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final GlDevice device;
    private final int readFbo;
@@ -52,52 +53,18 @@ public class GlCommandEncoder implements CommandEncoder {
    }
 
    @Override
-   public RenderPass createRenderPass(final Supplier<String> label, final GpuTextureView colorTexture, final OptionalInt clearColor) {
+   public RenderPassBackend createRenderPass(final Supplier<String> label, final GpuTextureView colorTexture, final OptionalInt clearColor) {
       return this.createRenderPass(label, colorTexture, clearColor, null, OptionalDouble.empty());
    }
 
    @Override
-   public RenderPass createRenderPass(
+   public RenderPassBackend createRenderPass(
       final Supplier<String> label,
       final GpuTextureView colorTexture,
       final OptionalInt clearColor,
       final @Nullable GpuTextureView depthTexture,
       final OptionalDouble clearDepth
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before creating a new one!");
-      }
-
-      if (clearDepth.isPresent() && depthTexture == null) {
-         LOGGER.warn("Depth clear value was provided but no depth texture is being used");
-      }
-
-      if (colorTexture.isClosed()) {
-         throw new IllegalStateException("Color texture is closed");
-      }
-
-      if ((colorTexture.texture().usage() & 8) == 0) {
-         throw new IllegalStateException("Color texture must have USAGE_RENDER_ATTACHMENT");
-      }
-
-      if (colorTexture.texture().getDepthOrLayers() > 1) {
-         throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported as an attachment");
-      }
-
-      if (depthTexture != null) {
-         if (depthTexture.isClosed()) {
-            throw new IllegalStateException("Depth texture is closed");
-         }
-
-         if ((depthTexture.texture().usage() & 8) == 0) {
-            throw new IllegalStateException("Depth texture must have USAGE_RENDER_ATTACHMENT");
-         }
-
-         if (depthTexture.texture().getDepthOrLayers() > 1) {
-            throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported as an attachment");
-         }
-      }
-
       this.inRenderPass = true;
       this.device.debugLabels().pushDebugGroup(label);
       int fbo = ((GlTextureView)colorTexture).getFbo(this.device.directStateAccess(), depthTexture == null ? null : depthTexture.texture());
@@ -117,26 +84,26 @@ public class GlCommandEncoder implements CommandEncoder {
       if (clearMask != 0) {
          GlStateManager._disableScissorTest();
          GlStateManager._depthMask(true);
-         GlStateManager._colorMask(true, true, true, true);
+         GlStateManager._colorMask(15);
          GlStateManager._clear(clearMask);
       }
 
       GlStateManager._viewport(0, 0, colorTexture.getWidth(0), colorTexture.getHeight(0));
       this.lastPipeline = null;
-      return new GlRenderPass(this, depthTexture != null);
+      return new GlRenderPass(this, this.device, depthTexture != null);
+   }
+
+   @Override
+   public boolean isInRenderPass() {
+      return this.inRenderPass;
    }
 
    @Override
    public void clearColorTexture(final GpuTexture colorTexture, final int clearColor) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before creating a new one!");
-      }
-
-      this.verifyColorTexture(colorTexture);
       this.device.directStateAccess().bindFrameBufferTextures(this.drawFbo, ((GlTexture)colorTexture).id, 0, 0, 36160);
       GL11.glClearColor(ARGB.redFloat(clearColor), ARGB.greenFloat(clearColor), ARGB.blueFloat(clearColor), ARGB.alphaFloat(clearColor));
       GlStateManager._disableScissorTest();
-      GlStateManager._colorMask(true, true, true, true);
+      GlStateManager._colorMask(15);
       GlStateManager._clear(16384);
       GlStateManager._glFramebufferTexture2D(36160, 36064, 3553, 0, 0);
       GlStateManager._glBindFramebuffer(36160, 0);
@@ -144,19 +111,13 @@ public class GlCommandEncoder implements CommandEncoder {
 
    @Override
    public void clearColorAndDepthTextures(final GpuTexture colorTexture, final int clearColor, final GpuTexture depthTexture, final double clearDepth) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before creating a new one!");
-      }
-
-      this.verifyColorTexture(colorTexture);
-      this.verifyDepthTexture(depthTexture);
       int fbo = ((GlTexture)colorTexture).getFbo(this.device.directStateAccess(), depthTexture);
       GlStateManager._glBindFramebuffer(36160, fbo);
       GlStateManager._disableScissorTest();
       GL11.glClearDepth(clearDepth);
       GL11.glClearColor(ARGB.redFloat(clearColor), ARGB.greenFloat(clearColor), ARGB.blueFloat(clearColor), ARGB.alphaFloat(clearColor));
       GlStateManager._depthMask(true);
-      GlStateManager._colorMask(true, true, true, true);
+      GlStateManager._colorMask(15);
       GlStateManager._clear(16640);
       GlStateManager._glBindFramebuffer(36160, 0);
    }
@@ -172,13 +133,6 @@ public class GlCommandEncoder implements CommandEncoder {
       final int regionWidth,
       final int regionHeight
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before creating a new one!");
-      }
-
-      this.verifyColorTexture(colorTexture);
-      this.verifyDepthTexture(depthTexture);
-      this.verifyRegion(colorTexture, regionX, regionY, regionWidth, regionHeight);
       int fbo = ((GlTexture)colorTexture).getFbo(this.device.directStateAccess(), depthTexture);
       GlStateManager._glBindFramebuffer(36160, fbo);
       GlStateManager._scissorBox(regionX, regionY, regionWidth, regionHeight);
@@ -186,44 +140,13 @@ public class GlCommandEncoder implements CommandEncoder {
       GL11.glClearDepth(clearDepth);
       GL11.glClearColor(ARGB.redFloat(clearColor), ARGB.greenFloat(clearColor), ARGB.blueFloat(clearColor), ARGB.alphaFloat(clearColor));
       GlStateManager._depthMask(true);
-      GlStateManager._colorMask(true, true, true, true);
+      GlStateManager._colorMask(15);
       GlStateManager._clear(16640);
       GlStateManager._glBindFramebuffer(36160, 0);
    }
 
-   private void verifyRegion(final GpuTexture colorTexture, final int regionX, final int regionY, final int regionWidth, final int regionHeight) {
-      if (regionX < 0 || regionX >= colorTexture.getWidth(0)) {
-         throw new IllegalArgumentException("regionX should not be outside of the texture");
-      }
-
-      if (regionY < 0 || regionY >= colorTexture.getHeight(0)) {
-         throw new IllegalArgumentException("regionY should not be outside of the texture");
-      }
-
-      if (regionWidth <= 0) {
-         throw new IllegalArgumentException("regionWidth should be greater than 0");
-      }
-
-      if (regionX + regionWidth > colorTexture.getWidth(0)) {
-         throw new IllegalArgumentException("regionWidth + regionX should be less than the texture width");
-      }
-
-      if (regionHeight <= 0) {
-         throw new IllegalArgumentException("regionHeight should be greater than 0");
-      }
-
-      if (regionY + regionHeight > colorTexture.getHeight(0)) {
-         throw new IllegalArgumentException("regionWidth + regionX should be less than the texture height");
-      }
-   }
-
    @Override
    public void clearDepthTexture(final GpuTexture depthTexture, final double clearDepth) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before creating a new one!");
-      }
-
-      this.verifyDepthTexture(depthTexture);
       this.device.directStateAccess().bindFrameBufferTextures(this.drawFbo, 0, ((GlTexture)depthTexture).id, 0, 36160);
       GL11.glDrawBuffer(0);
       GL11.glClearDepth(clearDepth);
@@ -235,48 +158,8 @@ public class GlCommandEncoder implements CommandEncoder {
       GlStateManager._glBindFramebuffer(36160, 0);
    }
 
-   private void verifyColorTexture(final GpuTexture colorTexture) {
-      if (!colorTexture.getFormat().hasColorAspect()) {
-         throw new IllegalStateException("Trying to clear a non-color texture as color");
-      }
-
-      if (colorTexture.isClosed()) {
-         throw new IllegalStateException("Color texture is closed");
-      }
-
-      if ((colorTexture.usage() & 8) == 0) {
-         throw new IllegalStateException("Color texture must have USAGE_RENDER_ATTACHMENT");
-      }
-
-      if (colorTexture.getDepthOrLayers() > 1) {
-         throw new UnsupportedOperationException("Clearing a texture with multiple layers or depths is not yet supported");
-      }
-   }
-
-   private void verifyDepthTexture(final GpuTexture depthTexture) {
-      if (!depthTexture.getFormat().hasDepthAspect()) {
-         throw new IllegalStateException("Trying to clear a non-depth texture as depth");
-      }
-
-      if (depthTexture.isClosed()) {
-         throw new IllegalStateException("Depth texture is closed");
-      }
-
-      if ((depthTexture.usage() & 8) == 0) {
-         throw new IllegalStateException("Depth texture must have USAGE_RENDER_ATTACHMENT");
-      }
-
-      if (depthTexture.getDepthOrLayers() > 1) {
-         throw new UnsupportedOperationException("Clearing a texture with multiple layers or depths is not yet supported");
-      }
-   }
-
    @Override
    public void writeToBuffer(final GpuBufferSlice slice, final ByteBuffer data) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
       GlBuffer buffer = (GlBuffer)slice.buffer();
       if (buffer.closed) {
          throw new IllegalStateException("Buffer already closed");
@@ -309,45 +192,8 @@ public class GlCommandEncoder implements CommandEncoder {
    }
 
    @Override
-   public GpuBuffer.MappedView mapBuffer(final GpuBuffer buffer, final boolean read, final boolean write) {
-      return this.mapBuffer(buffer.slice(), read, write);
-   }
-
-   @Override
    public GpuBuffer.MappedView mapBuffer(final GpuBufferSlice slice, final boolean read, final boolean write) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
       GlBuffer buffer = (GlBuffer)slice.buffer();
-      if (buffer.closed) {
-         throw new IllegalStateException("Buffer already closed");
-      }
-
-      if (!read && !write) {
-         throw new IllegalArgumentException("At least read or write must be true");
-      }
-
-      if (read && (buffer.usage() & 1) == 0) {
-         throw new IllegalStateException("Buffer is not readable");
-      }
-
-      if (write && (buffer.usage() & 2) == 0) {
-         throw new IllegalStateException("Buffer is not writable");
-      }
-
-      if (slice.offset() + slice.length() > buffer.size()) {
-         throw new IllegalArgumentException(
-            "Cannot map more data than this buffer can hold (attempting to map "
-               + slice.length()
-               + " bytes at offset "
-               + slice.offset()
-               + " from "
-               + buffer.size()
-               + " size buffer)"
-         );
-      }
-
       int flags = 0;
       if (read) {
          flags |= 1;
@@ -362,80 +208,9 @@ public class GlCommandEncoder implements CommandEncoder {
 
    @Override
    public void copyToBuffer(final GpuBufferSlice source, final GpuBufferSlice target) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
       GlBuffer sourceBuffer = (GlBuffer)source.buffer();
-      if (sourceBuffer.closed) {
-         throw new IllegalStateException("Source buffer already closed");
-      }
-
-      if ((sourceBuffer.usage() & 16) == 0) {
-         throw new IllegalStateException("Source buffer needs USAGE_COPY_SRC to be a source for a copy");
-      }
-
       GlBuffer targetBuffer = (GlBuffer)target.buffer();
-      if (targetBuffer.closed) {
-         throw new IllegalStateException("Target buffer already closed");
-      }
-
-      if ((targetBuffer.usage() & 8) == 0) {
-         throw new IllegalStateException("Target buffer needs USAGE_COPY_DST to be a destination for a copy");
-      }
-
-      if (source.length() != target.length()) {
-         throw new IllegalArgumentException(
-            "Cannot copy from slice of size " + source.length() + " to slice of size " + target.length() + ", they must be equal"
-         );
-      }
-
-      if (source.offset() + source.length() > sourceBuffer.size()) {
-         throw new IllegalArgumentException(
-            "Cannot copy more data than the source buffer holds (attempting to copy "
-               + source.length()
-               + " bytes at offset "
-               + source.offset()
-               + " from "
-               + sourceBuffer.size()
-               + " size buffer)"
-         );
-      }
-
-      if (target.offset() + target.length() > targetBuffer.size()) {
-         throw new IllegalArgumentException(
-            "Cannot copy more data than the target buffer can hold (attempting to copy "
-               + target.length()
-               + " bytes at offset "
-               + target.offset()
-               + " to "
-               + targetBuffer.size()
-               + " size buffer)"
-         );
-      }
-
       this.device.directStateAccess().copyBufferSubData(sourceBuffer.handle, targetBuffer.handle, source.offset(), target.offset(), source.length());
-   }
-
-   @Override
-   public void writeToTexture(final GpuTexture destination, final NativeImage source) {
-      int width = destination.getWidth(0);
-      int height = destination.getHeight(0);
-      if (source.getWidth() != width || source.getHeight() != height) {
-         throw new IllegalArgumentException(
-            "Cannot replace texture of size " + width + "x" + height + " with image of size " + source.getWidth() + "x" + source.getHeight()
-         );
-      }
-
-      if (destination.isClosed()) {
-         throw new IllegalStateException("Destination texture is closed");
-      }
-
-      if ((destination.usage() & 1) == 0) {
-         throw new IllegalStateException("Color texture must have USAGE_COPY_DST to be a destination for a write");
-      }
-
-      this.writeToTexture(destination, source, 0, 0, 0, 0, width, height, 0, 0);
    }
 
    @Override
@@ -451,77 +226,20 @@ public class GlCommandEncoder implements CommandEncoder {
       final int sourceX,
       final int sourceY
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
-      if (mipLevel >= 0 && mipLevel < destination.getMipLevels()) {
-         if (sourceX + width > source.getWidth() || sourceY + height > source.getHeight()) {
-            throw new IllegalArgumentException(
-               "Copy source ("
-                  + source.getWidth()
-                  + "x"
-                  + source.getHeight()
-                  + ") is not large enough to read a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " from "
-                  + sourceX
-                  + "x"
-                  + sourceY
-            );
-         }
-
-         if (destX + width > destination.getWidth(mipLevel) || destY + height > destination.getHeight(mipLevel)) {
-            throw new IllegalArgumentException(
-               "Dest texture ("
-                  + width
-                  + "x"
-                  + height
-                  + ") is not large enough to write a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " at "
-                  + destX
-                  + "x"
-                  + destY
-                  + " (at mip level "
-                  + mipLevel
-                  + ")"
-            );
-         }
-
-         if (destination.isClosed()) {
-            throw new IllegalStateException("Destination texture is closed");
-         }
-
-         if ((destination.usage() & 1) == 0) {
-            throw new IllegalStateException("Color texture must have USAGE_COPY_DST to be a destination for a write");
-         }
-
-         if (depthOrLayer >= destination.getDepthOrLayers()) {
-            throw new UnsupportedOperationException("Depth or layer is out of range, must be >= 0 and < " + destination.getDepthOrLayers());
-         }
-
-         int target;
-         if ((destination.usage() & 16) != 0) {
-            target = GlConst.CUBEMAP_TARGETS[depthOrLayer % 6];
-            GL11.glBindTexture(34067, ((GlTexture)destination).id);
-         } else {
-            target = 3553;
-            GlStateManager._bindTexture(((GlTexture)destination).id);
-         }
-
-         GlStateManager._pixelStore(3314, source.getWidth());
-         GlStateManager._pixelStore(3316, sourceX);
-         GlStateManager._pixelStore(3315, sourceY);
-         GlStateManager._pixelStore(3317, source.format().components());
-         GlStateManager._texSubImage2D(target, mipLevel, destX, destY, width, height, GlConst.toGl(source.format()), 5121, source.getPointer());
+      int target;
+      if ((destination.usage() & 16) != 0) {
+         target = GlConst.CUBEMAP_TARGETS[depthOrLayer % 6];
+         GL11.glBindTexture(34067, ((GlTexture)destination).id);
       } else {
-         throw new IllegalArgumentException("Invalid mipLevel " + mipLevel + ", must be >= 0 and < " + destination.getMipLevels());
+         target = 3553;
+         GlStateManager._bindTexture(((GlTexture)destination).id);
       }
+
+      GlStateManager._pixelStore(3314, source.getWidth());
+      GlStateManager._pixelStore(3316, sourceX);
+      GlStateManager._pixelStore(3315, sourceY);
+      GlStateManager._pixelStore(3317, source.format().components());
+      GlStateManager._texSubImage2D(target, mipLevel, destX, destY, width, height, GlConst.toGl(source.format()), 5121, source.getPointer());
    }
 
    @Override
@@ -536,79 +254,24 @@ public class GlCommandEncoder implements CommandEncoder {
       final int width,
       final int height
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
-      if (mipLevel >= 0 && mipLevel < destination.getMipLevels()) {
-         if (width * height * format.components() > source.remaining()) {
-            throw new IllegalArgumentException(
-               "Copy would overrun the source buffer (remaining length of "
-                  + source.remaining()
-                  + ", but copy is "
-                  + width
-                  + "x"
-                  + height
-                  + " of format "
-                  + format
-                  + ")"
-            );
-         }
-
-         if (destX + width > destination.getWidth(mipLevel) || destY + height > destination.getHeight(mipLevel)) {
-            throw new IllegalArgumentException(
-               "Dest texture ("
-                  + destination.getWidth(mipLevel)
-                  + "x"
-                  + destination.getHeight(mipLevel)
-                  + ") is not large enough to write a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " at "
-                  + destX
-                  + "x"
-                  + destY
-            );
-         }
-
-         if (destination.isClosed()) {
-            throw new IllegalStateException("Destination texture is closed");
-         }
-
-         if ((destination.usage() & 1) == 0) {
-            throw new IllegalStateException("Color texture must have USAGE_COPY_DST to be a destination for a write");
-         }
-
-         if (depthOrLayer >= destination.getDepthOrLayers()) {
-            throw new UnsupportedOperationException("Depth or layer is out of range, must be >= 0 and < " + destination.getDepthOrLayers());
-         }
-
-         int target;
-         if ((destination.usage() & 16) != 0) {
-            target = GlConst.CUBEMAP_TARGETS[depthOrLayer % 6];
-            GL11.glBindTexture(34067, ((GlTexture)destination).id);
-         } else {
-            target = 3553;
-            GlStateManager._bindTexture(((GlTexture)destination).id);
-         }
-
-         GlStateManager._pixelStore(3314, width);
-         GlStateManager._pixelStore(3316, 0);
-         GlStateManager._pixelStore(3315, 0);
-         GlStateManager._pixelStore(3317, format.components());
-         GlStateManager._texSubImage2D(target, mipLevel, destX, destY, width, height, GlConst.toGl(format), 5121, source);
+      int target;
+      if ((destination.usage() & 16) != 0) {
+         target = GlConst.CUBEMAP_TARGETS[depthOrLayer % 6];
+         GL11.glBindTexture(34067, ((GlTexture)destination).id);
       } else {
-         throw new IllegalArgumentException("Invalid mipLevel, must be >= 0 and < " + destination.getMipLevels());
+         target = 3553;
+         GlStateManager._bindTexture(((GlTexture)destination).id);
       }
+
+      GlStateManager._pixelStore(3314, width);
+      GlStateManager._pixelStore(3316, 0);
+      GlStateManager._pixelStore(3315, 0);
+      GlStateManager._pixelStore(3317, format.components());
+      GlStateManager._texSubImage2D(target, mipLevel, destX, destY, width, height, GlConst.toGl(format), 5121, source);
    }
 
    @Override
    public void copyTextureToBuffer(final GpuTexture source, final GpuBuffer destination, final long offset, final Runnable callback, final int mipLevel) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
       this.copyTextureToBuffer(source, destination, offset, callback, mipLevel, 0, 0, source.getWidth(mipLevel), source.getHeight(mipLevel));
    }
 
@@ -624,78 +287,18 @@ public class GlCommandEncoder implements CommandEncoder {
       final int width,
       final int height
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
-      if (mipLevel >= 0 && mipLevel < source.getMipLevels()) {
-         if (source.getWidth(mipLevel) * source.getHeight(mipLevel) * source.getFormat().pixelSize() + offset > destination.size()) {
-            throw new IllegalArgumentException(
-               "Buffer of size "
-                  + destination.size()
-                  + " is not large enough to hold "
-                  + width
-                  + "x"
-                  + height
-                  + " pixels ("
-                  + source.getFormat().pixelSize()
-                  + " bytes each) starting from offset "
-                  + offset
-            );
-         }
-
-         if ((source.usage() & 2) == 0) {
-            throw new IllegalArgumentException("Texture needs USAGE_COPY_SRC to be a source for a copy");
-         }
-
-         if ((destination.usage() & 8) == 0) {
-            throw new IllegalArgumentException("Buffer needs USAGE_COPY_DST to be a destination for a copy");
-         }
-
-         if (x + width > source.getWidth(mipLevel) || y + height > source.getHeight(mipLevel)) {
-            throw new IllegalArgumentException(
-               "Copy source texture ("
-                  + source.getWidth(mipLevel)
-                  + "x"
-                  + source.getHeight(mipLevel)
-                  + ") is not large enough to read a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " from "
-                  + x
-                  + ","
-                  + y
-            );
-         }
-
-         if (source.isClosed()) {
-            throw new IllegalStateException("Source texture is closed");
-         }
-
-         if (destination.isClosed()) {
-            throw new IllegalStateException("Destination buffer is closed");
-         }
-
-         if (source.getDepthOrLayers() > 1) {
-            throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported for copying");
-         }
-
-         GlStateManager.clearGlErrors();
-         this.device.directStateAccess().bindFrameBufferTextures(this.readFbo, ((GlTexture)source).glId(), 0, mipLevel, 36008);
-         GlStateManager._glBindBuffer(35051, ((GlBuffer)destination).handle);
-         GlStateManager._pixelStore(3330, width);
-         GlStateManager._readPixels(x, y, width, height, GlConst.toGlExternalId(source.getFormat()), GlConst.toGlType(source.getFormat()), offset);
-         RenderSystem.queueFencedTask(callback);
-         GlStateManager._glFramebufferTexture2D(36008, 36064, 3553, 0, mipLevel);
-         GlStateManager._glBindFramebuffer(36008, 0);
-         GlStateManager._glBindBuffer(35051, 0);
-         int error = GlStateManager._getError();
-         if (error != 0) {
-            throw new IllegalStateException("Couldn't perform copyTobuffer for texture " + source.getLabel() + ": GL error " + error);
-         }
-      } else {
-         throw new IllegalArgumentException("Invalid mipLevel " + mipLevel + ", must be >= 0 and < " + source.getMipLevels());
+      GlStateManager.clearGlErrors();
+      this.device.directStateAccess().bindFrameBufferTextures(this.readFbo, ((GlTexture)source).glId(), 0, mipLevel, 36008);
+      GlStateManager._glBindBuffer(35051, ((GlBuffer)destination).handle);
+      GlStateManager._pixelStore(3330, width);
+      GlStateManager._readPixels(x, y, width, height, GlConst.toGlExternalId(source.getFormat()), GlConst.toGlType(source.getFormat()), offset);
+      RenderSystem.queueFencedTask(callback);
+      GlStateManager._glFramebufferTexture2D(36008, 36064, 3553, 0, mipLevel);
+      GlStateManager._glBindFramebuffer(36008, 0);
+      GlStateManager._glBindBuffer(35051, 0);
+      int error = GlStateManager._getError();
+      if (error != 0) {
+         throw new IllegalStateException("Couldn't perform copyTobuffer for texture " + source.getLabel() + ": GL error " + error);
       }
    }
 
@@ -711,114 +314,30 @@ public class GlCommandEncoder implements CommandEncoder {
       final int width,
       final int height
    ) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
-      if (mipLevel >= 0 && mipLevel < source.getMipLevels() && mipLevel < destination.getMipLevels()) {
-         if (destX + width > destination.getWidth(mipLevel) || destY + height > destination.getHeight(mipLevel)) {
-            throw new IllegalArgumentException(
-               "Dest texture ("
-                  + destination.getWidth(mipLevel)
-                  + "x"
-                  + destination.getHeight(mipLevel)
-                  + ") is not large enough to write a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " at "
-                  + destX
-                  + "x"
-                  + destY
-            );
-         }
-
-         if (sourceX + width > source.getWidth(mipLevel) || sourceY + height > source.getHeight(mipLevel)) {
-            throw new IllegalArgumentException(
-               "Source texture ("
-                  + source.getWidth(mipLevel)
-                  + "x"
-                  + source.getHeight(mipLevel)
-                  + ") is not large enough to read a rectangle of "
-                  + width
-                  + "x"
-                  + height
-                  + " at "
-                  + sourceX
-                  + "x"
-                  + sourceY
-            );
-         }
-
-         if (source.isClosed()) {
-            throw new IllegalStateException("Source texture is closed");
-         }
-
-         if (destination.isClosed()) {
-            throw new IllegalStateException("Destination texture is closed");
-         }
-
-         if ((source.usage() & 2) == 0) {
-            throw new IllegalArgumentException("Texture needs USAGE_COPY_SRC to be a source for a copy");
-         }
-
-         if ((destination.usage() & 1) == 0) {
-            throw new IllegalArgumentException("Texture needs USAGE_COPY_DST to be a destination for a copy");
-         }
-
-         if (source.getDepthOrLayers() > 1) {
-            throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported for copying");
-         }
-
-         if (destination.getDepthOrLayers() > 1) {
-            throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported for copying");
-         }
-
-         GlStateManager.clearGlErrors();
-         GlStateManager._disableScissorTest();
-         boolean isDepth = source.getFormat().hasDepthAspect();
-         int sourceId = ((GlTexture)source).glId();
-         int destId = ((GlTexture)destination).glId();
-         this.device.directStateAccess().bindFrameBufferTextures(this.readFbo, isDepth ? 0 : sourceId, isDepth ? sourceId : 0, 0, 0);
-         this.device.directStateAccess().bindFrameBufferTextures(this.drawFbo, isDepth ? 0 : destId, isDepth ? destId : 0, 0, 0);
-         this.device
-            .directStateAccess()
-            .blitFrameBuffers(this.readFbo, this.drawFbo, sourceX, sourceY, width, height, destX, destY, width, height, isDepth ? 256 : 16384, 9728);
-         int error = GlStateManager._getError();
-         if (error != 0) {
-            throw new IllegalStateException(
-               "Couldn't perform copyToTexture for texture " + source.getLabel() + " to " + destination.getLabel() + ": GL error " + error
-            );
-         }
-      } else {
-         throw new IllegalArgumentException(
-            "Invalid mipLevel " + mipLevel + ", must be >= 0 and < " + source.getMipLevels() + " and < " + destination.getMipLevels()
+      GlStateManager.clearGlErrors();
+      GlStateManager._disableScissorTest();
+      boolean isDepth = source.getFormat().hasDepthAspect();
+      int sourceId = ((GlTexture)source).glId();
+      int destId = ((GlTexture)destination).glId();
+      this.device.directStateAccess().bindFrameBufferTextures(this.readFbo, isDepth ? 0 : sourceId, isDepth ? sourceId : 0, 0, 0);
+      this.device.directStateAccess().bindFrameBufferTextures(this.drawFbo, isDepth ? 0 : destId, isDepth ? destId : 0, 0, 0);
+      this.device
+         .directStateAccess()
+         .blitFrameBuffers(this.readFbo, this.drawFbo, sourceX, sourceY, width, height, destX, destY, width, height, isDepth ? 256 : 16384, 9728);
+      int error = GlStateManager._getError();
+      if (error != 0) {
+         throw new IllegalStateException(
+            "Couldn't perform copyToTexture for texture " + source.getLabel() + " to " + destination.getLabel() + ": GL error " + error
          );
       }
    }
 
    @Override
    public void presentTexture(final GpuTextureView textureView) {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      }
-
-      if (!textureView.texture().getFormat().hasColorAspect()) {
-         throw new IllegalStateException("Cannot present a non-color texture!");
-      }
-
-      if ((textureView.texture().usage() & 8) == 0) {
-         throw new IllegalStateException("Color texture must have USAGE_RENDER_ATTACHMENT to presented to the screen");
-      }
-
-      if (textureView.texture().getDepthOrLayers() > 1) {
-         throw new UnsupportedOperationException("Textures with multiple depths or layers are not yet supported for presentation");
-      }
-
       GlStateManager._disableScissorTest();
       GlStateManager._viewport(0, 0, textureView.getWidth(0), textureView.getHeight(0));
       GlStateManager._depthMask(true);
-      GlStateManager._colorMask(true, true, true, true);
+      GlStateManager._colorMask(15);
       this.device.directStateAccess().bindFrameBufferTextures(this.drawFbo, ((GlTexture)textureView.texture()).glId(), 0, 0, 0);
       this.device
          .directStateAccess()
@@ -829,11 +348,7 @@ public class GlCommandEncoder implements CommandEncoder {
 
    @Override
    public GpuFence createFence() {
-      if (this.inRenderPass) {
-         throw new IllegalStateException("Close the existing render pass before performing additional commands");
-      } else {
-         return new GlFence();
-      }
+      return new GlFence();
    }
 
    protected <T> void executeDrawMultiple(
@@ -880,7 +395,7 @@ public class GlCommandEncoder implements CommandEncoder {
                });
             }
 
-            this.drawFromBuffers(renderPass, 0, draw.firstIndex(), draw.indexCount(), indexType, renderPass.pipeline, 1);
+            this.drawFromBuffers(renderPass, draw.baseVertex(), draw.firstIndex(), draw.indexCount(), indexType, renderPass.pipeline, 1);
          }
       }
    }
@@ -1115,11 +630,21 @@ public class GlCommandEncoder implements CommandEncoder {
    private void applyPipelineState(final RenderPipeline pipeline) {
       if (this.lastPipeline != pipeline) {
          this.lastPipeline = pipeline;
-         if (pipeline.getDepthTestFunction() != DepthTestFunction.NO_DEPTH_TEST) {
+         DepthStencilState depthStencilState = pipeline.getDepthStencilState();
+         if (depthStencilState != null) {
             GlStateManager._enableDepthTest();
-            GlStateManager._depthFunc(GlConst.toGl(pipeline.getDepthTestFunction()));
+            GlStateManager._depthFunc(GlConst.toGl(depthStencilState.depthTest()));
+            GlStateManager._depthMask(depthStencilState.writeDepth());
+            if (depthStencilState.depthBiasConstant() == 0.0F && depthStencilState.depthBiasScaleFactor() == 0.0F) {
+               GlStateManager._disablePolygonOffset();
+            } else {
+               GlStateManager._polygonOffset(depthStencilState.depthBiasScaleFactor(), depthStencilState.depthBiasConstant());
+               GlStateManager._enablePolygonOffset();
+            }
          } else {
             GlStateManager._disableDepthTest();
+            GlStateManager._depthMask(false);
+            GlStateManager._disablePolygonOffset();
          }
 
          if (pipeline.isCull()) {
@@ -1128,9 +653,9 @@ public class GlCommandEncoder implements CommandEncoder {
             GlStateManager._disableCull();
          }
 
-         if (pipeline.getBlendFunction().isPresent()) {
+         if (pipeline.getColorTargetState().blendFunction().isPresent()) {
             GlStateManager._enableBlend();
-            BlendFunction blendFunction = pipeline.getBlendFunction().get();
+            BlendFunction blendFunction = pipeline.getColorTargetState().blendFunction().get();
             GlStateManager._blendFuncSeparate(
                GlConst.toGl(blendFunction.sourceColor()),
                GlConst.toGl(blendFunction.destColor()),
@@ -1142,23 +667,7 @@ public class GlCommandEncoder implements CommandEncoder {
          }
 
          GlStateManager._polygonMode(1032, GlConst.toGl(pipeline.getPolygonMode()));
-         GlStateManager._depthMask(pipeline.isWriteDepth());
-         GlStateManager._colorMask(pipeline.isWriteColor(), pipeline.isWriteColor(), pipeline.isWriteColor(), pipeline.isWriteAlpha());
-         if (pipeline.getDepthBiasConstant() == 0.0F && pipeline.getDepthBiasScaleFactor() == 0.0F) {
-            GlStateManager._disablePolygonOffset();
-         } else {
-            GlStateManager._polygonOffset(pipeline.getDepthBiasScaleFactor(), pipeline.getDepthBiasConstant());
-            GlStateManager._enablePolygonOffset();
-         }
-
-         switch (pipeline.getColorLogic()) {
-            case NONE:
-               GlStateManager._disableColorLogicOp();
-               break;
-            case OR_REVERSE:
-               GlStateManager._enableColorLogicOp();
-               GlStateManager._logicOp(5387);
-         }
+         GlStateManager._colorMask(pipeline.getColorTargetState().writeMask());
       }
    }
 
@@ -1166,10 +675,6 @@ public class GlCommandEncoder implements CommandEncoder {
       this.inRenderPass = false;
       GlStateManager._glBindFramebuffer(36160, 0);
       this.device.debugLabels().popDebugGroup();
-   }
-
-   protected GlDevice getDevice() {
-      return this.device;
    }
 
    @Override

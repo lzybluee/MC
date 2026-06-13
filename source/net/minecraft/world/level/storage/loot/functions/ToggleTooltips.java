@@ -14,7 +14,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class ToggleTooltips extends LootItemConditionalFunction {
-   public static final MapCodec<ToggleTooltips> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ToggleTooltips> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(Codec.unboundedMap(DataComponentType.CODEC, Codec.BOOL).fieldOf("toggles").forGetter(e -> e.values))
          .apply(i, ToggleTooltips::new)
@@ -40,7 +40,7 @@ public class ToggleTooltips extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<ToggleTooltips> getType() {
-      return LootItemFunctions.TOGGLE_TOOLTIPS;
+   public MapCodec<ToggleTooltips> codec() {
+      return MAP_CODEC;
    }
 }

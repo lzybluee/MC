@@ -7,10 +7,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.JavaOps;
 import it.unimi.dsi.fastutil.doubles.DoubleDoubleImmutablePair;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -40,7 +36,6 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
@@ -98,7 +93,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.AttackRange;
 import net.minecraft.world.item.component.BlocksAttacks;
@@ -194,6 +191,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    public static final float EXTRA_RENDER_CULLING_SIZE_WITH_BIG_HAT = 0.5F;
    public static final float DEFAULT_BABY_SCALE = 0.5F;
    private static final float WATER_FLOAT_IMPULSE = 0.04F;
+   private static final int CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME_TICKS = 40;
+   private static final int DEFAULT_CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME = 0;
+   private int currentImpulseContextResetGraceTime = 0;
    public static final Predicate<LivingEntity> PLAYER_NOT_WEARING_DISGUISE_ITEM = livingEntity -> {
       if (livingEntity instanceof Player player) {
          ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
@@ -202,14 +202,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
          return true;
       }
    };
-   private static final Dynamic<?> EMPTY_BRAIN = new Dynamic(JavaOps.INSTANCE, Map.of("memories", Map.of()));
    private final AttributeMap attributes;
    private final CombatTracker combatTracker = new CombatTracker(this);
    private final Map<Holder<MobEffect>, MobEffectInstance> activeEffects = Maps.newHashMap();
    private final Map<EquipmentSlot, ItemStack> lastEquipmentItems = Util.makeEnumMap(EquipmentSlot.class, slot -> ItemStack.EMPTY);
    public boolean swinging;
    private boolean discardFriction = false;
-   public InteractionHand swingingArm;
+   public @Nullable InteractionHand swingingArm;
    public int swingTime;
    public int removeArrowTime;
    public int removeStingerTime;
@@ -235,7 +234,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    public float xxa;
    public float yya;
    public float zza;
-   protected InterpolationHandler interpolation = new InterpolationHandler(this);
+   protected final InterpolationHandler interpolation = new InterpolationHandler(this);
    protected double lerpYHeadRot;
    protected int lerpHeadSteps;
    private boolean effectsDirty = true;
@@ -267,6 +266,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    );
    protected final EntityEquipment equipment;
    private Waypoint.Icon locatorBarIcon = new Waypoint.Icon();
+   public @Nullable Vec3 currentImpulseImpactPos;
+   public @Nullable Entity currentExplosionCause;
 
    protected LivingEntity(final EntityType<? extends LivingEntity> type, final Level level) {
       super(type, level);
@@ -277,7 +278,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       this.reapplyPosition();
       this.setYRot(this.random.nextFloat() * (float) (Math.PI * 2));
       this.yHeadRot = this.getYRot();
-      this.brain = this.makeBrain(EMPTY_BRAIN);
+      this.brain = this.makeBrain(Brain.Packed.EMPTY);
    }
 
    @Override
@@ -290,25 +291,17 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       return new EntityEquipment();
    }
 
-   public Brain<?> getBrain() {
-      return this.brain;
+   public Brain<? extends LivingEntity> getBrain() {
+      return (Brain<? extends LivingEntity>)this.brain;
    }
 
-   protected Brain.Provider<?> brainProvider() {
-      return Brain.provider(ImmutableList.of(), ImmutableList.of());
-   }
-
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return this.brainProvider().makeBrain(input);
+   protected Brain<? extends LivingEntity> makeBrain(final Brain.Packed packedBrain) {
+      return new Brain<>();
    }
 
    @Override
    public void kill(final ServerLevel level) {
       this.hurtServer(level, this.damageSources().genericKill(), Float.MAX_VALUE);
-   }
-
-   public boolean canAttackType(final EntityType<?> targetType) {
-      return true;
    }
 
    @Override
@@ -336,6 +329,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
          .add(Attributes.SAFE_FALL_DISTANCE)
          .add(Attributes.FALL_DAMAGE_MULTIPLIER)
          .add(Attributes.JUMP_STRENGTH)
+         .add(Attributes.ENTITY_INTERACTION_RANGE)
          .add(Attributes.OXYGEN_BONUS)
          .add(Attributes.BURNING_TIME)
          .add(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE)
@@ -349,7 +343,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    @Override
    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
       if (!this.isInWater()) {
-         this.updateInWaterStateAndDoWaterCurrentPushing();
+         this.updateFluidInteraction();
       }
 
       if (this.level() instanceof ServerLevel level && onGround && this.fallDistance > 0.0) {
@@ -381,7 +375,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    public boolean canBreatheUnderwater() {
-      return this.getType().is(EntityTypeTags.CAN_BREATHE_UNDER_WATER);
+      return this.is(EntityTypeTags.CAN_BREATHE_UNDER_WATER);
    }
 
    public float getSwimAmount(final float a) {
@@ -732,6 +726,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       output.putInt("HurtByTimestamp", this.lastHurtByMobTimestamp);
       output.putShort("DeathTime", (short)this.deathTime);
       output.putFloat("AbsorptionAmount", this.getAbsorptionAmount());
+      output.putInt("current_impulse_context_reset_grace_time", this.currentImpulseContextResetGraceTime);
+      output.storeNullable("current_explosion_impact_pos", Vec3.CODEC, this.currentImpulseImpactPos);
       output.store("attributes", AttributeInstance.Packed.LIST_CODEC, this.getAttributes().pack());
       if (!this.activeEffects.isEmpty()) {
          output.store("active_effects", MobEffectInstance.CODEC.listOf(), List.copyOf(this.activeEffects.values()));
@@ -739,8 +735,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
       output.putBoolean("FallFlying", this.isFallFlying());
       this.getSleepingPos().ifPresent(sleepingPos -> output.store("sleeping_pos", BlockPos.CODEC, sleepingPos));
-      DataResult<Dynamic<?>> writtenBrain = this.brain.serializeStart(NbtOps.INSTANCE).map(t -> new Dynamic(NbtOps.INSTANCE, t));
-      writtenBrain.resultOrPartial(LOGGER::error).ifPresent(b -> output.store("Brain", Codec.PASSTHROUGH, b));
+      output.store("Brain", Brain.Packed.CODEC, this.brain.pack());
       if (this.lastHurtByPlayer != null) {
          this.lastHurtByPlayer.store(output, "last_hurt_by_player");
          output.putInt("last_hurt_by_player_memory_time", this.lastHurtByPlayerMemoryTime);
@@ -813,13 +808,15 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.setPosToBed(sleepingPos);
          }
       }, this::clearSleepingPos);
-      input.<Dynamic>read("Brain", Codec.PASSTHROUGH).ifPresent(brainTag -> this.brain = this.makeBrain((Dynamic<?>)brainTag));
+      input.<Brain.Packed>read("Brain", Brain.Packed.CODEC).ifPresent(packedBrain -> this.brain = this.makeBrain(packedBrain));
       this.lastHurtByPlayer = EntityReference.read(input, "last_hurt_by_player");
       this.lastHurtByPlayerMemoryTime = input.getIntOr("last_hurt_by_player_memory_time", 0);
       this.lastHurtByMob = EntityReference.read(input, "last_hurt_by_mob");
       this.lastHurtByMobTimestamp = input.getIntOr("ticks_since_last_hurt_by_mob", 0) + this.tickCount;
       this.equipment.setAll(input.<EntityEquipment>read("equipment", EntityEquipment.CODEC).orElseGet(EntityEquipment::new));
       this.locatorBarIcon = input.<Waypoint.Icon>read("locator_bar_icon", Waypoint.Icon.CODEC).orElseGet(Waypoint.Icon::new);
+      this.currentImpulseContextResetGraceTime = input.getIntOr("current_impulse_context_reset_grace_time", 0);
+      this.currentImpulseImpactPos = input.<Vec3>read("current_explosion_impact_pos", Vec3.CODEC).orElse(null);
    }
 
    @Override
@@ -915,12 +912,11 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
       if (targetingEntity != null) {
          ItemStack itemStack = this.getItemBySlot(EquipmentSlot.HEAD);
-         EntityType<?> type = targetingEntity.getType();
-         if (type == EntityType.SKELETON && itemStack.is(Items.SKELETON_SKULL)
-            || type == EntityType.ZOMBIE && itemStack.is(Items.ZOMBIE_HEAD)
-            || type == EntityType.PIGLIN && itemStack.is(Items.PIGLIN_HEAD)
-            || type == EntityType.PIGLIN_BRUTE && itemStack.is(Items.PIGLIN_HEAD)
-            || type == EntityType.CREEPER && itemStack.is(Items.CREEPER_HEAD)) {
+         if (targetingEntity.is(EntityType.SKELETON) && itemStack.is(Items.SKELETON_SKULL)
+            || targetingEntity.is(EntityType.ZOMBIE) && itemStack.is(Items.ZOMBIE_HEAD)
+            || targetingEntity.is(EntityType.PIGLIN) && itemStack.is(Items.PIGLIN_HEAD)
+            || targetingEntity.is(EntityType.PIGLIN_BRUTE) && itemStack.is(Items.PIGLIN_HEAD)
+            || targetingEntity.is(EntityType.CREEPER) && itemStack.is(Items.CREEPER_HEAD)) {
             visibilityPercent *= 0.5;
          }
       }
@@ -1016,12 +1012,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    public boolean canBeAffected(final MobEffectInstance newEffect) {
-      if (this.getType().is(EntityTypeTags.IMMUNE_TO_INFESTED)) {
+      if (this.is(EntityTypeTags.IMMUNE_TO_INFESTED)) {
          return !newEffect.is(MobEffects.INFESTED);
-      } else if (this.getType().is(EntityTypeTags.IMMUNE_TO_OOZING)) {
+      } else if (this.is(EntityTypeTags.IMMUNE_TO_OOZING)) {
          return !newEffect.is(MobEffects.OOZING);
       } else {
-         return !this.getType().is(EntityTypeTags.IGNORES_POISON_AND_REGEN) ? true : !newEffect.is(MobEffects.REGENERATION) && !newEffect.is(MobEffects.POISON);
+         return !this.is(EntityTypeTags.IGNORES_POISON_AND_REGEN) ? true : !newEffect.is(MobEffects.REGENERATION) && !newEffect.is(MobEffects.POISON);
       }
    }
 
@@ -1038,7 +1034,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    public boolean isInvertedHealAndHarm() {
-      return this.getType().is(EntityTypeTags.INVERTED_HEALING_AND_HARM);
+      return this.is(EntityTypeTags.INVERTED_HEALING_AND_HARM);
    }
 
    public final @Nullable MobEffectInstance removeEffectNoUpdate(final Holder<MobEffect> effect) {
@@ -1183,7 +1179,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       float damageBlocked = this.applyItemBlocking(level, source, damage);
       damage -= damageBlocked;
       boolean blocked = damageBlocked > 0.0F;
-      if (source.is(DamageTypeTags.IS_FREEZING) && this.getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
+      if (source.is(DamageTypeTags.IS_FREEZING) && this.is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
          damage *= 5.0F;
       }
 
@@ -1295,7 +1291,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       }
 
       BlocksAttacks blocksAttacks = blockingWith.get(DataComponents.BLOCKS_ATTACKS);
-      if (blocksAttacks != null && !blocksAttacks.bypassedBy().map(source::is).orElse(false)) {
+      if (blocksAttacks != null && !blocksAttacks.bypassedBy().map(t -> t.contains(source.typeHolder())).orElse(false)) {
          if (source.getDirectEntity() instanceof AbstractArrow abstractArrow && abstractArrow.getPierceLevel() > 0) {
             return 0.0F;
          } else {
@@ -1333,7 +1329,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    protected void resolveMobResponsibleForDamage(final DamageSource source) {
       if (source.getEntity() instanceof LivingEntity livingSource
          && !source.is(DamageTypeTags.NO_ANGER)
-         && (!source.is(DamageTypes.WIND_CHARGE) || !this.getType().is(EntityTypeTags.NO_ANGER_FROM_WIND_CHARGE))) {
+         && (!source.is(DamageTypes.WIND_CHARGE) || !this.is(EntityTypeTags.NO_ANGER_FROM_WIND_CHARGE))) {
          this.setLastHurtByMob(livingSource);
       }
    }
@@ -1419,7 +1415,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
          if (breakSound != null && !this.isSilent()) {
             this.level()
                .playLocalSound(
-                  this.getX(), this.getY(), this.getZ(), breakSound.value(), this.getSoundSource(), 0.8F, 0.8F + this.level().random.nextFloat() * 0.4F, false
+                  this.getX(), this.getY(), this.getZ(), breakSound.value(), this.getSoundSource(), 0.8F, 0.8F + this.random.nextFloat() * 0.4F, false
                );
          }
 
@@ -1557,7 +1553,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       final ServerLevel level,
       final ResourceKey<LootTable> key,
       final @Nullable Entity interactingEntity,
-      final ItemStack tool,
+      final ItemInstance tool,
       final BiConsumer<ServerLevel, ItemStack> consumer
    ) {
       return this.dropFromLootTable(
@@ -1583,7 +1579,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    protected void dropFromShearingLootTable(
-      final ServerLevel level, final ResourceKey<LootTable> key, final ItemStack tool, final BiConsumer<ServerLevel, ItemStack> consumer
+      final ServerLevel level, final ResourceKey<LootTable> key, final ItemInstance tool, final BiConsumer<ServerLevel, ItemStack> consumer
    ) {
       this.dropFromLootTable(
          level,
@@ -1676,9 +1672,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
          .computeIfAbsent(slot, s -> new Reference2ObjectArrayMap());
    }
 
-   public void lungeForwardMaybe() {
+   public void postPiercingAttack() {
       if (this.level() instanceof ServerLevel serverLevel) {
-         EnchantmentHelper.doLungeEffects(serverLevel, this);
+         EnchantmentHelper.doPostPiercingAttackEffects(serverLevel, this);
       }
    }
 
@@ -1756,9 +1752,23 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
    @Override
    public boolean causeFallDamage(final double fallDistance, final float damageModifier, final DamageSource damageSource) {
-      boolean damaged = super.causeFallDamage(fallDistance, damageModifier, damageSource);
-      int dmg = this.calculateFallDamage(fallDistance, damageModifier);
+      double effectiveFallDistance;
+      if (this.isIgnoringFallDamageFromCurrentImpulse()) {
+         effectiveFallDistance = Math.min(fallDistance, this.currentImpulseImpactPos.y - this.getY());
+         boolean hasLandedAboveCurrentImpulseImpactPosY = effectiveFallDistance <= 0.0;
+         if (hasLandedAboveCurrentImpulseImpactPosY) {
+            this.resetCurrentImpulseContext();
+         } else {
+            this.tryResetCurrentImpulseContext();
+         }
+      } else {
+         effectiveFallDistance = fallDistance;
+      }
+
+      boolean damaged = super.causeFallDamage(effectiveFallDistance, damageModifier, damageSource);
+      int dmg = this.calculateFallDamage(effectiveFallDistance, damageModifier);
       if (dmg > 0) {
+         this.resetCurrentImpulseContext();
          this.playSound(this.getFallDamageSound(dmg), 1.0F, 1.0F);
          this.playBlockFallSound();
          this.hurt(damageSource, dmg);
@@ -1768,8 +1778,41 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       }
    }
 
+   public void setIgnoreFallDamageFromCurrentImpulse(final boolean ignoreFallDamage, final Vec3 newImpulseImpactPos) {
+      if (ignoreFallDamage) {
+         this.applyPostImpulseGraceTime(40);
+         this.currentImpulseImpactPos = newImpulseImpactPos;
+      } else {
+         this.currentImpulseContextResetGraceTime = 0;
+      }
+   }
+
+   public void applyPostImpulseGraceTime(final int ticks) {
+      this.currentImpulseContextResetGraceTime = Math.max(this.currentImpulseContextResetGraceTime, ticks);
+   }
+
+   public boolean isIgnoringFallDamageFromCurrentImpulse() {
+      return this.currentImpulseImpactPos != null;
+   }
+
+   public void tryResetCurrentImpulseContext() {
+      if (this.currentImpulseContextResetGraceTime == 0) {
+         this.resetCurrentImpulseContext();
+      }
+   }
+
+   public boolean isInPostImpulseGraceTime() {
+      return this.currentImpulseContextResetGraceTime > 0;
+   }
+
+   public void resetCurrentImpulseContext() {
+      this.currentImpulseContextResetGraceTime = 0;
+      this.currentExplosionCause = null;
+      this.currentImpulseImpactPos = null;
+   }
+
    protected int calculateFallDamage(final double fallDistance, final float damageModifier) {
-      if (this.getType().is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
+      if (this.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
          return 0;
       }
 
@@ -1934,7 +1977,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    private int getCurrentSwingDuration() {
-      ItemStack handStack = this.getItemInHand(InteractionHand.MAIN_HAND);
+      InteractionHand hand = this.swingingArm != null ? this.swingingArm : InteractionHand.MAIN_HAND;
+      ItemStack handStack = this.getItemInHand(hand);
       int swingDuration = handStack.getSwingAnimation().duration();
       if (MobEffectUtil.hasDigSpeed(this)) {
          return swingDuration - (1 + MobEffectUtil.getDigSpeedAmplification(this));
@@ -2147,13 +2191,17 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       return this.getMainHandItem();
    }
 
-   public AttackRange entityAttackRange() {
-      AttackRange attackRange = this.getActiveItem().get(DataComponents.ATTACK_RANGE);
+   public AttackRange getAttackRangeWith(final ItemStack weaponItem) {
+      AttackRange attackRange = weaponItem.get(DataComponents.ATTACK_RANGE);
       return attackRange != null ? attackRange : AttackRange.defaultFor(this);
    }
 
    public ItemStack getActiveItem() {
-      return this.isUsingItem() ? this.getUseItem() : this.getMainHandItem();
+      if (this.isSpectator()) {
+         return ItemStack.EMPTY;
+      } else {
+         return this.isUsingItem() ? this.getUseItem() : this.getMainHandItem();
+      }
    }
 
    public boolean isHolding(final Item item) {
@@ -2343,6 +2391,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       }
    }
 
+   public VoxelShape getLiquidCollisionShape() {
+      return Shapes.empty();
+   }
+
    protected boolean shouldTravelInFluid(final FluidState fluidState) {
       return (this.isInWater() || this.isInLava()) && this.isAffectedByFluids() && !this.canStandOnFluid(fluidState);
    }
@@ -2459,7 +2511,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    private void floatInWaterWhileRidden() {
-      boolean canEntityFloatInWater = this.getType().is(EntityTypeTags.CAN_FLOAT_WHILE_RIDDEN);
+      boolean canEntityFloatInWater = this.is(EntityTypeTags.CAN_FLOAT_WHILE_RIDDEN);
       if (canEntityFloatInWater && this.isVehicle() && this.getFluidHeight(FluidTags.WATER) > this.getFluidJumpThreshold()) {
          this.setDeltaMovement(this.getDeltaMovement().add(0.0, 0.04F, 0.0));
       }
@@ -2748,6 +2800,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
       this.refreshDirtyAttributes();
       this.elytraAnimationState.tick();
+      if (this.currentImpulseContextResetGraceTime > 0) {
+         this.currentImpulseContextResetGraceTime--;
+      }
    }
 
    public boolean wasRecentlyStabbed(final Entity target, final int allowedTime) {
@@ -2931,7 +2986,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       double dx = movement.x;
       double dy = movement.y;
       double dz = movement.z;
-      if (this.getType().equals(EntityType.PLAYER)) {
+      if (this.is(EntityType.PLAYER)) {
          if (movement.horizontalDistanceSqr() < 9.0E-6) {
             dx = 0.0;
             dz = 0.0;
@@ -3426,16 +3481,20 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
    }
 
    public void spawnItemParticles(final ItemStack itemStack, final int count) {
-      for (int i = 0; i < count; i++) {
-         Vec3 d = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, 0.0);
-         d = d.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
-         d = d.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
-         double y1 = -this.random.nextFloat() * 0.6 - 0.3;
-         Vec3 p = new Vec3((this.random.nextFloat() - 0.5) * 0.3, y1, 0.6);
-         p = p.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
-         p = p.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
-         p = p.add(this.getX(), this.getEyeY(), this.getZ());
-         this.level().addParticle(new ItemParticleOption(ParticleTypes.ITEM, itemStack), p.x, p.y, p.z, d.x, d.y + 0.05, d.z);
+      if (!itemStack.isEmpty()) {
+         ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(itemStack));
+
+         for (int i = 0; i < count; i++) {
+            Vec3 d = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, 0.0);
+            d = d.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
+            d = d.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+            double y1 = -this.random.nextFloat() * 0.6 - 0.3;
+            Vec3 p = new Vec3((this.random.nextFloat() - 0.5) * 0.3, y1, 0.6);
+            p = p.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
+            p = p.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+            p = p.add(this.getX(), this.getEyeY(), this.getZ());
+            this.level().addParticle(breakParticle, p.x, p.y, p.z, d.x, d.y + 0.05, d.z);
+         }
       }
    }
 
@@ -3740,7 +3799,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
          Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
          if (equippable != null && equippable.dispensable()) {
             EquipmentSlot slot = equippable.slot();
-            return this.canUseSlot(slot) && equippable.canBeEquippedBy(this.getType())
+            return this.canUseSlot(slot) && equippable.canBeEquippedBy(this.typeHolder())
                ? this.getItemBySlot(slot).isEmpty() && this.canDispenserEquipIntoSlot(slot)
                : false;
          } else {
@@ -3764,7 +3823,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
       Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
       return equippable == null
          ? slot == EquipmentSlot.MAINHAND && this.canUseSlot(EquipmentSlot.MAINHAND)
-         : slot == equippable.slot() && this.canUseSlot(equippable.slot()) && equippable.canBeEquippedBy(this.getType());
+         : slot == equippable.slot() && this.canUseSlot(equippable.slot()) && equippable.canBeEquippedBy(this.typeHolder());
    }
 
    private static SlotAccess createEquipmentSlotAccess(final LivingEntity entity, final EquipmentSlot equipmentSlot) {

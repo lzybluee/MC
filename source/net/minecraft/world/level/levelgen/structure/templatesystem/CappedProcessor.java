@@ -10,13 +10,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.level.ServerLevelAccessor;
 
 public class CappedProcessor extends StructureProcessor {
    public static final MapCodec<CappedProcessor> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             StructureProcessorType.SINGLE_CODEC.fieldOf("delegate").forGetter(c -> c.delegate),
-            IntProvider.POSITIVE_CODEC.fieldOf("limit").forGetter(c -> c.limit)
+            IntProviders.POSITIVE_CODEC.fieldOf("limit").forGetter(c -> c.limit)
          )
          .apply(i, CappedProcessor::new)
    );
@@ -42,7 +43,7 @@ public class CappedProcessor extends StructureProcessor {
       final List<StructureTemplate.StructureBlockInfo> processedBlockInfoList,
       final StructurePlaceSettings settings
    ) {
-      if (this.limit.getMaxValue() != 0 && !processedBlockInfoList.isEmpty()) {
+      if (this.limit.maxInclusive() != 0 && !processedBlockInfoList.isEmpty()) {
          if (originalBlockInfoList.size() != processedBlockInfoList.size()) {
             Util.logAndPauseIfInIde(
                "Original block info list not in sync with processed list, skipping processing. Original size: "
@@ -53,7 +54,7 @@ public class CappedProcessor extends StructureProcessor {
             return processedBlockInfoList;
          }
 
-         RandomSource random = RandomSource.create(level.getLevel().getSeed()).forkPositional().at(position);
+         RandomSource random = RandomSource.createThreadLocalInstance(level.getLevel().getSeed()).forkPositional().at(position);
          int maxToReplace = Math.min(this.limit.sample(random), processedBlockInfoList.size());
          if (maxToReplace < 1) {
             return processedBlockInfoList;

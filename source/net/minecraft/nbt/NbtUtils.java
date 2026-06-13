@@ -159,48 +159,26 @@ public final class NbtUtils {
       return result;
    }
 
+   private static void writeStateProperties(final StateHolder<?, ?> state, final CompoundTag tag) {
+      if (!state.isSingletonState()) {
+         CompoundTag properties = new CompoundTag();
+         state.getValues().forEach(value -> properties.putString(value.property().getName(), value.valueName()));
+         tag.put("Properties", properties);
+      }
+   }
+
    public static CompoundTag writeBlockState(final BlockState state) {
       CompoundTag tag = new CompoundTag();
       tag.putString("Name", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
-      Map<Property<?>, Comparable<?>> values = state.getValues();
-      if (!values.isEmpty()) {
-         CompoundTag properties = new CompoundTag();
-
-         for (Entry<Property<?>, Comparable<?>> entry : values.entrySet()) {
-            Property<?> key = entry.getKey();
-            properties.putString(key.getName(), getName(key, entry.getValue()));
-         }
-
-         tag.put("Properties", properties);
-      }
-
+      writeStateProperties(state, tag);
       return tag;
    }
 
    public static CompoundTag writeFluidState(final FluidState state) {
       CompoundTag tag = new CompoundTag();
       tag.putString("Name", BuiltInRegistries.FLUID.getKey(state.getType()).toString());
-      Map<Property<?>, Comparable<?>> values = state.getValues();
-      if (!values.isEmpty()) {
-         CompoundTag properties = new CompoundTag();
-
-         for (Entry<Property<?>, Comparable<?>> entry : values.entrySet()) {
-            Property<?> key = entry.getKey();
-            properties.putString(key.getName(), getName(key, entry.getValue()));
-         }
-
-         tag.put("Properties", properties);
-      }
-
+      writeStateProperties(state, tag);
       return tag;
-   }
-
-   private static <T extends Comparable<T>> String getName(final Property<T> key, final Comparable<?> value) {
-      return key.getName((T)value);
-   }
-
-   public static String prettyPrint(final Tag tag) {
-      return prettyPrint(tag, false);
    }
 
    public static String prettyPrint(final Tag tag, final boolean withBinaryBlobs) {
@@ -551,12 +529,7 @@ public final class NbtUtils {
       return tag;
    }
 
-   public static Dynamic<Tag> addCurrentDataVersion(final Dynamic<Tag> tag) {
-      int version = SharedConstants.getCurrentVersion().dataVersion().version();
-      return addDataVersion(tag, version);
-   }
-
-   public static Dynamic<Tag> addDataVersion(final Dynamic<Tag> tag, final int version) {
+   public static <T> Dynamic<T> addDataVersion(final Dynamic<T> tag, final int version) {
       return tag.set("DataVersion", tag.createInt(version));
    }
 
@@ -575,6 +548,10 @@ public final class NbtUtils {
 
    public static int getDataVersion(final CompoundTag tag, final int _default) {
       return tag.getIntOr("DataVersion", _default);
+   }
+
+   public static int getDataVersion(final Dynamic<?> dynamic) {
+      return getDataVersion(dynamic, -1);
    }
 
    public static int getDataVersion(final Dynamic<?> dynamic, final int _default) {

@@ -289,6 +289,13 @@ public class V1460 extends NamespacedSchema {
          )
       );
       schema.registerType(false, References.SAVED_DATA_COMMAND_STORAGE, DSL::remainder);
+      schema.registerType(
+         false,
+         References.SAVED_DATA_CUSTOM_BOSS_EVENTS,
+         () -> DSL.optionalFields("data", DSL.compoundList(DSL.optionalFields("Name", References.TEXT_COMPONENT.in(schema))))
+      );
+      schema.registerType(false, References.SAVED_DATA_ENDER_DRAGON_FIGHT, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_GAME_RULES, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_TICKETS, DSL::remainder);
       schema.registerType(
          false,
@@ -298,6 +305,7 @@ public class V1460 extends NamespacedSchema {
       schema.registerType(false, References.SAVED_DATA_MAP_INDEX, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_RAIDS, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_RANDOM_SEQUENCES, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_SCHEDULED_EVENTS, DSL::remainder);
       schema.registerType(
          false,
          References.SAVED_DATA_SCOREBOARD,
@@ -319,7 +327,11 @@ public class V1460 extends NamespacedSchema {
          References.SAVED_DATA_STRUCTURE_FEATURE_INDICES,
          () -> DSL.optionalFields("data", DSL.optionalFields("Features", DSL.compoundList(References.STRUCTURE_FEATURE.in(schema))))
       );
+      schema.registerType(false, References.SAVED_DATA_WANDERING_TRADER, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WEATHER, DSL::remainder);
       schema.registerType(false, References.SAVED_DATA_WORLD_BORDER, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WORLD_CLOCKS, DSL::remainder);
+      schema.registerType(false, References.SAVED_DATA_WORLD_GEN_SETTINGS, () -> DSL.fields("data", References.WORLD_GEN_SETTINGS.in(schema)));
       schema.registerType(false, References.DEBUG_PROFILE, DSL::remainder);
       schema.registerType(false, References.STRUCTURE_FEATURE, DSL::remainder);
       Map<String, Supplier<TypeTemplate>> criterionTypes = V1451_6.createCriterionTypes(schema);

@@ -64,19 +64,12 @@ public abstract class VertexArrayCache {
                GlStateManager._enableVertexAttribArray(i);
             }
 
-            switch (element.usage()) {
-               case POSITION:
-               case GENERIC:
-               case UV:
-                  if (element.type() == VertexFormatElement.Type.FLOAT) {
-                     GlStateManager._vertexAttribPointer(i, element.count(), GlConst.toGl(element.type()), false, vertexSize, format.getOffset(element));
-                  } else {
-                     GlStateManager._vertexAttribIPointer(i, element.count(), GlConst.toGl(element.type()), vertexSize, format.getOffset(element));
-                  }
-                  break;
-               case NORMAL:
-               case COLOR:
-                  GlStateManager._vertexAttribPointer(i, element.count(), GlConst.toGl(element.type()), true, vertexSize, format.getOffset(element));
+            if (!element.normalized() && element.type() != VertexFormatElement.Type.FLOAT) {
+               GlStateManager._vertexAttribIPointer(i, element.count(), GlConst.toGl(element.type()), vertexSize, format.getOffset(element));
+            } else {
+               GlStateManager._vertexAttribPointer(
+                  i, element.count(), GlConst.toGl(element.type()), element.normalized(), vertexSize, format.getOffset(element)
+               );
             }
          }
       }
@@ -119,19 +112,12 @@ public abstract class VertexArrayCache {
                for (int i = 0; i < elements.size(); i++) {
                   VertexFormatElement element = elements.get(i);
                   GlStateManager._enableVertexAttribArray(i);
-                  switch (element.usage()) {
-                     case POSITION:
-                     case GENERIC:
-                     case UV:
-                        if (element.type() == VertexFormatElement.Type.FLOAT) {
-                           ARBVertexAttribBinding.glVertexAttribFormat(i, element.count(), GlConst.toGl(element.type()), false, format.getOffset(element));
-                        } else {
-                           ARBVertexAttribBinding.glVertexAttribIFormat(i, element.count(), GlConst.toGl(element.type()), format.getOffset(element));
-                        }
-                        break;
-                     case NORMAL:
-                     case COLOR:
-                        ARBVertexAttribBinding.glVertexAttribFormat(i, element.count(), GlConst.toGl(element.type()), true, format.getOffset(element));
+                  if (!element.normalized() && element.type() != VertexFormatElement.Type.FLOAT) {
+                     ARBVertexAttribBinding.glVertexAttribIFormat(i, element.count(), GlConst.toGl(element.type()), format.getOffset(element));
+                  } else {
+                     ARBVertexAttribBinding.glVertexAttribFormat(
+                        i, element.count(), GlConst.toGl(element.type()), element.normalized(), format.getOffset(element)
+                     );
                   }
 
                   ARBVertexAttribBinding.glVertexAttribBinding(i, 0);

@@ -30,7 +30,7 @@ public class InteractWith {
       final int stopDistance
    ) {
       int interactionRangeSqr = interactionRange * interactionRange;
-      Predicate<LivingEntity> isTargetValid = mob -> type.equals(mob.getType()) && targetFilter.test((T)mob);
+      Predicate<LivingEntity> isTargetValid = mob -> mob.is(type) && targetFilter.test((T)mob);
       return BehaviorBuilder.create(
          i -> i.group(
                i.registered(interactionTarget),

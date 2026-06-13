@@ -137,7 +137,7 @@ public record NoiseGeneratorSettings(
          NoiseSettings.CAVES_NOISE_SETTINGS,
          Blocks.STONE.defaultBlockState(),
          Blocks.WATER.defaultBlockState(),
-         NoiseRouterData.caves(context.lookup(Registries.DENSITY_FUNCTION), context.lookup(Registries.NOISE)),
+         NoiseRouterData.caves(context.lookup(Registries.DENSITY_FUNCTION)),
          SurfaceRuleData.overworldLike(false, true, true),
          List.of(),
          32,

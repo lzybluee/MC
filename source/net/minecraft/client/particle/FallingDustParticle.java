@@ -1,6 +1,7 @@
 package net.minecraft.client.particle;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -87,14 +88,21 @@ public class FallingDustParticle extends SingleQuadParticle {
          }
 
          BlockPos pos = BlockPos.containing(x, y, z);
-         int col = Minecraft.getInstance().getBlockColors().getColor(blockState, level, pos);
-         if (blockState.getBlock() instanceof FallingBlock) {
-            col = ((FallingBlock)blockState.getBlock()).getDustColor(blockState, level, pos);
+         int tintColor;
+         if (blockState.getBlock() instanceof FallingBlock fallingBlock) {
+            tintColor = fallingBlock.getDustColor(blockState, level, pos);
+         } else {
+            BlockTintSource tintSource = Minecraft.getInstance().getBlockColors().getTintSource(blockState, 0);
+            if (tintSource != null) {
+               tintColor = tintSource.colorAsTerrainParticle(blockState, level, pos);
+            } else {
+               tintColor = blockState.getMapColor(level, pos).col;
+            }
          }
 
-         float r = (col >> 16 & 0xFF) / 255.0F;
-         float g = (col >> 8 & 0xFF) / 255.0F;
-         float b = (col & 0xFF) / 255.0F;
+         float r = (tintColor >> 16 & 0xFF) / 255.0F;
+         float g = (tintColor >> 8 & 0xFF) / 255.0F;
+         float b = (tintColor & 0xFF) / 255.0F;
          return new FallingDustParticle(level, x, y, z, r, g, b, this.sprite);
       }
    }

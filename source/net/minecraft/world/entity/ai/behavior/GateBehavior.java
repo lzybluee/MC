@@ -1,6 +1,7 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import com.mojang.datafixers.util.Pair;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,17 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
    @Override
    public Behavior.Status getStatus() {
       return this.status;
+   }
+
+   @Override
+   public Set<MemoryModuleType<?>> getRequiredMemories() {
+      Set<MemoryModuleType<?>> memories = new HashSet<>(this.entryCondition.keySet());
+
+      for (BehaviorControl<? super E> behavior : this.behaviors) {
+         memories.addAll(behavior.getRequiredMemories());
+      }
+
+      return memories;
    }
 
    private boolean hasRequiredMemories(final E body) {
@@ -81,16 +93,12 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
 
    @Override
    public String debugString() {
-      return this.getClass().getSimpleName();
-   }
-
-   @Override
-   public String toString() {
-      Set<? extends BehaviorControl<? super E>> runningBehaviours = this.behaviors
+      Set<String> runningBehaviours = this.behaviors
          .stream()
          .filter(goal -> goal.getStatus() == Behavior.Status.RUNNING)
+         .map(b -> b.getClass().getSimpleName())
          .collect(Collectors.toSet());
-      return "(" + this.getClass().getSimpleName() + "): " + runningBehaviours;
+      return this.getClass().getSimpleName() + ": " + runningBehaviours;
    }
 
    public enum OrderPolicy {

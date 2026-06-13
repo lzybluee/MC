@@ -8,31 +8,36 @@ import java.util.List;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.state.BlockDisplayEntityRenderState;
 import net.minecraft.client.renderer.entity.state.DisplayEntityRenderState;
 import net.minecraft.client.renderer.entity.state.ItemDisplayEntityRenderState;
 import net.minecraft.client.renderer.entity.state.TextDisplayEntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEntityRenderState> extends EntityRenderer<T, ST> {
+   public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
    private final EntityRenderDispatcher entityRenderDispatcher;
+   protected final BlockModelResolver blockModelResolver;
 
    protected DisplayRenderer(final EntityRendererProvider.Context context) {
       super(context);
       this.entityRenderDispatcher = context.getEntityRenderDispatcher();
+      this.blockModelResolver = context.getBlockModelResolver();
    }
 
    protected AABB getBoundingBoxForCulling(final T entity) {
@@ -50,12 +55,12 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
 
    protected int getSkyLightLevel(final T entity, final BlockPos blockPos) {
       int packedBrightnessOverride = getBrightnessOverride(entity);
-      return packedBrightnessOverride != -1 ? LightTexture.sky(packedBrightnessOverride) : super.getSkyLightLevel(entity, blockPos);
+      return packedBrightnessOverride != -1 ? LightCoordsUtil.sky(packedBrightnessOverride) : super.getSkyLightLevel(entity, blockPos);
    }
 
    protected int getBlockLightLevel(final T entity, final BlockPos blockPos) {
       int packedBrightnessOverride = getBrightnessOverride(entity);
-      return packedBrightnessOverride != -1 ? LightTexture.block(packedBrightnessOverride) : super.getBlockLightLevel(entity, blockPos);
+      return packedBrightnessOverride != -1 ? LightCoordsUtil.block(packedBrightnessOverride) : super.getBlockLightLevel(entity, blockPos);
    }
 
    protected float getShadowRadius(final ST state) {
@@ -76,7 +81,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
          poseStack.pushPose();
          poseStack.mulPose(this.calculateOrientation(renderState, state, new Quaternionf()));
          Transformation transformation = renderState.transformation().get(interpolationProgress);
-         poseStack.mulPose(transformation.getMatrix());
+         poseStack.mulPose(transformation);
          this.submitInner(state, poseStack, submitNodeCollector, state.lightCoords, interpolationProgress);
          poseStack.popPose();
       }
@@ -135,7 +140,12 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
 
       public void extractRenderState(final Display.BlockDisplay entity, final BlockDisplayEntityRenderState state, final float partialTicks) {
          super.extractRenderState(entity, state, partialTicks);
-         state.blockRenderState = entity.blockRenderState();
+         Display.BlockDisplay.BlockRenderState blockRenderState = entity.blockRenderState();
+         if (blockRenderState != null) {
+            this.blockModelResolver.update(state.blockModel, blockRenderState.blockState(), BLOCK_DISPLAY_CONTEXT);
+         } else {
+            state.blockModel.clear();
+         }
       }
 
       public void submitInner(
@@ -145,7 +155,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
          final int lightCoords,
          final float interpolationProgress
       ) {
-         submitNodeCollector.submitBlock(poseStack, state.blockRenderState.blockState(), lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+         state.blockModel.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
       }
    }
 
@@ -233,7 +243,7 @@ public abstract class DisplayRenderer<T extends Display, S, ST extends DisplayEn
          byte textOpacity = (byte)renderState.textOpacity().get(interpolationProgress);
          int backgroundColor;
          if (useDefaultBackground) {
-            float backgroundAlpha = Minecraft.getInstance().options.getBackgroundOpacity(0.25F);
+            float backgroundAlpha = Minecraft.getInstance().gameRenderer.getGameRenderState().optionsRenderState.getBackgroundOpacity(0.25F);
             backgroundColor = (int)(backgroundAlpha * 255.0F) << 24;
          } else {
             backgroundColor = renderState.backgroundColor().get(interpolationProgress);

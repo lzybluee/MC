@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -40,6 +42,9 @@ import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.TickRateManager;
 import net.minecraft.world.attribute.EnvironmentAttributeSystem;
 import net.minecraft.world.attribute.EnvironmentAttributes;
+import net.minecraft.world.clock.ClockManager;
+import net.minecraft.world.clock.WorldClock;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageSources;
 import net.minecraft.world.entity.Entity;
@@ -107,15 +112,15 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
    private final Thread thread;
    private final boolean isDebug;
    private int skyDarken;
-   protected int randValue = RandomSource.create().nextInt();
+   protected int randValue = RandomSource.createThreadLocalInstance().nextInt();
    protected final int addend = 1013904223;
    protected float oRainLevel;
    protected float rainLevel;
    protected float oThunderLevel;
    protected float thunderLevel;
-   public final RandomSource random = RandomSource.create();
+   protected final RandomSource random = RandomSource.create();
    @Deprecated
-   private final RandomSource threadSafeRandom = RandomSource.createThreadSafe();
+   private final RandomSource soundSeedGenerator = RandomSource.createThreadSafe();
    private final Holder<DimensionType> dimensionTypeRegistration;
    protected final WritableLevelData levelData;
    private final boolean isClientSide;
@@ -160,11 +165,11 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
    }
 
    public boolean isInWorldBounds(final BlockPos pos) {
-      return !this.isOutsideBuildHeight(pos) && isInWorldBoundsHorizontal(pos);
+      return this.isInsideBuildHeight(pos) && isInWorldBoundsHorizontal(pos);
    }
 
    public boolean isInValidBounds(final BlockPos pos) {
-      return !this.isOutsideBuildHeight(pos) && isInValidBoundsHorizontal(pos);
+      return this.isInsideBuildHeight(pos) && isInValidBoundsHorizontal(pos);
    }
 
    public static boolean isInSpawnableBounds(final BlockPos pos) {
@@ -437,7 +442,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
       final float volume,
       final float pitch
    ) {
-      this.playSeededSound(except, x, y, z, sound, source, volume, pitch, this.threadSafeRandom.nextLong());
+      this.playSeededSound(except, x, y, z, sound, source, volume, pitch, this.soundSeedGenerator.nextLong());
    }
 
    public void playSound(
@@ -450,13 +455,13 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
       final float volume,
       final float pitch
    ) {
-      this.playSeededSound(except, x, y, z, sound, source, volume, pitch, this.threadSafeRandom.nextLong());
+      this.playSeededSound(except, x, y, z, sound, source, volume, pitch, this.soundSeedGenerator.nextLong());
    }
 
    public void playSound(
       final @Nullable Entity except, final Entity sourceEntity, final SoundEvent sound, final SoundSource source, final float volume, final float pitch
    ) {
-      this.playSeededSound(except, sourceEntity, BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), source, volume, pitch, this.threadSafeRandom.nextLong());
+      this.playSeededSound(except, sourceEntity, BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound), source, volume, pitch, this.soundSeedGenerator.nextLong());
    }
 
    public void playLocalSound(
@@ -563,7 +568,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
    }
 
    public boolean shouldTickBlocksAt(final BlockPos pos) {
-      return this.shouldTickBlocksAt(ChunkPos.asLong(pos));
+      return this.shouldTickBlocksAt(ChunkPos.pack(pos));
    }
 
    public void explode(
@@ -749,15 +754,6 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
       }
    }
 
-   protected void prepareWeather() {
-      if (this.levelData.isRaining()) {
-         this.rainLevel = 1.0F;
-         if (this.levelData.isThundering()) {
-            this.thunderLevel = 1.0F;
-         }
-      }
-   }
-
    @Override
    public void close() throws IOException {
       this.getChunkSource().close();
@@ -881,8 +877,16 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
    public void onBlockEntityAdded(final BlockEntity blockEntity) {
    }
 
-   public long getDayTime() {
-      return this.levelData.getDayTime();
+   public long getOverworldClockTime() {
+      return this.getClockTimeTicks(this.registryAccess().get(WorldClocks.OVERWORLD));
+   }
+
+   public long getDefaultClockTime() {
+      return this.getClockTimeTicks(this.dimensionType().defaultClock());
+   }
+
+   private long getClockTimeTicks(final Optional<? extends Holder<WorldClock>> clock) {
+      return clock.<Long>map(holder -> this.clockManager().getTotalTicks((Holder<WorldClock>)holder)).orElse(0L);
    }
 
    public boolean mayInteract(final Entity entity, final BlockPos pos) {
@@ -972,6 +976,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
       });
       category.setDetail("Chunk stats", this.getChunkSource()::gatherStats);
       category.setDetail("Level dimension", () -> this.dimension().identifier().toString());
+      category.setDetail("Level time", () -> String.format(Locale.ROOT, "%d game time, %d day time", this.getGameTime(), this.getOverworldClockTime()));
 
       try {
          this.levelData.fillCrashReportCategory(category, this);
@@ -1085,6 +1090,8 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
    public DamageSources damageSources() {
       return this.damageSources;
    }
+
+   public abstract ClockManager clockManager();
 
    public abstract EnvironmentAttributeSystem environmentAttributes();
 

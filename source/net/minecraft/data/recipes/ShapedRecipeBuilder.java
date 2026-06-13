@@ -2,20 +2,14 @@ package net.minecraft.data.recipes;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementRequirements;
-import net.minecraft.advancements.AdvancementRewards;
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.RecipeUnlockedTrigger;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
@@ -26,19 +20,21 @@ import org.jspecify.annotations.Nullable;
 public class ShapedRecipeBuilder implements RecipeBuilder {
    private final HolderGetter<Item> items;
    private final RecipeCategory category;
-   private final Item result;
-   private final int count;
+   private final ItemStackTemplate result;
    private final List<String> rows = Lists.newArrayList();
    private final Map<Character, Ingredient> key = Maps.newLinkedHashMap();
-   private final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
+   private final RecipeUnlockAdvancementBuilder advancementBuilder = new RecipeUnlockAdvancementBuilder();
    private @Nullable String group;
    private boolean showNotification = true;
 
-   private ShapedRecipeBuilder(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike result, final int count) {
+   private ShapedRecipeBuilder(final HolderGetter<Item> items, final RecipeCategory category, final ItemStackTemplate result) {
       this.items = items;
       this.category = category;
-      this.result = result.asItem();
-      this.count = count;
+      this.result = result;
+   }
+
+   private ShapedRecipeBuilder(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike result, final int count) {
+      this(items, category, new ItemStackTemplate(result.asItem(), count));
    }
 
    public static ShapedRecipeBuilder shaped(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike item) {
@@ -80,7 +76,7 @@ public class ShapedRecipeBuilder implements RecipeBuilder {
    }
 
    public ShapedRecipeBuilder unlockedBy(final String name, final Criterion<?> criterion) {
-      this.criteria.put(name, criterion);
+      this.advancementBuilder.unlockedBy(name, criterion);
       return this;
    }
 
@@ -95,33 +91,16 @@ public class ShapedRecipeBuilder implements RecipeBuilder {
    }
 
    @Override
-   public Item getResult() {
-      return this.result;
+   public ResourceKey<Recipe<?>> defaultId() {
+      return RecipeBuilder.getDefaultRecipeId(this.result);
    }
 
    @Override
    public void save(final RecipeOutput output, final ResourceKey<Recipe<?>> id) {
-      ShapedRecipePattern pattern = this.ensureValid(id);
-      Advancement.Builder advancement = output.advancement()
-         .addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(id))
-         .rewards(AdvancementRewards.Builder.recipe(id))
-         .requirements(AdvancementRequirements.Strategy.OR);
-      this.criteria.forEach(advancement::addCriterion);
+      ShapedRecipePattern pattern = ShapedRecipePattern.of(this.key, this.rows);
       ShapedRecipe recipe = new ShapedRecipe(
-         Objects.requireNonNullElse(this.group, ""),
-         RecipeBuilder.determineBookCategory(this.category),
-         pattern,
-         new ItemStack(this.result, this.count),
-         this.showNotification
+         RecipeBuilder.createCraftingCommonInfo(this.showNotification), RecipeBuilder.createCraftingBookInfo(this.category, this.group), pattern, this.result
       );
-      output.accept(id, recipe, advancement.build(id.identifier().withPrefix("recipes/" + this.category.getFolderName() + "/")));
-   }
-
-   private ShapedRecipePattern ensureValid(final ResourceKey<Recipe<?>> id) {
-      if (this.criteria.isEmpty()) {
-         throw new IllegalStateException("No way of obtaining recipe " + id.identifier());
-      } else {
-         return ShapedRecipePattern.of(this.key, this.rows);
-      }
+      output.accept(id, recipe, this.advancementBuilder.build(output, id, this.category));
    }
 }

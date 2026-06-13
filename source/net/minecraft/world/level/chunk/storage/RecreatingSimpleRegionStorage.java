@@ -21,17 +21,15 @@ public class RecreatingSimpleRegionStorage extends SimpleRegionStorage {
       final Path writeFolder,
       final DataFixer fixerUpper,
       final boolean syncWrites,
-      final DataFixTypes dataFixType,
-      Supplier<LegacyTagFixer> legacyFixer
+      final DataFixTypes dataFixType
    ) {
-      super(readInfo, readFolder, fixerUpper, syncWrites, dataFixType, legacyFixer);
+      super(readInfo, readFolder, fixerUpper, syncWrites, dataFixType);
       this.writeFolder = writeFolder;
       this.writeWorker = new IOWorker(writeInfo, writeFolder, syncWrites);
    }
 
    @Override
    public CompletableFuture<Void> write(final ChunkPos pos, final Supplier<CompoundTag> supplier) {
-      this.markChunkDone(pos);
       return this.writeWorker.store(pos, supplier);
    }
 

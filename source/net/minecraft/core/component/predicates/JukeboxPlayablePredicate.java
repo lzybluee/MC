@@ -34,7 +34,7 @@ public record JukeboxPlayablePredicate(Optional<HolderSet<JukeboxSong>> song) im
 
       for (Holder<JukeboxSong> maybeSong : this.song.get()) {
          Optional<ResourceKey<JukeboxSong>> songId = maybeSong.unwrapKey();
-         if (!songId.isEmpty() && songId.equals(value.song().key())) {
+         if (!songId.isEmpty() && songId.equals(value.song().unwrapKey())) {
             songIsPresent = true;
             break;
          }

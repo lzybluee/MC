@@ -45,19 +45,19 @@ public class NbtOps implements DynamicOps<Tag> {
 
    public <U> U convertTo(final DynamicOps<U> outOps, final Tag input) {
       return (U)(switch (input) {
-         case EndTag ignored -> (Object)outOps.empty();
-         case ByteTag(byte value) -> (Object)outOps.createByte(value);
-         case ShortTag(short value) -> (Object)outOps.createShort(value);
-         case IntTag(int value) -> (Object)outOps.createInt(value);
-         case LongTag(long value) -> (Object)outOps.createLong(value);
-         case FloatTag(float value) -> (Object)outOps.createFloat(value);
-         case DoubleTag(double value) -> (Object)outOps.createDouble(value);
-         case ByteArrayTag byteArrayTag -> (Object)outOps.createByteList(ByteBuffer.wrap(byteArrayTag.getAsByteArray()));
-         case StringTag(String value) -> (Object)outOps.createString(value);
-         case ListTag listTag -> (Object)this.convertList(outOps, listTag);
-         case CompoundTag compoundTag -> (Object)this.convertMap(outOps, compoundTag);
-         case IntArrayTag intArrayTag -> (Object)outOps.createIntList(Arrays.stream(intArrayTag.getAsIntArray()));
-         case LongArrayTag longArrayTag -> (Object)outOps.createLongList(Arrays.stream(longArrayTag.getAsLongArray()));
+         case EndTag ignored -> outOps.empty();
+         case ByteTag(byte value) -> outOps.createByte(value);
+         case ShortTag(short value) -> outOps.createShort(value);
+         case IntTag(int value) -> outOps.createInt(value);
+         case LongTag(long value) -> outOps.createLong(value);
+         case FloatTag(float value) -> outOps.createFloat(value);
+         case DoubleTag(double value) -> outOps.createDouble(value);
+         case ByteArrayTag byteArrayTag -> outOps.createByteList(ByteBuffer.wrap(byteArrayTag.getAsByteArray()));
+         case StringTag(String value) -> outOps.createString(value);
+         case ListTag listTag -> this.convertList(outOps, listTag);
+         case CompoundTag compoundTag -> this.convertMap(outOps, compoundTag);
+         case IntArrayTag intArrayTag -> outOps.createIntList(Arrays.stream(intArrayTag.getAsIntArray()));
+         case LongArrayTag longArrayTag -> outOps.createLongList(Arrays.stream(longArrayTag.getAsLongArray()));
          default -> throw new MatchException(null, null);
       });
    }
@@ -401,10 +401,6 @@ public class NbtOps implements DynamicOps<Tag> {
          }
 
          return collector;
-      }
-
-      default NbtOps.ListCollector acceptAll(final Stream<Tag> tags) {
-         return this.acceptAll(tags::iterator);
       }
 
       Tag result();

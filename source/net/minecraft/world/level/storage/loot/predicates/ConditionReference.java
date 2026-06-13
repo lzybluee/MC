@@ -6,37 +6,26 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import org.slf4j.Logger;
 
 public record ConditionReference(ResourceKey<LootItemCondition> name) implements LootItemCondition {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final MapCodec<ConditionReference> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ConditionReference> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(ResourceKey.codec(Registries.PREDICATE).fieldOf("name").forGetter(ConditionReference::name)).apply(i, ConditionReference::new)
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.REFERENCE;
+   public MapCodec<ConditionReference> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public void validate(final ValidationContext context) {
-      if (!context.allowsReferences()) {
-         context.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(this.name));
-      } else if (context.hasVisitedElement(this.name)) {
-         context.reportProblem(new ValidationContext.RecursiveReferenceProblem(this.name));
-      } else {
-         LootItemCondition.super.validate(context);
-         context.resolver()
-            .get(this.name)
-            .ifPresentOrElse(
-               condition -> condition.value().validate(context.enterElement(new ProblemReporter.ElementReferencePathElement(this.name), this.name)),
-               () -> context.reportProblem(new ValidationContext.MissingReferenceProblem(this.name))
-            );
-      }
+      LootItemCondition.super.validate(context);
+      Validatable.validateReference(context, this.name);
    }
 
    public boolean test(final LootContext lootContext) {

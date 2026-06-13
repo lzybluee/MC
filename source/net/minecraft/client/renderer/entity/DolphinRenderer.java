@@ -9,7 +9,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.dolphin.Dolphin;
 
 public class DolphinRenderer extends AgeableMobRenderer<Dolphin, DolphinRenderState, DolphinModel> {
-   private static final Identifier DOLPHIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin.png");
+   private static final Identifier DOLPHIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin/dolphin.png");
+   private static final Identifier DOLPHIN_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin/dolphin_baby.png");
 
    public DolphinRenderer(final EntityRendererProvider.Context context) {
       super(context, new DolphinModel(context.bakeLayer(ModelLayers.DOLPHIN)), new DolphinModel(context.bakeLayer(ModelLayers.DOLPHIN_BABY)), 0.7F);
@@ -17,7 +18,7 @@ public class DolphinRenderer extends AgeableMobRenderer<Dolphin, DolphinRenderSt
    }
 
    public Identifier getTextureLocation(final DolphinRenderState state) {
-      return DOLPHIN_LOCATION;
+      return state.isBaby ? DOLPHIN_BABY_LOCATION : DOLPHIN_LOCATION;
    }
 
    public DolphinRenderState createRenderState() {

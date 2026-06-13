@@ -7,7 +7,7 @@ public enum LiquidSettings implements StringRepresentable {
    IGNORE_WATERLOGGING("ignore_waterlogging"),
    APPLY_WATERLOGGING("apply_waterlogging");
 
-   public static Codec<LiquidSettings> CODEC = StringRepresentable.fromValues(LiquidSettings::values);
+   public static final Codec<LiquidSettings> CODEC = StringRepresentable.fromValues(LiquidSettings::values);
    private final String name;
 
    LiquidSettings(final String name) {

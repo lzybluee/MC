@@ -20,7 +20,7 @@ public class SetLookAndInteract {
                i,
                (lookTarget, interactionTarget, nearestEntities) -> (level, body, timestamp) -> {
                   Optional<LivingEntity> closest = i.<NearestVisibleLivingEntities>get(nearestEntities)
-                     .findClosest(e -> e.distanceToSqr(body) <= interactionRangeSqr && type.equals(e.getType()));
+                     .findClosest(e -> e.distanceToSqr(body) <= interactionRangeSqr && e.is(type));
                   if (closest.isEmpty()) {
                      return false;
                   }

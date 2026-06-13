@@ -8,7 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 public record WeatherCheck(Optional<Boolean> isRaining, Optional<Boolean> isThundering) implements LootItemCondition {
-   public static final MapCodec<WeatherCheck> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<WeatherCheck> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Codec.BOOL.optionalFieldOf("raining").forGetter(WeatherCheck::isRaining),
             Codec.BOOL.optionalFieldOf("thundering").forGetter(WeatherCheck::isThundering)
@@ -17,8 +17,8 @@ public record WeatherCheck(Optional<Boolean> isRaining, Optional<Boolean> isThun
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.WEATHER_CHECK;
+   public MapCodec<WeatherCheck> codec() {
+      return MAP_CODEC;
    }
 
    public boolean test(final LootContext context) {

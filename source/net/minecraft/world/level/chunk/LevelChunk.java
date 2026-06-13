@@ -291,7 +291,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource {
       boolean isEmpty = section.hasOnlyAir();
       if (wasEmpty != isEmpty) {
          this.level.getChunkSource().getLightEngine().updateSectionStatus(pos, isEmpty);
-         this.level.getChunkSource().onSectionEmptinessChanged(this.chunkPos.x, SectionPos.blockToSectionCoord(y), this.chunkPos.z, isEmpty);
+         this.level.getChunkSource().onSectionEmptinessChanged(this.chunkPos.x(), SectionPos.blockToSectionCoord(y), this.chunkPos.z(), isEmpty);
       }
 
       if (LightEngine.hasDifferentLightProperties(oldState, state)) {
@@ -332,10 +332,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource {
       if (state.hasBlockEntity()) {
          BlockEntity blockEntity = this.getBlockEntity(pos, LevelChunk.EntityCreationType.CHECK);
          if (blockEntity != null && !blockEntity.isValidBlockState(state)) {
-            LOGGER.warn(
-               "Found mismatched block entity @ {}: type = {}, state = {}",
-               new Object[]{pos, blockEntity.getType().builtInRegistryHolder().key().identifier(), state}
-            );
+            LOGGER.warn("Found mismatched block entity @ {}: type = {}, state = {}", new Object[]{pos, blockEntity.typeHolder().getRegisteredName(), state});
             this.removeBlockEntity(pos);
             blockEntity = null;
          }
@@ -419,7 +416,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource {
       } else {
          return !(this.level instanceof ServerLevel serverLevel)
             ? true
-            : this.getFullStatus().isOrAfter(FullChunkStatus.BLOCK_TICKING) && serverLevel.areEntitiesLoaded(ChunkPos.asLong(pos));
+            : this.getFullStatus().isOrAfter(FullChunkStatus.BLOCK_TICKING) && serverLevel.areEntitiesLoaded(ChunkPos.pack(pos));
       }
    }
 
@@ -583,7 +580,9 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource {
                   fluidState.tick(level, blockPos, blockState);
                }
 
-               if (!(blockState.getBlock() instanceof LiquidBlock)) {
+               if (blockState.getBlock() instanceof LiquidBlock) {
+                  blockState.tick(level, blockPos, level.getRandom());
+               } else {
                   BlockState blockStateNew = Block.updateFromNeighbourShapes(blockState, level, blockPos);
                   if (blockStateNew != blockState) {
                      level.setBlock(blockPos, blockStateNew, 276);
@@ -792,7 +791,7 @@ public class LevelChunk extends ChunkAccess implements DebugValueSource {
 
       @Override
       public String getType() {
-         return BlockEntityType.getKey(this.blockEntity.getType()).toString();
+         return this.blockEntity.typeHolder().getRegisteredName();
       }
 
       @Override

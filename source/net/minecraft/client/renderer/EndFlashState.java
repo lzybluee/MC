@@ -17,16 +17,16 @@ public class EndFlashState {
    private float xAngle;
    private float yAngle;
 
-   public void tick(final long gameTime) {
-      this.calculateFlashParameters(gameTime);
+   public void tick(final long clockTime) {
+      this.calculateFlashParameters(clockTime);
       this.oldIntensity = this.intensity;
-      this.intensity = this.calculateIntensity(gameTime);
+      this.intensity = this.calculateIntensity(clockTime);
    }
 
-   private void calculateFlashParameters(final long gameTime) {
-      long newSeed = gameTime / 600L;
+   private void calculateFlashParameters(final long clockTime) {
+      long newSeed = clockTime / 600L;
       if (newSeed != this.flashSeed) {
-         RandomSource randomSource = RandomSource.create(newSeed);
+         RandomSource randomSource = RandomSource.createThreadLocalInstance(newSeed);
          randomSource.nextFloat();
          this.offset = Mth.randomBetweenInclusive(randomSource, 0, 200);
          this.duration = Mth.randomBetweenInclusive(randomSource, 100, Math.min(380, 600 - this.offset));
@@ -36,10 +36,10 @@ public class EndFlashState {
       }
    }
 
-   private float calculateIntensity(final long gameTime) {
-      long gameTimeWithinInterval = gameTime % 600L;
-      return gameTimeWithinInterval >= this.offset && gameTimeWithinInterval <= this.offset + this.duration
-         ? Mth.sin((float)(gameTimeWithinInterval - this.offset) * (float) Math.PI / this.duration)
+   private float calculateIntensity(final long clockTime) {
+      long clockTimeWithinInterval = clockTime % 600L;
+      return clockTimeWithinInterval >= this.offset && clockTimeWithinInterval <= this.offset + this.duration
+         ? Mth.sin((float)(clockTimeWithinInterval - this.offset) * (float) Math.PI / this.duration)
          : 0.0F;
    }
 

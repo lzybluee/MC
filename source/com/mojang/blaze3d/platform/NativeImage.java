@@ -224,6 +224,10 @@ public final class NativeImage implements AutoCloseable {
       this.pixels = 0L;
    }
 
+   public boolean isClosed() {
+      return this.pixels == 0L;
+   }
+
    public int getWidth() {
       return this.width;
    }
@@ -476,7 +480,7 @@ public final class NativeImage implements AutoCloseable {
       }
 
       int components = this.format.components();
-      STBImageResize.nstbir_resize_uint8(
+      STBImageResize.nstbir_resize_uint8_linear(
          this.pixels + (sourceX + sourceY * this.getWidth()) * components,
          sizeX,
          sizeY,
@@ -495,6 +499,44 @@ public final class NativeImage implements AutoCloseable {
 
    public long getPointer() {
       return this.pixels;
+   }
+
+   public Transparency computeTransparency(final int x0, final int y0, final int x1, final int y1) {
+      this.checkAllocated();
+      if (this.format != NativeImage.Format.RGBA) {
+         return Transparency.NONE;
+      }
+
+      if (x0 >= 0 && y0 >= 0 && x1 <= this.width && y1 <= this.height) {
+         if ((long)this.width * this.height * 4L > 2147483647L) {
+            throw new IllegalArgumentException("Image of size " + this.width + "x" + this.height + " is too large to compute translucency");
+         }
+
+         boolean hasTransparentPixel = false;
+         boolean hasTranslucentPixel = false;
+         IntBuffer buffer = MemoryUtil.memIntBuffer(this.pixels, this.width * this.height);
+
+         for (int y = y0; y < y1; y++) {
+            for (int x = x0; x < x1; x++) {
+               int alpha = ARGB.alpha(buffer.get(x + y * this.width));
+               if (alpha == 0) {
+                  hasTransparentPixel = true;
+               } else if (alpha != 255) {
+                  hasTranslucentPixel = true;
+               }
+            }
+         }
+
+         return Transparency.of(hasTransparentPixel, hasTranslucentPixel);
+      } else {
+         throw new IllegalArgumentException(
+            "Cannot compute translucency out of bounds: [" + x0 + ", " + y0 + ", " + x1 + ", " + y1 + "] in " + this.width + "x" + this.height + " image"
+         );
+      }
+   }
+
+   public Transparency computeTransparency() {
+      return this.computeTransparency(0, 0, this.width, this.height);
    }
 
    public enum Format {

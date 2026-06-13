@@ -1,12 +1,12 @@
 package net.minecraft.world.level.block;
 
-import com.google.common.collect.Maps;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -26,7 +26,6 @@ public class BannerBlock extends AbstractBannerBlock {
       i -> i.group(DyeColor.CODEC.fieldOf("color").forGetter(AbstractBannerBlock::getColor), propertiesCodec()).apply(i, BannerBlock::new)
    );
    public static final IntegerProperty ROTATION = BlockStateProperties.ROTATION_16;
-   private static final Map<DyeColor, Block> BY_COLOR = Maps.newHashMap();
    private static final VoxelShape SHAPE = Block.column(8.0, 0.0, 16.0);
 
    @Override
@@ -36,8 +35,7 @@ public class BannerBlock extends AbstractBannerBlock {
 
    public BannerBlock(final DyeColor color, final BlockBehaviour.Properties properties) {
       super(color, properties);
-      this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 0));
-      BY_COLOR.put(color, this);
+      this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 8));
    }
 
    @Override
@@ -86,7 +84,20 @@ public class BannerBlock extends AbstractBannerBlock {
       builder.add(ROTATION);
    }
 
-   public static Block byColor(final DyeColor color) {
-      return BY_COLOR.getOrDefault(color, Blocks.WHITE_BANNER);
+   public enum AttachmentType implements StringRepresentable {
+      WALL("wall"),
+      GROUND("ground");
+
+      public static final Codec<BannerBlock.AttachmentType> CODEC = StringRepresentable.fromEnum(BannerBlock.AttachmentType::values);
+      private final String name;
+
+      AttachmentType(final String name) {
+         this.name = name;
+      }
+
+      @Override
+      public String getSerializedName() {
+         return this.name;
+      }
    }
 }

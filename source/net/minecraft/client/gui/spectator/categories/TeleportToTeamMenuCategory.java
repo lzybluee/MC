@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.spectator.SpectatorMenu;
 import net.minecraft.client.gui.spectator.SpectatorMenuCategory;
 import net.minecraft.client.gui.spectator.SpectatorMenuItem;
@@ -57,7 +57,7 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
    }
 
    @Override
-   public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+   public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TELEPORT_TO_TEAM_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
    }
 
@@ -91,7 +91,7 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
             return Optional.empty();
          }
 
-         PlayerInfo playerInfo = players.get(RandomSource.create().nextInt(players.size()));
+         PlayerInfo playerInfo = players.get(RandomSource.createThreadLocalInstance().nextInt(players.size()));
          return Optional.of(new TeleportToTeamMenuCategory.TeamSelectionItem(team, players, playerInfo::getSkin));
       }
 
@@ -106,7 +106,7 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
       }
 
       @Override
-      public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+      public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
          Integer teamColor = this.team.getColor().getColor();
          if (teamColor != null) {
             float red = (teamColor >> 16 & 0xFF) / 255.0F;
@@ -115,7 +115,7 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
             graphics.fill(1, 1, 15, 15, ARGB.colorFromFloat(alpha, red * brightness, green * brightness, blue * brightness));
          }
 
-         PlayerFaceRenderer.draw(graphics, this.iconSkin.get(), 2, 2, 12, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
+         PlayerFaceExtractor.extractRenderState(graphics, this.iconSkin.get(), 2, 2, 12, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
       }
 
       @Override

@@ -8,12 +8,13 @@ import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
+import net.minecraft.util.LightCoordsUtil;
 import org.joml.Quaternionf;
 
 public class FlameFeatureRenderer {
-   public void render(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource, final AtlasManager atlasManager) {
+   public void renderSolid(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource, final AtlasManager atlasManager) {
       for (SubmitNodeStorage.FlameSubmit flameSubmit : nodeCollection.getFlameSubmits()) {
          this.renderFlame(flameSubmit.pose(), bufferSource, flameSubmit.entityRenderState(), flameSubmit.rotation(), atlasManager);
       }
@@ -39,6 +40,7 @@ public class FlameFeatureRenderer {
       float zo = 0.0F;
       int ss = 0;
       VertexConsumer buffer = bufferSource.getBuffer(Sheets.cutoutBlockSheet());
+      int lightCoords = LightCoordsUtil.withBlock(state.lightCoords, 15);
 
       while (h > 0.0F) {
          TextureAtlasSprite tex = ss % 2 == 0 ? fire1 : fire2;
@@ -52,10 +54,10 @@ public class FlameFeatureRenderer {
             u0 = tmp;
          }
 
-         fireVertex(pose, buffer, -r - 0.0F, 0.0F - yo, zo, u1, v1);
-         fireVertex(pose, buffer, r - 0.0F, 0.0F - yo, zo, u0, v1);
-         fireVertex(pose, buffer, r - 0.0F, 1.4F - yo, zo, u0, v0);
-         fireVertex(pose, buffer, -r - 0.0F, 1.4F - yo, zo, u1, v0);
+         fireVertex(pose, buffer, -r - 0.0F, 0.0F - yo, zo, u1, v1, lightCoords);
+         fireVertex(pose, buffer, r - 0.0F, 0.0F - yo, zo, u0, v1, lightCoords);
+         fireVertex(pose, buffer, r - 0.0F, 1.4F - yo, zo, u0, v0, lightCoords);
+         fireVertex(pose, buffer, -r - 0.0F, 1.4F - yo, zo, u1, v0, lightCoords);
          h -= 0.45F;
          yo -= 0.45F;
          r *= 0.9F;
@@ -65,8 +67,8 @@ public class FlameFeatureRenderer {
    }
 
    private static void fireVertex(
-      final PoseStack.Pose pose, final VertexConsumer buffer, final float x, final float y, final float z, final float u, final float v
+      final PoseStack.Pose pose, final VertexConsumer buffer, final float x, final float y, final float z, final float u, final float v, final int lightCoords
    ) {
-      buffer.addVertex(pose, x, y, z).setColor(-1).setUv(u, v).setUv1(0, 10).setLight(240).setNormal(pose, 0.0F, 1.0F, 0.0F);
+      buffer.addVertex(pose, x, y, z).setColor(-1).setUv(u, v).setUv1(0, 10).setLight(lightCoords).setNormal(pose, 0.0F, 1.0F, 0.0F);
    }
 }

@@ -1,6 +1,7 @@
 package net.minecraft.client.renderer.entity.layers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.model.animal.llama.BabyLlamaModel;
 import net.minecraft.client.model.animal.llama.LlamaModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -26,7 +27,7 @@ public class LlamaDecorLayer extends RenderLayer<LlamaRenderState, LlamaModel> {
       super(renderer);
       this.equipmentRenderer = equipmentRenderer;
       this.adultModel = new LlamaModel(modelSet.bakeLayer(ModelLayers.LLAMA_DECOR));
-      this.babyModel = new LlamaModel(modelSet.bakeLayer(ModelLayers.LLAMA_BABY_DECOR));
+      this.babyModel = new BabyLlamaModel(modelSet.bakeLayer(ModelLayers.LLAMA_BABY_DECOR));
    }
 
    public void submit(
@@ -39,10 +40,17 @@ public class LlamaDecorLayer extends RenderLayer<LlamaRenderState, LlamaModel> {
    ) {
       ItemStack itemStack = state.bodyItem;
       Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
-      if (equippable != null && equippable.assetId().isPresent()) {
+      if (equippable != null && equippable.assetId().isPresent() && !state.isBaby) {
          this.renderEquipment(poseStack, submitNodeCollector, state, itemStack, equippable.assetId().get(), lightCoords);
       } else if (state.isTraderLlama) {
-         this.renderEquipment(poseStack, submitNodeCollector, state, ItemStack.EMPTY, EquipmentAssets.TRADER_LLAMA, lightCoords);
+         this.renderEquipment(
+            poseStack,
+            submitNodeCollector,
+            state,
+            ItemStack.EMPTY,
+            state.isBaby ? EquipmentAssets.TRADER_LLAMA_BABY : EquipmentAssets.TRADER_LLAMA,
+            lightCoords
+         );
       }
    }
 

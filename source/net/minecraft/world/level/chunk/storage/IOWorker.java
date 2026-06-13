@@ -42,18 +42,18 @@ public class IOWorker implements AutoCloseable, ChunkScanAccess {
    }
 
    public boolean isOldChunkAround(final ChunkPos pos, final int range) {
-      ChunkPos from = new ChunkPos(pos.x - range, pos.z - range);
-      ChunkPos to = new ChunkPos(pos.x + range, pos.z + range);
+      ChunkPos from = new ChunkPos(pos.x() - range, pos.z() - range);
+      ChunkPos to = new ChunkPos(pos.x() + range, pos.z() + range);
 
       for (int regionX = from.getRegionX(); regionX <= to.getRegionX(); regionX++) {
          for (int regionZ = from.getRegionZ(); regionZ <= to.getRegionZ(); regionZ++) {
             BitSet data = this.getOrCreateOldDataForRegion(regionX, regionZ).join();
             if (!data.isEmpty()) {
                ChunkPos minChunkPos = ChunkPos.minFromRegion(regionX, regionZ);
-               int startChunkX = Math.max(from.x - minChunkPos.x, 0);
-               int startChunkZ = Math.max(from.z - minChunkPos.z, 0);
-               int endChunkX = Math.min(to.x - minChunkPos.x, 31);
-               int endChunkZ = Math.min(to.z - minChunkPos.z, 31);
+               int startChunkX = Math.max(from.x() - minChunkPos.x(), 0);
+               int startChunkZ = Math.max(from.z() - minChunkPos.z(), 0);
+               int endChunkX = Math.min(to.x() - minChunkPos.x(), 31);
+               int endChunkZ = Math.min(to.z() - minChunkPos.z(), 31);
 
                for (int x = startChunkX; x <= endChunkX; x++) {
                   for (int z = startChunkZ; z <= endChunkZ; z++) {
@@ -71,7 +71,7 @@ public class IOWorker implements AutoCloseable, ChunkScanAccess {
    }
 
    private CompletableFuture<BitSet> getOrCreateOldDataForRegion(final int regionX, final int regionZ) {
-      long regionPos = ChunkPos.asLong(regionX, regionZ);
+      long regionPos = ChunkPos.pack(regionX, regionZ);
       synchronized (this.regionCacheForBlender) {
          CompletableFuture<BitSet> result = (CompletableFuture<BitSet>)this.regionCacheForBlender.getAndMoveToFirst(regionPos);
          if (result == null) {

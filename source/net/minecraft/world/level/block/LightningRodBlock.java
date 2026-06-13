@@ -44,7 +44,7 @@ public class LightningRodBlock extends RodBlock implements SimpleWaterloggedBloc
    @Override
    public BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       return this.defaultBlockState().setValue(FACING, context.getClickedFace()).setValue(WATERLOGGED, isWaterSource);
    }
 
@@ -102,7 +102,7 @@ public class LightningRodBlock extends RodBlock implements SimpleWaterloggedBloc
    @Override
    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
       if (level.isThundering()
-         && level.random.nextInt(200) <= level.getGameTime() % 200L
+         && level.getRandom().nextInt(200) <= level.getGameTime() % 200L
          && pos.getY() == level.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ()) - 1) {
          ParticleUtils.spawnParticlesAlongAxis(state.getValue(FACING).getAxis(), level, pos, 0.125, ParticleTypes.ELECTRIC_SPARK, UniformInt.of(1, 2));
       }

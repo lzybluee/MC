@@ -50,7 +50,7 @@ public class CocoaBlock extends HorizontalDirectionalBlock implements Bonemealab
 
    @Override
    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
-      if (level.random.nextInt(5) == 0) {
+      if (level.getRandom().nextInt(5) == 0) {
          int age = state.getValue(AGE);
          if (age < 2) {
             level.setBlock(pos, state.setValue(AGE, age + 1), 2);
@@ -61,7 +61,7 @@ public class CocoaBlock extends HorizontalDirectionalBlock implements Bonemealab
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockState relativeState = level.getBlockState(pos.relative(state.getValue(FACING)));
-      return relativeState.is(BlockTags.JUNGLE_LOGS);
+      return relativeState.is(BlockTags.SUPPORTS_COCOA);
    }
 
    @Override

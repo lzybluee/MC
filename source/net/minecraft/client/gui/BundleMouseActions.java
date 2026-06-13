@@ -5,7 +5,7 @@ import net.minecraft.client.ScrollWheelHandler;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ServerboundSelectBundleItemPacket;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
@@ -35,7 +35,7 @@ public class BundleMouseActions implements ItemSlotMouseAction {
       Vector2i wheelXY = this.scrollWheelHandler.onMouseScroll(scrollX, scrollY);
       int wheel = wheelXY.y == 0 ? -wheelXY.x : wheelXY.y;
       if (wheel != 0) {
-         int selectedItem = BundleItem.getSelectedItem(itemStack);
+         int selectedItem = BundleItem.getSelectedItemIndex(itemStack);
          int updatedSelectedItem = ScrollWheelHandler.getNextScrollWheelSelection(wheel, selectedItem, amountOfShownItems);
          if (selectedItem != updatedSelectedItem) {
             this.toggleSelectedBundleItem(itemStack, slotIndex, updatedSelectedItem);
@@ -51,8 +51,8 @@ public class BundleMouseActions implements ItemSlotMouseAction {
    }
 
    @Override
-   public void onSlotClicked(final Slot slot, final ClickType clickType) {
-      if (clickType == ClickType.QUICK_MOVE || clickType == ClickType.SWAP) {
+   public void onSlotClicked(final Slot slot, final ContainerInput containerInput) {
+      if (containerInput == ContainerInput.QUICK_MOVE || containerInput == ContainerInput.SWAP) {
          this.unselectedBundleItem(slot.getItem(), slot.index);
       }
    }

@@ -1,5 +1,6 @@
 package net.minecraft.client.renderer.chunk;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.Direction;
@@ -29,11 +30,14 @@ public interface SectionMesh extends AutoCloseable {
 
    boolean facesCanSeeEachother(Direction direction1, Direction direction2);
 
-   default @Nullable SectionBuffers getBuffers(final ChunkSectionLayer layer) {
+   default SectionMesh.@Nullable SectionDraw getSectionDraw(final ChunkSectionLayer layer) {
       return null;
    }
 
    @Override
    default void close() {
+   }
+
+   record SectionDraw(int indexCount, VertexFormat.IndexType indexType, boolean hasCustomIndexBuffer) {
    }
 }

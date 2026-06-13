@@ -3,7 +3,6 @@ package com.mojang.realmsclient.gui.screens;
 import com.mojang.realmsclient.dto.RealmsJoinInformation;
 import com.mojang.realmsclient.dto.ServiceQuality;
 import com.mojang.realmsclient.util.task.LongRunningTask;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.ImageWidget;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
@@ -39,9 +38,7 @@ public class RealmsLongRunningMcoConnectTaskScreen extends RealmsLongRunningMcoT
             : ServiceQuality.UNKNOWN.getIcon();
          regionInfo.addChild(ImageWidget.sprite(10, 8, icon), LayoutSettings::alignVerticallyTop);
          this.footer.addChild(regionInfo, layoutSettings -> layoutSettings.paddingTop(40));
-         this.footer.visitWidgets(x$0 -> {
-            AbstractWidget var10000 = this.addRenderableWidget(x$0);
-         });
+         this.footer.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
          this.repositionElements();
       }
    }

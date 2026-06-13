@@ -120,7 +120,7 @@ public class RamTarget extends Behavior<Goat> {
 
    protected void finishRam(final ServerLevel level, final Goat body) {
       level.broadcastEntityEvent(body, (byte)59);
-      body.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, this.getTimeBetweenRams.apply(body).sample(level.random));
+      body.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, this.getTimeBetweenRams.apply(body).sample(level.getRandom()));
       body.getBrain().eraseMemory(MemoryModuleType.RAM_TARGET);
    }
 }

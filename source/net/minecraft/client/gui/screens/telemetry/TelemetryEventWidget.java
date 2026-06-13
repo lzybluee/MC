@@ -7,7 +7,8 @@ import java.util.function.DoubleConsumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractScrollArea;
 import net.minecraft.client.gui.components.AbstractTextAreaWidget;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.layouts.Layout;
@@ -32,7 +33,7 @@ public class TelemetryEventWidget extends AbstractTextAreaWidget {
    private @Nullable DoubleConsumer onScrolledListener;
 
    public TelemetryEventWidget(final int x, final int y, final int width, final int height, final Font font) {
-      super(x, y, width, height, Component.empty());
+      super(x, y, width, height, Component.empty(), AbstractScrollArea.defaultSettings(9));
       this.font = font;
       this.content = this.buildContent(Minecraft.getInstance().telemetryOptInExtra());
    }
@@ -82,17 +83,12 @@ public class TelemetryEventWidget extends AbstractTextAreaWidget {
    }
 
    @Override
-   protected double scrollRate() {
-      return 9.0;
-   }
-
-   @Override
-   protected void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   protected void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       int top = this.getInnerTop();
       int left = this.getInnerLeft();
       graphics.pose().pushMatrix();
       graphics.pose().translate(left, top);
-      this.content.container().visitWidgets(widget -> widget.render(graphics, mouseX, mouseY, a));
+      this.content.container().visitWidgets(widget -> widget.extractRenderState(graphics, mouseX, mouseY, a));
       graphics.pose().popMatrix();
    }
 

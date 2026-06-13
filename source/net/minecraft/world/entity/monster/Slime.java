@@ -287,8 +287,8 @@ public class Slime extends Mob implements Enemy {
             return false;
          }
 
-         ChunkPos chunkPos = new ChunkPos(pos);
-         boolean slimeChunk = WorldgenRandom.seedSlimeChunk(chunkPos.x, chunkPos.z, ((WorldGenLevel)level).getSeed(), 987234911L).nextInt(10) == 0;
+         ChunkPos chunkPos = ChunkPos.containing(pos);
+         boolean slimeChunk = WorldgenRandom.seedSlimeChunk(chunkPos.x(), chunkPos.z(), ((WorldGenLevel)level).getSeed(), 987234911L).nextInt(10) == 0;
          if (random.nextInt(10) == 0 && slimeChunk && pos.getY() < 40) {
             return checkMobSpawnRules(type, level, spawnReason, pos, random);
          }

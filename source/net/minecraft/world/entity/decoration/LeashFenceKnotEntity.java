@@ -1,5 +1,6 @@
 package net.minecraft.world.entity.decoration;
 
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -70,13 +71,13 @@ public class LeashFenceKnotEntity extends BlockAttachedEntity {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       if (this.level().isClientSide()) {
          return InteractionResult.SUCCESS;
       }
 
       if (player.getItemInHand(hand).is(Items.SHEARS)) {
-         InteractionResult result = super.interact(player, hand);
+         InteractionResult result = super.interact(player, hand, location);
          if (result instanceof InteractionResult.Success success && success.wasItemInteraction()) {
             return result;
          }
@@ -102,7 +103,7 @@ public class LeashFenceKnotEntity extends BlockAttachedEntity {
       }
 
       if (!attachedMob && !anyDropped) {
-         return super.interact(player, hand);
+         return super.interact(player, hand, location);
       }
 
       this.gameEvent(GameEvent.BLOCK_ATTACH, player);
@@ -123,16 +124,24 @@ public class LeashFenceKnotEntity extends BlockAttachedEntity {
    }
 
    public static LeashFenceKnotEntity getOrCreateKnot(final Level level, final BlockPos pos) {
+      return getKnot(level, pos).orElseGet(() -> createKnot(level, pos));
+   }
+
+   public static Optional<LeashFenceKnotEntity> getKnot(final Level level, final BlockPos pos) {
       int x = pos.getX();
       int y = pos.getY();
       int z = pos.getZ();
 
       for (LeashFenceKnotEntity knot : level.getEntitiesOfClass(LeashFenceKnotEntity.class, new AABB(x - 1.0, y - 1.0, z - 1.0, x + 1.0, y + 1.0, z + 1.0))) {
          if (knot.getPos().equals(pos)) {
-            return knot;
+            return Optional.of(knot);
          }
       }
 
+      return Optional.empty();
+   }
+
+   public static LeashFenceKnotEntity createKnot(final Level level, final BlockPos pos) {
       LeashFenceKnotEntity knot = new LeashFenceKnotEntity(level, pos);
       level.addFreshEntity(knot);
       return knot;

@@ -119,7 +119,7 @@ public class CactusBlock extends Block {
       }
 
       BlockState belowState = level.getBlockState(pos.below());
-      return (belowState.is(Blocks.CACTUS) || belowState.is(BlockTags.SAND)) && !level.getBlockState(pos.above()).liquid();
+      return (belowState.is(this) || belowState.is(BlockTags.SUPPORTS_CACTUS)) && !level.getBlockState(pos.above()).liquid();
    }
 
    @Override

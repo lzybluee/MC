@@ -3,6 +3,7 @@ package net.minecraft.client.renderer.texture;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.Transparency;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -14,6 +15,8 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -34,6 +37,7 @@ import net.minecraft.client.resources.metadata.texture.TextureMetadataSection;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -49,6 +53,7 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
    private final List<MetadataSectionType.WithValue<?>> additionalMetadata;
    private final MipmapStrategy mipmapStrategy;
    private final float alphaCutoffBias;
+   private final Transparency transparency;
 
    public SpriteContents(final Identifier name, final FrameSize frameSize, final NativeImage image) {
       this(name, frameSize, image, Optional.empty(), List.of(), Optional.empty());
@@ -74,11 +79,12 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
       this.byMipLevel = new NativeImage[]{this.originalImage};
       this.mipmapStrategy = textureInfo.map(TextureMetadataSection::mipmapStrategy).orElse(MipmapStrategy.AUTO);
       this.alphaCutoffBias = textureInfo.map(TextureMetadataSection::alphaCutoffBias).orElse(0.0F);
+      this.transparency = image.computeTransparency();
    }
 
    public void increaseMipLevel(final int mipLevel) {
       try {
-         this.byMipLevel = MipmapGenerator.generateMipLevels(this.name, this.byMipLevel, mipLevel, this.mipmapStrategy, this.alphaCutoffBias);
+         this.byMipLevel = MipmapGenerator.generateMipLevels(this.name, this.byMipLevel, mipLevel, this.mipmapStrategy, this.alphaCutoffBias, this.transparency);
       } catch (Throwable t) {
          CrashReport report = CrashReport.forThrowable(t, "Generating mipmaps for frame");
          CrashReportCategory frameCategory = report.addCategory("Frame being iterated");
@@ -97,6 +103,10 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
 
    public boolean isAnimated() {
       return this.getFrameCount() > 1;
+   }
+
+   public Transparency transparency() {
+      return this.transparency;
    }
 
    private SpriteContents.@Nullable AnimatedTexture createAnimatedTexture(
@@ -168,8 +178,8 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
       return this.name;
    }
 
-   public IntStream getUniqueFrames() {
-      return this.animatedTexture != null ? this.animatedTexture.getUniqueFrames() : IntStream.of(1);
+   public IntList getUniqueFrames() {
+      return this.animatedTexture != null ? this.animatedTexture.getUniqueFrames() : IntList.of(1);
    }
 
    public SpriteContents.@Nullable AnimationState createAnimationState(final GpuBufferSlice uboSlice, final int spriteUboSize) {
@@ -210,6 +220,36 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
       return ARGB.alpha(this.originalImage.getPixel(actualX, actualY)) == 0;
    }
 
+   public Transparency computeTransparency(final float u0, final float v0, final float u1, final float v1) {
+      if (this.transparency.isOpaque()) {
+         return this.transparency;
+      }
+
+      if (u0 == 0.0F && v0 == 0.0F && u1 == 1.0F && v1 == 1.0F) {
+         return this.transparency;
+      }
+
+      int x0 = Mth.floor(u0 * this.width);
+      int y0 = Mth.floor(v0 * this.height);
+      int x1 = Mth.ceil(u1 * this.width);
+      int y1 = Mth.ceil(v1 * this.height);
+      if (this.animatedTexture == null) {
+         return this.originalImage.computeTransparency(x0, y0, x1, y1);
+      }
+
+      IntList uniqueFrames = this.animatedTexture.uniqueFrames;
+      Transparency transparency = Transparency.NONE;
+
+      for (int i = 0; i < uniqueFrames.size(); i++) {
+         int frame = uniqueFrames.getInt(i);
+         int frameX = this.animatedTexture.getFrameX(frame) * this.width;
+         int frameY = this.animatedTexture.getFrameY(frame) * this.height;
+         transparency = transparency.or(this.originalImage.computeTransparency(frameX + x0, frameY + y0, frameX + x1, frameY + y1));
+      }
+
+      return transparency;
+   }
+
    public void uploadFirstFrame(final GpuTexture destination, final int level) {
       RenderSystem.getDevice()
          .createCommandEncoder()
@@ -218,6 +258,7 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
 
    private class AnimatedTexture {
       private final List<SpriteContents.FrameInfo> frames;
+      private final IntList uniqueFrames;
       private final int frameRowSize;
       private final boolean interpolateFrames;
 
@@ -225,6 +266,7 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
          this.frames = frames;
          this.frameRowSize = frameRowSize;
          this.interpolateFrames = interpolateFrames;
+         this.uniqueFrames = IntArrayList.toList(frames.stream().mapToInt(SpriteContents.FrameInfo::index).distinct());
       }
 
       private int getFrameX(final int index) {
@@ -240,7 +282,8 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
          Int2ObjectMap<GpuTextureView> frameTexturesByIndex = new Int2ObjectOpenHashMap();
          GpuBufferSlice[] spriteUbosByMip = new GpuBufferSlice[SpriteContents.this.byMipLevel.length];
 
-         for (int frame : this.getUniqueFrames().toArray()) {
+         for (int i = 0; i < this.uniqueFrames.size(); i++) {
+            int frame = this.uniqueFrames.getInt(i);
             GpuTexture texture = device.createTexture(
                () -> SpriteContents.this.name + " animation frame " + frame,
                5,
@@ -248,7 +291,7 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
                SpriteContents.this.width,
                SpriteContents.this.height,
                1,
-               SpriteContents.this.byMipLevel.length + 1
+               SpriteContents.this.byMipLevel.length
             );
             int offsetX = this.getFrameX(frame) * SpriteContents.this.width;
             int offsetY = this.getFrameY(frame) * SpriteContents.this.height;
@@ -280,8 +323,8 @@ public class SpriteContents implements AutoCloseable, Stitcher.Entry {
          return SpriteContents.this.new AnimationState(this, frameTexturesByIndex, spriteUbosByMip);
       }
 
-      public IntStream getUniqueFrames() {
-         return this.frames.stream().mapToInt(f -> f.index).distinct();
+      public IntList getUniqueFrames() {
+         return this.uniqueFrames;
       }
    }
 

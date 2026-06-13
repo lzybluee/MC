@@ -105,7 +105,7 @@ public class RegionFile implements AutoCloseable {
    }
 
    private Path getExternalChunkPath(final ChunkPos pos) {
-      String externalFileName = "c." + pos.x + "." + pos.z + ".mcc";
+      String externalFileName = "c." + pos.x() + "." + pos.z() + ".mcc";
       return this.externalFileDir.resolve(externalFileName);
    }
 

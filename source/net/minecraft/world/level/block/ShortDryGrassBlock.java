@@ -38,7 +38,7 @@ public class ShortDryGrassBlock extends DryVegetationBlock implements Bonemealab
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return true;
+      return level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
    }
 
    @Override

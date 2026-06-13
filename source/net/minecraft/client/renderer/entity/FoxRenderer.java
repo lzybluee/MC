@@ -1,7 +1,12 @@
 package net.minecraft.client.renderer.entity;
 
+import com.google.common.collect.Maps;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import java.util.EnumMap;
+import java.util.Map;
+import net.minecraft.client.model.animal.fox.AdultFoxModel;
+import net.minecraft.client.model.animal.fox.BabyFoxModel;
 import net.minecraft.client.model.animal.fox.FoxModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.layers.FoxHeldItemLayer;
@@ -13,11 +18,29 @@ import net.minecraft.world.entity.animal.fox.Fox;
 public class FoxRenderer extends AgeableMobRenderer<Fox, FoxRenderState, FoxModel> {
    private static final Identifier RED_FOX_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox.png");
    private static final Identifier RED_FOX_SLEEP_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_sleep.png");
-   private static final Identifier SNOW_FOX_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/snow_fox.png");
-   private static final Identifier SNOW_FOX_SLEEP_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/snow_fox_sleep.png");
+   private static final Identifier SNOW_FOX_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_snow.png");
+   private static final Identifier SNOW_FOX_SLEEP_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_snow_sleep.png");
+   private static final Identifier BABY_RED_FOX_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_baby.png");
+   private static final Identifier BABY_RED_FOX_SLEEP_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_sleep_baby.png");
+   private static final Identifier BABY_SNOW_FOX_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_snow_baby.png");
+   private static final Identifier BABY_SNOW_FOX_SLEEP_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fox/fox_snow_sleep_baby.png");
+   private static final EnumMap<Fox.Variant, FoxRenderer.FoxTexturesByState> TEXTURES_BY_VARIANT = Maps.newEnumMap(
+      Map.of(
+         Fox.Variant.RED,
+         new FoxRenderer.FoxTexturesByState(
+            new FoxRenderer.FoxTexturesByAge(RED_FOX_TEXTURE, BABY_RED_FOX_TEXTURE),
+            new FoxRenderer.FoxTexturesByAge(RED_FOX_SLEEP_TEXTURE, BABY_RED_FOX_SLEEP_TEXTURE)
+         ),
+         Fox.Variant.SNOW,
+         new FoxRenderer.FoxTexturesByState(
+            new FoxRenderer.FoxTexturesByAge(SNOW_FOX_TEXTURE, BABY_SNOW_FOX_TEXTURE),
+            new FoxRenderer.FoxTexturesByAge(SNOW_FOX_SLEEP_TEXTURE, BABY_SNOW_FOX_SLEEP_TEXTURE)
+         )
+      )
+   );
 
    public FoxRenderer(final EntityRendererProvider.Context context) {
-      super(context, new FoxModel(context.bakeLayer(ModelLayers.FOX)), new FoxModel(context.bakeLayer(ModelLayers.FOX_BABY)), 0.4F);
+      super(context, new AdultFoxModel(context.bakeLayer(ModelLayers.FOX)), new BabyFoxModel(context.bakeLayer(ModelLayers.FOX_BABY)), 0.4F);
       this.addLayer(new FoxHeldItemLayer(this));
    }
 
@@ -29,11 +52,13 @@ public class FoxRenderer extends AgeableMobRenderer<Fox, FoxRenderState, FoxMode
    }
 
    public Identifier getTextureLocation(final FoxRenderState state) {
-      if (state.variant == Fox.Variant.RED) {
-         return state.isSleeping ? RED_FOX_SLEEP_TEXTURE : RED_FOX_TEXTURE;
-      } else {
-         return state.isSleeping ? SNOW_FOX_SLEEP_TEXTURE : SNOW_FOX_TEXTURE;
+      FoxRenderer.FoxTexturesByState byState = TEXTURES_BY_VARIANT.get(state.variant);
+      if (byState == null) {
+         return RED_FOX_TEXTURE;
       }
+
+      FoxRenderer.FoxTexturesByAge ageTextures = state.isSleeping ? byState.sleeping() : byState.idle();
+      return state.isBaby ? ageTextures.baby() : ageTextures.adult();
    }
 
    public FoxRenderState createRenderState() {
@@ -51,5 +76,11 @@ public class FoxRenderer extends AgeableMobRenderer<Fox, FoxRenderState, FoxMode
       state.isFaceplanted = entity.isFaceplanted();
       state.isPouncing = entity.isPouncing();
       state.variant = entity.getVariant();
+   }
+
+   private record FoxTexturesByAge(Identifier adult, Identifier baby) {
+   }
+
+   private record FoxTexturesByState(FoxRenderer.FoxTexturesByAge idle, FoxRenderer.FoxTexturesByAge sleeping) {
    }
 }

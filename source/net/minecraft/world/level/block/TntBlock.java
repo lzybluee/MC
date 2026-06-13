@@ -76,7 +76,7 @@ public class TntBlock extends Block {
       if (level.getGameRules().get(GameRules.TNT_EXPLODES)) {
          PrimedTnt primed = new PrimedTnt(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, explosion.getIndirectSourceEntity());
          int fuse = primed.getFuse();
-         primed.setFuse((short)(level.random.nextInt(fuse / 4) + fuse / 8));
+         primed.setFuse((short)(level.getRandom().nextInt(fuse / 4) + fuse / 8));
          level.addFreshEntity(primed);
       }
    }
@@ -122,7 +122,7 @@ public class TntBlock extends Block {
 
          player.awardStat(Stats.ITEM_USED.get(item));
       } else if (level instanceof ServerLevel serverLevel && !serverLevel.getGameRules().get(GameRules.TNT_EXPLODES)) {
-         player.displayClientMessage(Component.translatable("block.minecraft.tnt.disabled"), true);
+         player.sendOverlayMessage(Component.translatable("block.minecraft.tnt.disabled"));
          return InteractionResult.PASS;
       }
 

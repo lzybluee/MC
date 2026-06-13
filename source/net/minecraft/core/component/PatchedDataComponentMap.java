@@ -63,8 +63,7 @@ public final class PatchedDataComponentMap implements DataComponentMap {
 
    @Override
    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
-      Optional<? extends T> value = (Optional<? extends T>)this.patch.get(type);
-      return (T)(value != null ? value.orElse(null) : this.prototype.get(type));
+      return DataComponentPatch.getFromPatchAndPrototype(this.patch, this.prototype, type);
    }
 
    public boolean hasNonDefault(final DataComponentType<?> type) {

@@ -34,6 +34,7 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.providers.EnchantmentProvider;
@@ -46,7 +47,7 @@ import org.apache.commons.lang3.mutable.MutableObject;
 import org.jspecify.annotations.Nullable;
 
 public class EnchantmentHelper {
-   public static int getItemEnchantmentLevel(final Holder<Enchantment> enchantment, final ItemStack piece) {
+   public static int getItemEnchantmentLevel(final Holder<Enchantment> enchantment, final ItemInstance piece) {
       ItemEnchantments enchantments = piece.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
       return enchantments.getLevel(enchantment);
    }
@@ -214,12 +215,13 @@ public class EnchantmentHelper {
       }
    }
 
-   public static void doLungeEffects(final ServerLevel serverLevel, final Entity entity) {
-      if (entity instanceof LivingEntity user) {
-         runIterationOnItem(
-            entity.getWeaponItem(), EquipmentSlot.MAINHAND, user, (enchantment, level, item) -> enchantment.value().doLunge(serverLevel, level, item, entity)
-         );
-      }
+   public static void doPostPiercingAttackEffects(final ServerLevel serverLevel, final LivingEntity user) {
+      runIterationOnItem(
+         user.getWeaponItem(),
+         EquipmentSlot.MAINHAND,
+         user,
+         (enchantment, level, item) -> enchantment.value().doPostPiercingAttack(serverLevel, level, item, user)
+      );
    }
 
    public static void doPostAttackEffectsWithItemSource(

@@ -16,7 +16,7 @@ public class NearestAttackableTargetGoal<T extends LivingEntity> extends TargetG
    protected final Class<T> targetType;
    protected final int randomInterval;
    protected @Nullable LivingEntity target;
-   protected TargetingConditions targetConditions;
+   protected final TargetingConditions targetConditions;
 
    public NearestAttackableTargetGoal(final Mob mob, final Class<T> targetType, final boolean mustSee) {
       this(mob, targetType, 10, mustSee, false, null);

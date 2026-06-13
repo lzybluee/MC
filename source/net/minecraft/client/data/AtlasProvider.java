@@ -8,8 +8,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.client.data.models.ItemModelGenerators;
-import net.minecraft.client.renderer.MaterialMapper;
 import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.SpriteMapper;
 import net.minecraft.client.renderer.blockentity.BellRenderer;
 import net.minecraft.client.renderer.blockentity.ConduitRenderer;
 import net.minecraft.client.renderer.blockentity.EnchantTableRenderer;
@@ -19,8 +19,7 @@ import net.minecraft.client.renderer.texture.atlas.sources.DirectoryLister;
 import net.minecraft.client.renderer.texture.atlas.sources.PalettedPermutations;
 import net.minecraft.client.renderer.texture.atlas.sources.SingleFile;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -78,15 +77,15 @@ public class AtlasProvider implements DataProvider {
       return result;
    }
 
-   private static SpriteSource forMaterial(final Material material) {
-      return new SingleFile(material.texture());
+   private static SpriteSource forMaterial(final SpriteId sprite) {
+      return new SingleFile(sprite.texture());
    }
 
-   private static SpriteSource forMapper(final MaterialMapper mapper) {
+   private static SpriteSource forMapper(final SpriteMapper mapper) {
       return new DirectoryLister(mapper.prefix(), mapper.prefix() + "/");
    }
 
-   private static List<SpriteSource> simpleMapper(final MaterialMapper mapper) {
+   private static List<SpriteSource> simpleMapper(final SpriteMapper mapper) {
       return List.of(forMapper(mapper));
    }
 
@@ -132,11 +131,11 @@ public class AtlasProvider implements DataProvider {
    }
 
    private static List<SpriteSource> bannerPatterns() {
-      return List.of(forMaterial(ModelBakery.BANNER_BASE), forMapper(Sheets.BANNER_MAPPER));
+      return List.of(forMapper(Sheets.BANNER_MAPPER));
    }
 
    private static List<SpriteSource> shieldPatterns() {
-      return List.of(forMaterial(ModelBakery.SHIELD_BASE), forMaterial(ModelBakery.NO_PATTERN_SHIELD), forMapper(Sheets.SHIELD_MAPPER));
+      return List.of(forMapper(Sheets.SHIELD_MAPPER));
    }
 
    private static List<SpriteSource> guiSprites() {

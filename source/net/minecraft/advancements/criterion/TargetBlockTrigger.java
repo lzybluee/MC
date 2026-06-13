@@ -8,6 +8,8 @@ import net.minecraft.advancements.Criterion;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import net.minecraft.world.phys.Vec3;
 
 public class TargetBlockTrigger extends SimpleCriterionTrigger<TargetBlockTrigger.TriggerInstance> {
@@ -43,9 +45,9 @@ public class TargetBlockTrigger extends SimpleCriterionTrigger<TargetBlockTrigge
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         validator.validateEntity(this.projectile, "projectile");
+         Validatable.validate(validator.entityContext(), "projectile", this.projectile);
       }
    }
 }

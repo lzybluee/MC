@@ -4,7 +4,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -88,8 +88,8 @@ public class LevelLoadingScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       long current = Util.getMillis();
       if (current - this.lastNarration > 2000L) {
          this.lastNarration = current;
@@ -102,25 +102,25 @@ public class LevelLoadingScreen extends Screen {
       int textTop;
       if (statusView != null) {
          int size = 2;
-         renderChunks(graphics, xCenter, yCenter, 2, 0, statusView);
+         extractChunksForRendering(graphics, xCenter, yCenter, 2, 0, statusView);
          textTop = yCenter - statusView.radius() * 2 - 9 * 3;
       } else {
          textTop = yCenter - 50;
       }
 
-      graphics.drawCenteredString(this.font, DOWNLOADING_TERRAIN_TEXT, xCenter, textTop, -1);
+      graphics.centeredText(this.font, DOWNLOADING_TERRAIN_TEXT, xCenter, textTop, -1);
       if (this.loadTracker.hasProgress()) {
          this.drawProgressBar(graphics, xCenter - 100, textTop + 9 + 3, 200, 2, this.smoothedProgress);
       }
    }
 
-   private void drawProgressBar(final GuiGraphics graphics, final int left, final int top, final int width, final int height, final float progress) {
+   private void drawProgressBar(final GuiGraphicsExtractor graphics, final int left, final int top, final int width, final int height, final float progress) {
       graphics.fill(left, top, left + width, top + height, -16777216);
       graphics.fill(left, top, left + Math.round(progress * width), top + height, -16711936);
    }
 
-   public static void renderChunks(
-      final GuiGraphics graphics, final int xCenter, final int yCenter, final int size, final int margin, final ChunkLoadStatusView statusView
+   public static void extractChunksForRendering(
+      final GuiGraphicsExtractor graphics, final int xCenter, final int yCenter, final int size, final int margin, final ChunkLoadStatusView statusView
    ) {
       int width = size + margin;
       int diameter = statusView.radius() * 2 + 1;
@@ -143,7 +143,7 @@ public class LevelLoadingScreen extends Screen {
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       switch (this.reason) {
          case NETHER_PORTAL:
             graphics.blitSprite(RenderPipelines.GUI_OPAQUE_TEXTURED_BACKGROUND, this.getNetherPortalSprite(), 0, 0, graphics.guiWidth(), graphics.guiHeight());
@@ -158,9 +158,9 @@ public class LevelLoadingScreen extends Screen {
             graphics.fill(RenderPipelines.END_PORTAL, textureSetup, 0, 0, this.width, this.height);
             break;
          case OTHER:
-            this.renderPanorama(graphics, a);
-            this.renderBlurredBackground(graphics);
-            this.renderMenuBackground(graphics);
+            this.extractPanorama(graphics, a);
+            this.extractBlurredBackground(graphics);
+            this.extractMenuBackground(graphics);
       }
    }
 
@@ -169,7 +169,11 @@ public class LevelLoadingScreen extends Screen {
          return this.cachedNetherPortalSprite;
       }
 
-      this.cachedNetherPortalSprite = this.minecraft.getBlockRenderer().getBlockModelShaper().getParticleIcon(Blocks.NETHER_PORTAL.defaultBlockState());
+      this.cachedNetherPortalSprite = this.minecraft
+         .getModelManager()
+         .getBlockStateModelSet()
+         .getParticleMaterial(Blocks.NETHER_PORTAL.defaultBlockState())
+         .sprite();
       return this.cachedNetherPortalSprite;
    }
 

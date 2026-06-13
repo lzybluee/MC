@@ -28,8 +28,8 @@ public class SocializeAtBell {
                   if (level.getRandom().nextInt(100) == 0
                      && level.dimension() == memory.dimension()
                      && memory.pos().closerToCenterThan(body.position(), 4.0)
-                     && visibleEntities.contains(mob -> EntityType.VILLAGER.equals(mob.getType()))) {
-                     visibleEntities.findClosest(mob -> EntityType.VILLAGER.equals(mob.getType()) && mob.distanceToSqr(body) <= 32.0).ifPresent(mob -> {
+                     && visibleEntities.contains(mob -> mob.is(EntityType.VILLAGER))) {
+                     visibleEntities.findClosest(mob -> mob.is(EntityType.VILLAGER) && mob.distanceToSqr(body) <= 32.0).ifPresent(mob -> {
                         interactionTarget.set(mob);
                         lookTarget.set(new EntityTracker(mob, true));
                         walkTarget.set(new WalkTarget(new EntityTracker(mob, false), 0.3F, 1));

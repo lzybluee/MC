@@ -74,7 +74,7 @@ public class SpriteLoader {
          }
 
          Options options = Minecraft.getInstance().options;
-         int anisotropyBit = mipLevel != 0 && options.textureFiltering().get() == TextureFilteringMethod.ANISOTROPIC ? options.maxAnisotropyBit().get() : 0;
+         int anisotropyBit = options.textureFiltering().get() != TextureFilteringMethod.ANISOTROPIC ? 0 : options.maxAnisotropyBit().get();
          Stitcher<SpriteContents> stitcher = new Stitcher<>(maxTextureSize, maxTextureSize, mipLevel, anisotropyBit);
 
          for (SpriteContents spriteInfo : sprites) {

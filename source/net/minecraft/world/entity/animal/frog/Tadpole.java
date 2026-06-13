@@ -1,11 +1,13 @@
 package net.minecraft.world.entity.animal.frog;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -24,10 +26,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Bucketable;
@@ -43,26 +43,16 @@ import org.jspecify.annotations.Nullable;
 
 public class Tadpole extends AbstractFish {
    private static final int DEFAULT_AGE = 0;
+   private static final EntityDataAccessor<Boolean> AGE_LOCKED = SynchedEntityData.defineId(Tadpole.class, EntityDataSerializers.BOOLEAN);
    @VisibleForTesting
    public static int ticksToBeFrog = Math.abs(-24000);
    public static final float HITBOX_WIDTH = 0.4F;
    public static final float HITBOX_HEIGHT = 0.3F;
    private int age = 0;
-   protected static final ImmutableList<SensorType<? extends Sensor<? super Tadpole>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.FROG_TEMPTATIONS
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT,
-      MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-      MemoryModuleType.IS_TEMPTED,
-      MemoryModuleType.TEMPTING_PLAYER,
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.IS_PANICKING
+   protected int ageLockParticleTimer = 0;
+   private static final Brain.Provider<Tadpole> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.FROG_TEMPTATIONS),
+      var0 -> TadpoleAi.getActivities()
    );
 
    public Tadpole(final EntityType<? extends AbstractFish> type, final Level level) {
@@ -77,18 +67,13 @@ public class Tadpole extends AbstractFish {
    }
 
    @Override
-   protected Brain.Provider<Tadpole> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return TadpoleAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Tadpole> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Tadpole> getBrain() {
-      return (Brain<Tadpole>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -115,21 +100,39 @@ public class Tadpole extends AbstractFish {
    @Override
    public void aiStep() {
       super.aiStep();
-      if (!this.level().isClientSide()) {
+      if (!this.level().isClientSide() && !this.isAgeLocked()) {
          this.setAge(this.age + 1);
       }
+
+      this.ageLockParticleTimer = AgeableMob.makeAgeLockedParticle(this.level(), this, this.ageLockParticleTimer, this.isAgeLocked());
    }
 
    @Override
    protected void addAdditionalSaveData(final ValueOutput output) {
       super.addAdditionalSaveData(output);
       output.putInt("Age", this.age);
+      output.putBoolean("AgeLocked", this.isAgeLocked());
    }
 
    @Override
    protected void readAdditionalSaveData(final ValueInput input) {
       super.readAdditionalSaveData(input);
       this.setAge(input.getIntOr("Age", 0));
+      this.setAgeLocked(input.getBooleanOr("AgeLocked", false));
+   }
+
+   @Override
+   protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+      super.defineSynchedData(entityData);
+      entityData.define(AGE_LOCKED, false);
+   }
+
+   protected void setAgeLocked(final boolean locked) {
+      this.entityData.set(AGE_LOCKED, locked);
+   }
+
+   public boolean isAgeLocked() {
+      return this.entityData.get(AGE_LOCKED);
    }
 
    @Override
@@ -150,12 +153,21 @@ public class Tadpole extends AbstractFish {
    @Override
    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
       ItemStack itemStack = player.getItemInHand(hand);
-      if (this.isFood(itemStack)) {
+      if (this.isFood(itemStack) && !this.isAgeLocked()) {
          this.feed(player, itemStack);
+         return InteractionResult.SUCCESS;
+      } else if (AgeableMob.canUseGoldenDandelion(itemStack, true, this.ageLockParticleTimer, this)) {
+         AgeableMob.setAgeLocked(this, this::isAgeLocked, player, itemStack, mob -> this.setAgeLockedData());
          return InteractionResult.SUCCESS;
       } else {
          return Bucketable.bucketMobPickup(player, hand, this).orElse(super.mobInteract(player, hand));
       }
+   }
+
+   private void setAgeLockedData() {
+      this.setAgeLocked(!this.isAgeLocked());
+      this.setAge(0);
+      this.ageLockParticleTimer = 40;
    }
 
    @Override
@@ -170,13 +182,17 @@ public class Tadpole extends AbstractFish {
    @Override
    public void saveToBucketTag(final ItemStack bucket) {
       Bucketable.saveDefaultDataToBucketTag(this, bucket);
-      CustomData.update(DataComponents.BUCKET_ENTITY_DATA, bucket, tag -> tag.putInt("Age", this.getAge()));
+      CustomData.update(DataComponents.BUCKET_ENTITY_DATA, bucket, tag -> {
+         tag.putInt("Age", this.getAge());
+         tag.putBoolean("AgeLocked", this.isAgeLocked());
+      });
    }
 
    @Override
    public void loadFromBucketTag(final CompoundTag tag) {
       Bucketable.loadDefaultDataFromBucketTag(this, tag);
       tag.getInt("Age").ifPresent(this::setAge);
+      this.setAgeLocked(tag.getBooleanOr("AgeLocked", false));
    }
 
    @Override

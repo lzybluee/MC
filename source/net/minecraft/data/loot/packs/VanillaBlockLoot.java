@@ -205,6 +205,7 @@ public class VanillaBlockLoot extends BlockLootSubProvider {
       this.dropSelf(Blocks.RED_WOOL);
       this.dropSelf(Blocks.BLACK_WOOL);
       this.dropSelf(Blocks.DANDELION);
+      this.dropSelf(Blocks.GOLDEN_DANDELION);
       this.dropSelf(Blocks.OPEN_EYEBLOSSOM);
       this.dropSelf(Blocks.CLOSED_EYEBLOSSOM);
       this.dropSelf(Blocks.POPPY);
@@ -754,6 +755,7 @@ public class VanillaBlockLoot extends BlockLootSubProvider {
       this.dropPottedContents(Blocks.POTTED_CHERRY_SAPLING);
       this.dropPottedContents(Blocks.POTTED_FERN);
       this.dropPottedContents(Blocks.POTTED_DANDELION);
+      this.dropPottedContents(Blocks.POTTED_GOLDEN_DANDELION);
       this.dropPottedContents(Blocks.POTTED_POPPY);
       this.dropPottedContents(Blocks.POTTED_OPEN_EYEBLOSSOM);
       this.dropPottedContents(Blocks.POTTED_CLOSED_EYEBLOSSOM);

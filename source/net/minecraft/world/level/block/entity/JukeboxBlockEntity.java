@@ -51,7 +51,7 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
          ItemStack itemBeforePoppingOut = this.getTheItem();
          if (!itemBeforePoppingOut.isEmpty()) {
             this.removeTheItem();
-            Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(this.level.random, 0.7F);
+            Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(this.level.getRandom(), 0.7F);
             ItemStack itemStack = itemBeforePoppingOut.copy();
             ItemEntity entity = new ItemEntity(this.level, itemPos.x(), itemPos.y(), itemPos.z(), itemStack);
             entity.setDefaultPickUpDelay();
@@ -66,7 +66,7 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
    }
 
    public int getComparatorOutput() {
-      return JukeboxSong.fromStack(this.level.registryAccess(), this.item).map(Holder::value).map(JukeboxSong::comparatorOutput).orElse(0);
+      return JukeboxSong.fromStack(this.item).map(Holder::value).map(JukeboxSong::comparatorOutput).orElse(0);
    }
 
    @Override
@@ -80,7 +80,7 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
       this.item = newItem;
       input.getLong("ticks_since_song_started")
          .ifPresent(
-            ticksSinceSongStarted -> JukeboxSong.fromStack(input.lookup(), this.item)
+            ticksSinceSongStarted -> JukeboxSong.fromStack(this.item)
                .ifPresent(song -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)song, ticksSinceSongStarted))
          );
    }
@@ -113,7 +113,7 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
    public void setTheItem(final ItemStack itemStack) {
       this.item = itemStack;
       boolean itemWasInserted = !this.item.isEmpty();
-      Optional<Holder<JukeboxSong>> maybeSong = JukeboxSong.fromStack(this.level.registryAccess(), this.item);
+      Optional<Holder<JukeboxSong>> maybeSong = JukeboxSong.fromStack(this.item);
       this.notifyItemChangedInJukebox(itemWasInserted);
       if (itemWasInserted && maybeSong.isPresent()) {
          this.jukeboxSongPlayer.play(this.level, maybeSong.get());
@@ -157,15 +157,13 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
    @VisibleForTesting
    public void setSongItemWithoutPlaying(final ItemStack itemStack) {
       this.item = itemStack;
-      JukeboxSong.fromStack(this.level.registryAccess(), itemStack)
-         .ifPresent(song -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)song, 0L));
+      JukeboxSong.fromStack(itemStack).ifPresent(song -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)song, 0L));
       this.level.updateNeighborsAt(this.getBlockPos(), this.getBlockState().getBlock());
       this.setChanged();
    }
 
    @VisibleForTesting
    public void tryForcePlaySong() {
-      JukeboxSong.fromStack(this.level.registryAccess(), this.getTheItem())
-         .ifPresent(song -> this.jukeboxSongPlayer.play(this.level, (Holder<JukeboxSong>)song));
+      JukeboxSong.fromStack(this.getTheItem()).ifPresent(song -> this.jukeboxSongPlayer.play(this.level, (Holder<JukeboxSong>)song));
    }
 }

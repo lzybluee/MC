@@ -1,5 +1,6 @@
 package net.minecraft.server.packs.repository;
 
+import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.function.Function;
@@ -43,8 +44,11 @@ public class Pack {
       final PackLocationInfo location, final Pack.ResourcesSupplier resources, final PackFormat currentPackVersion, final PackType type
    ) {
       try (PackResources pack = resources.openPrimary(location)) {
-         PackMetadataSection meta = pack.getMetadataSection(PackMetadataSection.forPackType(type));
-         if (meta == null) {
+         PackMetadataSection meta;
+         try {
+            meta = pack.getMetadataSection(PackMetadataSection.forPackType(type));
+         } catch (JsonParseException e) {
+            LOGGER.warn("Error reading pack metadata, attempting fallback type", e);
             meta = pack.getMetadataSection(PackMetadataSection.FALLBACK_TYPE);
          }
 

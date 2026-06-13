@@ -67,8 +67,9 @@ public class AcquirePoi {
                      return false;
                   }
 
+                  RandomSource random = level.getRandom();
                   if (nextScheduledStart.longValue() == 0L) {
-                     nextScheduledStart.setValue(level.getGameTime() + level.random.nextInt(20));
+                     nextScheduledStart.setValue(level.getGameTime() + random.nextInt(20));
                      return false;
                   }
 
@@ -76,7 +77,7 @@ public class AcquirePoi {
                      return false;
                   }
 
-                  nextScheduledStart.setValue(timestamp + 20L + level.getRandom().nextInt(20));
+                  nextScheduledStart.setValue(timestamp + 20L + random.nextInt(20));
                   PoiManager poiManager = level.getPoiManager();
                   batchCache.long2ObjectEntrySet().removeIf(entry -> !((AcquirePoi.JitteredLinearRetry)entry.getValue()).isStillValid(timestamp));
                   Predicate<BlockPos> cacheTest = pos -> {
@@ -110,7 +111,7 @@ public class AcquirePoi {
                      });
                   } else {
                      for (Pair<Holder<PoiType>, BlockPos> p : poiPositions) {
-                        batchCache.computeIfAbsent(((BlockPos)p.getSecond()).asLong(), key -> new AcquirePoi.JitteredLinearRetry(level.random, timestamp));
+                        batchCache.computeIfAbsent(((BlockPos)p.getSecond()).asLong(), key -> new AcquirePoi.JitteredLinearRetry(random, timestamp));
                      }
                   }
 

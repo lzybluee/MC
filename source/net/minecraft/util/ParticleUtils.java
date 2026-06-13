@@ -15,8 +15,10 @@ import net.minecraft.world.phys.Vec3;
 
 public class ParticleUtils {
    public static void spawnParticlesOnBlockFaces(final Level level, final BlockPos pos, final ParticleOptions particle, final IntProvider particlesPerFaceRange) {
+      RandomSource random = level.getRandom();
+
       for (Direction direction : Direction.values()) {
-         spawnParticlesOnBlockFace(level, pos, particle, particlesPerFaceRange, direction, () -> getRandomSpeedRanges(level.random), 0.55);
+         spawnParticlesOnBlockFace(level, pos, particle, particlesPerFaceRange, direction, () -> getRandomSpeedRanges(random), 0.55);
       }
    }
 
@@ -29,7 +31,7 @@ public class ParticleUtils {
       final Supplier<Vec3> speedSupplier,
       final double stepFactor
    ) {
-      int particleCount = particlesPerFaceRange.sample(level.random);
+      int particleCount = particlesPerFaceRange.sample(level.getRandom());
 
       for (int i = 0; i < particleCount; i++) {
          spawnParticleOnFace(level, pos, face, particle, speedSupplier.get(), stepFactor);
@@ -52,15 +54,16 @@ public class ParticleUtils {
       boolean stepX = attachedAxis == Direction.Axis.X;
       boolean stepY = attachedAxis == Direction.Axis.Y;
       boolean stepZ = attachedAxis == Direction.Axis.Z;
-      int particleCount = sparkCount.sample(level.random);
+      RandomSource random = level.getRandom();
+      int particleCount = sparkCount.sample(random);
 
       for (int i = 0; i < particleCount; i++) {
-         double x = centerOfBlock.x + Mth.nextDouble(level.random, -1.0, 1.0) * (stepX ? 0.5 : radius);
-         double y = centerOfBlock.y + Mth.nextDouble(level.random, -1.0, 1.0) * (stepY ? 0.5 : radius);
-         double z = centerOfBlock.z + Mth.nextDouble(level.random, -1.0, 1.0) * (stepZ ? 0.5 : radius);
-         double xBaseSpeed = stepX ? Mth.nextDouble(level.random, -1.0, 1.0) : 0.0;
-         double yBaseSpeed = stepY ? Mth.nextDouble(level.random, -1.0, 1.0) : 0.0;
-         double zBaseSpeed = stepZ ? Mth.nextDouble(level.random, -1.0, 1.0) : 0.0;
+         double x = centerOfBlock.x + Mth.nextDouble(random, -1.0, 1.0) * (stepX ? 0.5 : radius);
+         double y = centerOfBlock.y + Mth.nextDouble(random, -1.0, 1.0) * (stepY ? 0.5 : radius);
+         double z = centerOfBlock.z + Mth.nextDouble(random, -1.0, 1.0) * (stepZ ? 0.5 : radius);
+         double xBaseSpeed = stepX ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
+         double yBaseSpeed = stepY ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
+         double zBaseSpeed = stepZ ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
          level.addParticle(particle, x, y, z, xBaseSpeed, yBaseSpeed, zBaseSpeed);
       }
    }
@@ -72,9 +75,10 @@ public class ParticleUtils {
       int stepX = face.getStepX();
       int stepY = face.getStepY();
       int stepZ = face.getStepZ();
-      double x = centerOfBlock.x + (stepX == 0 ? Mth.nextDouble(level.random, -0.5, 0.5) : stepX * stepFactor);
-      double y = centerOfBlock.y + (stepY == 0 ? Mth.nextDouble(level.random, -0.5, 0.5) : stepY * stepFactor);
-      double z = centerOfBlock.z + (stepZ == 0 ? Mth.nextDouble(level.random, -0.5, 0.5) : stepZ * stepFactor);
+      RandomSource random = level.getRandom();
+      double x = centerOfBlock.x + (stepX == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepX * stepFactor);
+      double y = centerOfBlock.y + (stepY == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepY * stepFactor);
+      double z = centerOfBlock.z + (stepZ == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepZ * stepFactor);
       double xBaseSpeed = stepX == 0 ? speed.x() : 0.0;
       double yBaseSpeed = stepY == 0 ? speed.y() : 0.0;
       double zBaseSpeed = stepZ == 0 ? speed.z() : 0.0;

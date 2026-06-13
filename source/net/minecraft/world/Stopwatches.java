@@ -18,7 +18,9 @@ public class Stopwatches extends SavedData {
       .fieldOf("stopwatches")
       .codec()
       .xmap(Stopwatches::unpack, Stopwatches::pack);
-   public static final SavedDataType<Stopwatches> TYPE = new SavedDataType<>("stopwatches", Stopwatches::new, CODEC, DataFixTypes.SAVED_DATA_STOPWATCHES);
+   public static final SavedDataType<Stopwatches> TYPE = new SavedDataType<>(
+      Identifier.withDefaultNamespace("stopwatches"), Stopwatches::new, CODEC, DataFixTypes.SAVED_DATA_STOPWATCHES
+   );
    private final Map<Identifier, Stopwatch> stopwatches = new Object2ObjectOpenHashMap();
 
    private Stopwatches() {

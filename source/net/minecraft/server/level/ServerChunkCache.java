@@ -22,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.FileUtil;
 import net.minecraft.util.Util;
 import net.minecraft.util.VisibleForDebug;
@@ -50,8 +49,8 @@ import net.minecraft.world.level.entity.ChunkStatusUpdateListener;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
-import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import net.minecraft.world.level.storage.SavedDataStorage;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -63,7 +62,7 @@ public class ServerChunkCache extends ChunkSource {
    private final ThreadedLevelLightEngine lightEngine;
    private final ServerChunkCache.MainThreadExecutor mainThreadProcessor;
    public final ChunkMap chunkMap;
-   private final DimensionDataStorage dataStorage;
+   private final SavedDataStorage savedDataStorage;
    private final TicketStorage ticketStorage;
    private long lastInhabitedUpdate;
    private boolean spawnEnemies = true;
@@ -87,7 +86,7 @@ public class ServerChunkCache extends ChunkSource {
       final int simulationDistance,
       final boolean syncWrites,
       final ChunkStatusUpdateListener chunkStatusListener,
-      final Supplier<DimensionDataStorage> overworldDataStorage
+      final Supplier<SavedDataStorage> overworldDataStorage
    ) {
       this.level = level;
       this.mainThreadProcessor = new ServerChunkCache.MainThreadExecutor(level);
@@ -100,8 +99,8 @@ public class ServerChunkCache extends ChunkSource {
          LOGGER.error("Failed to create dimension data storage directory", e);
       }
 
-      this.dataStorage = new DimensionDataStorage(dataFolder, fixerUpper, level.registryAccess());
-      this.ticketStorage = this.dataStorage.computeIfAbsent(TicketStorage.TYPE);
+      this.savedDataStorage = new SavedDataStorage(dataFolder, fixerUpper, level.registryAccess());
+      this.ticketStorage = this.savedDataStorage.computeIfAbsent(TicketStorage.TYPE);
       this.chunkMap = new ChunkMap(
          level,
          levelStorage,
@@ -151,7 +150,7 @@ public class ServerChunkCache extends ChunkSource {
 
       ProfilerFiller profiler = Profiler.get();
       profiler.incrementCounter("getChunk");
-      long pos = ChunkPos.asLong(x, z);
+      long pos = ChunkPos.pack(x, z);
 
       for (int i = 0; i < 4; i++) {
          if (pos == this.lastChunkPos[i] && targetStatus == this.lastChunkStatus[i]) {
@@ -182,7 +181,7 @@ public class ServerChunkCache extends ChunkSource {
       }
 
       Profiler.get().incrementCounter("getChunkNow");
-      long pos = ChunkPos.asLong(x, z);
+      long pos = ChunkPos.pack(x, z);
 
       for (int i = 0; i < 4; i++) {
          if (pos == this.lastChunkPos[i] && this.lastChunkStatus[i] == ChunkStatus.FULL) {
@@ -233,7 +232,7 @@ public class ServerChunkCache extends ChunkSource {
       final int x, final int z, final ChunkStatus targetStatus, final boolean loadOrGenerate
    ) {
       ChunkPos pos = new ChunkPos(x, z);
-      long key = pos.toLong();
+      long key = pos.pack();
       int targetTicketLevel = ChunkLevel.byStatus(targetStatus);
       ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(key);
       if (loadOrGenerate) {
@@ -261,14 +260,14 @@ public class ServerChunkCache extends ChunkSource {
 
    @Override
    public boolean hasChunk(final int x, final int z) {
-      ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(new ChunkPos(x, z).toLong());
+      ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(new ChunkPos(x, z).pack());
       int targetTicketLevel = ChunkLevel.byStatus(ChunkStatus.FULL);
       return !this.chunkAbsent(chunkHolder, targetTicketLevel);
    }
 
    @Override
    public @Nullable LightChunk getChunkForLighting(final int x, final int z) {
-      long key = ChunkPos.asLong(x, z);
+      long key = ChunkPos.pack(x, z);
       ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(key);
       return chunkHolder == null ? null : chunkHolder.getChunkIfPresentUnchecked(ChunkStatus.INITIALIZE_LIGHT.getParent());
    }
@@ -310,7 +309,7 @@ public class ServerChunkCache extends ChunkSource {
    @Override
    public void close() throws IOException {
       this.save(true);
-      this.dataStorage.close();
+      this.savedDataStorage.close();
       this.lightEngine.close();
       this.chunkMap.close();
    }
@@ -391,7 +390,7 @@ public class ServerChunkCache extends ChunkSource {
          profiler.popPush("filteringSpawningChunks");
          this.chunkMap.collectSpawningChunks(spawningChunks);
          profiler.popPush("shuffleSpawningChunks");
-         Util.shuffle(spawningChunks, this.level.random);
+         Util.shuffle(spawningChunks, this.level.getRandom());
          profiler.popPush("tickSpawningChunks");
 
          for (LevelChunk chunk : spawningChunks) {
@@ -416,7 +415,7 @@ public class ServerChunkCache extends ChunkSource {
    ) {
       ChunkPos chunkPos = chunk.getPos();
       chunk.incrementInhabitedTime(timeDiff);
-      if (this.distanceManager.inEntityTickingRange(chunkPos.toLong())) {
+      if (this.distanceManager.inEntityTickingRange(chunkPos.pack())) {
          this.level.tickThunder(chunk);
       }
 
@@ -464,7 +463,7 @@ public class ServerChunkCache extends ChunkSource {
    public void blockChanged(final BlockPos pos) {
       int xc = SectionPos.blockToSectionCoord(pos.getX());
       int zc = SectionPos.blockToSectionCoord(pos.getZ());
-      ChunkHolder chunk = this.getVisibleChunkIfPresent(ChunkPos.asLong(xc, zc));
+      ChunkHolder chunk = this.getVisibleChunkIfPresent(ChunkPos.pack(xc, zc));
       if (chunk != null && chunk.blockChanged(pos)) {
          this.chunkHoldersToBroadcast.add(chunk);
       }
@@ -473,7 +472,7 @@ public class ServerChunkCache extends ChunkSource {
    @Override
    public void onLightUpdate(final LightLayer layer, final SectionPos pos) {
       this.mainThreadProcessor.execute(() -> {
-         ChunkHolder chunk = this.getVisibleChunkIfPresent(pos.chunk().toLong());
+         ChunkHolder chunk = this.getVisibleChunkIfPresent(pos.chunk().pack());
          if (chunk != null && chunk.sectionLightChanged(layer, pos.y())) {
             this.chunkHoldersToBroadcast.add(chunk);
          }
@@ -499,7 +498,7 @@ public class ServerChunkCache extends ChunkSource {
 
       this.addTicketWithRadius(type, pos, radius);
       this.runDistanceManagerUpdates();
-      ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(pos.toLong());
+      ChunkHolder chunkHolder = this.getVisibleChunkIfPresent(pos.pack());
       Objects.requireNonNull(chunkHolder, "No chunk was scheduled for loading");
       return this.chunkMap.getChunkRangeFuture(chunkHolder, radius, distance -> ChunkStatus.FULL);
    }
@@ -564,8 +563,8 @@ public class ServerChunkCache extends ChunkSource {
       return this.chunkMap.getChunkDebugData(pos);
    }
 
-   public DimensionDataStorage getDataStorage() {
-      return this.dataStorage;
+   public SavedDataStorage getDataStorage() {
+      return this.savedDataStorage;
    }
 
    public PoiManager getPoiManager() {
@@ -593,12 +592,7 @@ public class ServerChunkCache extends ChunkSource {
 
    private final class MainThreadExecutor extends BlockableEventLoop<Runnable> {
       private MainThreadExecutor(final Level level) {
-         super("Chunk source main thread executor for " + level.dimension().identifier());
-      }
-
-      @Override
-      public void managedBlock(final BooleanSupplier condition) {
-         super.managedBlock(() -> MinecraftServer.throwIfFatalException() && condition.getAsBoolean());
+         super("Chunk source main thread executor for " + level.dimension().identifier(), false);
       }
 
       @Override

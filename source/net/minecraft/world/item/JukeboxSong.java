@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -52,8 +51,8 @@ public record JukeboxSong(Holder<SoundEvent> soundEvent, Component description, 
       return ticksElapsed >= this.lengthInTicks() + 20;
    }
 
-   public static Optional<Holder<JukeboxSong>> fromStack(final HolderLookup.Provider registries, final ItemStack stack) {
+   public static Optional<Holder<JukeboxSong>> fromStack(final ItemStack stack) {
       JukeboxPlayable jukeboxPlayable = stack.get(DataComponents.JUKEBOX_PLAYABLE);
-      return jukeboxPlayable != null ? jukeboxPlayable.song().unwrap(registries) : Optional.empty();
+      return jukeboxPlayable != null ? Optional.of(jukeboxPlayable.song()) : Optional.empty();
    }
 }

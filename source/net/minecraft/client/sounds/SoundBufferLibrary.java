@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import javax.sound.sampled.AudioFormat;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceProvider;
@@ -54,5 +55,37 @@ public class SoundBufferLibrary {
 
    public CompletableFuture<?> preload(final Collection<Sound> sounds) {
       return CompletableFuture.allOf(sounds.stream().map(sound -> this.getCompleteBuffer(sound.getPath())).toArray(CompletableFuture[]::new));
+   }
+
+   public void enumerate(final SoundBufferLibrary.DebugOutput debugOutput) {
+      this.cache.forEach((id, bufferFuture) -> {
+         SoundBuffer buffer = bufferFuture.getNow(null);
+         if (buffer != null && buffer.isValid()) {
+            debugOutput.accountBuffer(id, buffer.size(), buffer.format());
+         }
+      });
+   }
+
+   public interface DebugOutput {
+      void accountBuffer(Identifier id, int size, AudioFormat format);
+
+      class Counter implements SoundBufferLibrary.DebugOutput {
+         private int totalCount;
+         private long totalSize;
+
+         @Override
+         public void accountBuffer(final Identifier id, final int size, final AudioFormat format) {
+            this.totalCount++;
+            this.totalSize += size;
+         }
+
+         public int totalCount() {
+            return this.totalCount;
+         }
+
+         public long totalSize() {
+            return this.totalSize;
+         }
+      }
    }
 }

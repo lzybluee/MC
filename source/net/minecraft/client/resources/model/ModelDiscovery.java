@@ -16,9 +16,14 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Function;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.block.dispatch.BlockModelRotation;
+import net.minecraft.client.renderer.block.dispatch.ModelState;
+import net.minecraft.client.resources.model.cuboid.ItemTransforms;
+import net.minecraft.client.resources.model.cuboid.MissingCuboidModel;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -32,8 +37,8 @@ public class ModelDiscovery {
    private final Queue<ModelDiscovery.ModelWrapper> parentDiscoveryQueue = new ArrayDeque<>();
 
    public ModelDiscovery(final Map<Identifier, UnbakedModel> unbakedModels, final UnbakedModel missingUnbakedModel) {
-      this.missingModel = new ModelDiscovery.ModelWrapper(MissingBlockModel.LOCATION, missingUnbakedModel, true);
-      this.modelWrappers.put(MissingBlockModel.LOCATION, this.missingModel);
+      this.missingModel = new ModelDiscovery.ModelWrapper(MissingCuboidModel.LOCATION, missingUnbakedModel, true);
+      this.modelWrappers.put(MissingCuboidModel.LOCATION, this.missingModel);
       this.uncachedResolver = rawId -> {
          Identifier id = (Identifier)rawId;
          UnbakedModel rawModel = unbakedModels.get(id);
@@ -137,7 +142,7 @@ public class ModelDiscovery {
       private static final ModelDiscovery.Slot<UnbakedGeometry> KEY_GEOMETRY = slot(2);
       private static final ModelDiscovery.Slot<ItemTransforms> KEY_TRANSFORMS = slot(3);
       private static final ModelDiscovery.Slot<TextureSlots> KEY_TEXTURE_SLOTS = slot(4);
-      private static final ModelDiscovery.Slot<TextureAtlasSprite> KEY_PARTICLE_SPRITE = slot(5);
+      private static final ModelDiscovery.Slot<Material.Baked> KEY_PARTICLE_SPRITE = slot(5);
       private static final ModelDiscovery.Slot<QuadCollection> KEY_DEFAULT_GEOMETRY = slot(6);
       private static final int SLOT_COUNT = 7;
       private final Identifier id;
@@ -213,9 +218,9 @@ public class ModelDiscovery {
       }
 
       @Override
-      public TextureAtlasSprite resolveParticleSprite(final TextureSlots textureSlots, final ModelBaker baker) {
-         TextureAtlasSprite result = this.getSlot(KEY_PARTICLE_SPRITE);
-         return result != null ? result : this.updateSlot(KEY_PARTICLE_SPRITE, ResolvedModel.resolveParticleSprite(textureSlots, baker, this));
+      public Material.Baked resolveParticleMaterial(final TextureSlots textureSlots, final ModelBaker baker) {
+         Material.Baked result = this.getSlot(KEY_PARTICLE_SPRITE);
+         return result != null ? result : this.updateSlot(KEY_PARTICLE_SPRITE, ResolvedModel.resolveParticleMaterial(textureSlots, baker, this));
       }
 
       private QuadCollection bakeDefaultState(final TextureSlots textureSlots, final ModelBaker baker, final ModelState state) {

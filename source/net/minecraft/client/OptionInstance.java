@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractOptionSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.CycleButton;
@@ -414,8 +414,8 @@ public final class OptionInstance<T> {
       }
 
       @Override
-      public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-         super.renderWidget(graphics, mouseX, mouseY, a);
+      public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+         super.extractWidgetRenderState(graphics, mouseX, mouseY, a);
          if (this.delayedApplyAt != null && Util.getMillis() >= this.delayedApplyAt) {
             this.delayedApplyAt = null;
             this.applyUnsavedValue();

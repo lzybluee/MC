@@ -1,6 +1,5 @@
 package net.minecraft.client.gui.screens.multiplayer;
 
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
@@ -36,9 +35,7 @@ public class ServerReconfigScreen extends Screen {
          .addChild(Button.builder(CommonComponents.GUI_DISCONNECT, b -> this.connection.disconnect(ConnectScreen.ABORT_CONNECTION)).build());
       this.disconnectButton.active = false;
       this.layout.arrangeElements();
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

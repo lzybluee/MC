@@ -81,7 +81,7 @@ public abstract class LeavesBlock extends Block implements SimpleWaterloggedBloc
    }
 
    @Override
-   protected int getLightBlock(final BlockState state) {
+   protected int getLightDampening(final BlockState state) {
       return 1;
    }
 
@@ -128,7 +128,7 @@ public abstract class LeavesBlock extends Block implements SimpleWaterloggedBloc
    }
 
    public static OptionalInt getOptionalDistanceAt(final BlockState state) {
-      if (state.is(BlockTags.LOGS)) {
+      if (state.is(BlockTags.PREVENTS_NEARBY_LEAF_DECAY)) {
          return OptionalInt.of(0);
       } else {
          return state.hasProperty(DISTANCE) ? OptionalInt.of(state.getValue(DISTANCE)) : OptionalInt.empty();
@@ -179,7 +179,7 @@ public abstract class LeavesBlock extends Block implements SimpleWaterloggedBloc
    @Override
    public BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      BlockState state = this.defaultBlockState().setValue(PERSISTENT, true).setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+      BlockState state = this.defaultBlockState().setValue(PERSISTENT, true).setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
       return updateDistance(state, context.getLevel(), context.getClickedPos());
    }
 }

@@ -13,6 +13,7 @@ import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.dispenser.EquipmentDispenseItemBehavior;
 import net.minecraft.core.dispenser.ProjectileDispenseBehavior;
+import net.minecraft.core.dispenser.SpawnEggItemBehavior;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.RandomSource;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
@@ -87,7 +89,7 @@ public class DispenserBlock extends BaseEntityBlock {
          LOGGER.warn("Ignoring dispensing attempt for Dispenser without matching block entity at {}", pos);
       } else {
          BlockSource source = new BlockSource(level, pos, state, blockEntity);
-         int slot = blockEntity.getRandomSlot(level.random);
+         int slot = blockEntity.getRandomSlot(level.getRandom());
          if (slot < 0) {
             level.levelEvent(1001, pos, 0);
             level.gameEvent(GameEvent.BLOCK_ACTIVATE, pos, GameEvent.Context.of(blockEntity.getBlockState()));
@@ -111,7 +113,11 @@ public class DispenserBlock extends BaseEntityBlock {
    }
 
    private static DispenseItemBehavior getDefaultDispenseMethod(final ItemStack itemStack) {
-      return itemStack.has(DataComponents.EQUIPPABLE) ? EquipmentDispenseItemBehavior.INSTANCE : DEFAULT_BEHAVIOR;
+      if (itemStack.has(DataComponents.EQUIPPABLE)) {
+         return EquipmentDispenseItemBehavior.INSTANCE;
+      } else {
+         return itemStack.getItem() instanceof SpawnEggItem && itemStack.has(DataComponents.ENTITY_DATA) ? SpawnEggItemBehavior.INSTANCE : DEFAULT_BEHAVIOR;
+      }
    }
 
    @Override

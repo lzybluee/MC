@@ -1,8 +1,12 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.NonNullList;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 public interface CraftingRecipe extends Recipe<CraftingInput> {
    @Override
@@ -24,7 +28,8 @@ public interface CraftingRecipe extends Recipe<CraftingInput> {
 
       for (int slot = 0; slot < result.size(); slot++) {
          Item item = input.getItem(slot).getItem();
-         result.set(slot, item.getCraftingRemainder());
+         ItemStackTemplate remainder = item.getCraftingRemainder();
+         result.set(slot, remainder != null ? remainder.create() : ItemStack.EMPTY);
       }
 
       return result;
@@ -38,5 +43,14 @@ public interface CraftingRecipe extends Recipe<CraftingInput> {
          case REDSTONE -> RecipeBookCategories.CRAFTING_REDSTONE;
          case MISC -> RecipeBookCategories.CRAFTING_MISC;
       };
+   }
+
+   record CraftingBookInfo(CraftingBookCategory category, String group) implements Recipe.BookInfo<CraftingBookCategory> {
+      public static final MapCodec<CraftingRecipe.CraftingBookInfo> MAP_CODEC = Recipe.BookInfo.mapCodec(
+         CraftingBookCategory.CODEC, CraftingBookCategory.MISC, CraftingRecipe.CraftingBookInfo::new
+      );
+      public static final StreamCodec<RegistryFriendlyByteBuf, CraftingRecipe.CraftingBookInfo> STREAM_CODEC = Recipe.BookInfo.streamCodec(
+         CraftingBookCategory.STREAM_CODEC, CraftingRecipe.CraftingBookInfo::new
+      );
    }
 }

@@ -7,19 +7,19 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record EnchantmentLevelProvider(LevelBasedValue amount) implements NumberProvider {
-   public static final MapCodec<EnchantmentLevelProvider> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<EnchantmentLevelProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(LevelBasedValue.CODEC.fieldOf("amount").forGetter(EnchantmentLevelProvider::amount)).apply(i, EnchantmentLevelProvider::new)
    );
+
+   @Override
+   public MapCodec<EnchantmentLevelProvider> codec() {
+      return MAP_CODEC;
+   }
 
    @Override
    public float getFloat(final LootContext context) {
       int level = context.getParameter(LootContextParams.ENCHANTMENT_LEVEL);
       return this.amount.calculate(level);
-   }
-
-   @Override
-   public LootNumberProviderType getType() {
-      return NumberProviders.ENCHANTMENT_LEVEL;
    }
 
    public static EnchantmentLevelProvider forEnchantmentLevel(final LevelBasedValue amount) {

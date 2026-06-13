@@ -1,7 +1,6 @@
 package net.minecraft.server;
 
 import com.mojang.datafixers.util.Pair;
-import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -21,11 +20,8 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.tags.TagLoader;
 import net.minecraft.world.level.WorldDataConfiguration;
-import org.slf4j.Logger;
 
 public class WorldLoader {
-   private static final Logger LOGGER = LogUtils.getLogger();
-
    public static <D, R> CompletableFuture<R> load(
       final WorldLoader.InitConfig config,
       final WorldLoader.WorldDataSupplier<D> worldDataSupplier,
@@ -33,51 +29,60 @@ public class WorldLoader {
       final Executor backgroundExecutor,
       final Executor mainThreadExecutor
    ) {
-      try {
-         Pair<WorldDataConfiguration, CloseableResourceManager> packsAndResourceManager = config.packConfig.createResourceManager();
-         CloseableResourceManager resources = (CloseableResourceManager)packsAndResourceManager.getSecond();
-         LayeredRegistryAccess<RegistryLayer> initialLayers = RegistryLayer.createRegistryAccess();
-         List<Registry.PendingTags<?>> staticLayerTags = TagLoader.loadTagsForExistingRegistries(resources, initialLayers.getLayer(RegistryLayer.STATIC));
-         RegistryAccess.Frozen worldgenLoadContext = initialLayers.getAccessForLoading(RegistryLayer.WORLDGEN);
-         List<HolderLookup.RegistryLookup<?>> worldgenContextRegistries = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticLayerTags);
-         RegistryAccess.Frozen loadedWorldgenRegistries = RegistryDataLoader.load(resources, worldgenContextRegistries, RegistryDataLoader.WORLDGEN_REGISTRIES);
-         List<HolderLookup.RegistryLookup<?>> dimensionContextRegistries = Stream.concat(
-               worldgenContextRegistries.stream(), loadedWorldgenRegistries.listRegistries()
-            )
-            .toList();
-         RegistryAccess.Frozen initialWorldgenDimensions = RegistryDataLoader.load(
-            resources, dimensionContextRegistries, RegistryDataLoader.DIMENSION_REGISTRIES
+      return CompletableFuture.supplyAsync(config.packConfig::createResourceManager, mainThreadExecutor)
+         .thenComposeAsync(
+            packsAndResourceManager -> {
+               CloseableResourceManager resources = (CloseableResourceManager)packsAndResourceManager.getSecond();
+               LayeredRegistryAccess<RegistryLayer> initialLayers = RegistryLayer.createRegistryAccess();
+               List<Registry.PendingTags<?>> staticLayerTags = TagLoader.loadTagsForExistingRegistries(resources, initialLayers.getLayer(RegistryLayer.STATIC));
+               RegistryAccess.Frozen worldgenLoadContext = initialLayers.getAccessForLoading(RegistryLayer.WORLDGEN);
+               List<HolderLookup.RegistryLookup<?>> worldgenContextRegistries = TagLoader.buildUpdatedLookups(worldgenLoadContext, staticLayerTags);
+               return RegistryDataLoader.load(resources, worldgenContextRegistries, RegistryDataLoader.WORLDGEN_REGISTRIES, backgroundExecutor)
+                  .thenComposeAsync(
+                     loadedWorldgenRegistries -> {
+                        List<HolderLookup.RegistryLookup<?>> dimensionContextRegistries = Stream.concat(
+                              worldgenContextRegistries.stream(), loadedWorldgenRegistries.listRegistries()
+                           )
+                           .toList();
+                        return RegistryDataLoader.load(resources, dimensionContextRegistries, RegistryDataLoader.DIMENSION_REGISTRIES, backgroundExecutor)
+                           .thenComposeAsync(
+                              initialWorldgenDimensions -> {
+                                 WorldDataConfiguration worldDataConfiguration = (WorldDataConfiguration)packsAndResourceManager.getFirst();
+                                 HolderLookup.Provider dimensionContextProvider = HolderLookup.Provider.create(dimensionContextRegistries.stream());
+                                 WorldLoader.DataLoadOutput<D> worldDataAndRegistries = worldDataSupplier.get(
+                                    new WorldLoader.DataLoadContext(resources, worldDataConfiguration, dimensionContextProvider, initialWorldgenDimensions)
+                                 );
+                                 LayeredRegistryAccess<RegistryLayer> resourcesLoadContext = initialLayers.replaceFrom(
+                                    RegistryLayer.WORLDGEN, loadedWorldgenRegistries, worldDataAndRegistries.finalDimensions
+                                 );
+                                 return ReloadableServerResources.loadResources(
+                                       resources,
+                                       resourcesLoadContext,
+                                       staticLayerTags,
+                                       worldDataConfiguration.enabledFeatures(),
+                                       config.commandSelection(),
+                                       config.functionCompilationPermissions(),
+                                       backgroundExecutor,
+                                       mainThreadExecutor
+                                    )
+                                    .whenComplete((managers, throwable) -> {
+                                       if (throwable != null) {
+                                          resources.close();
+                                       }
+                                    })
+                                    .thenApplyAsync(managers -> {
+                                       managers.updateComponentsAndStaticRegistryTags();
+                                       return resultFactory.create(resources, managers, resourcesLoadContext, worldDataAndRegistries.cookie);
+                                    }, mainThreadExecutor);
+                              },
+                              backgroundExecutor
+                           );
+                     },
+                     backgroundExecutor
+                  );
+            },
+            backgroundExecutor
          );
-         WorldDataConfiguration worldDataConfiguration = (WorldDataConfiguration)packsAndResourceManager.getFirst();
-         HolderLookup.Provider dimensionContextProvider = HolderLookup.Provider.create(dimensionContextRegistries.stream());
-         WorldLoader.DataLoadOutput<D> worldDataAndRegistries = worldDataSupplier.get(
-            new WorldLoader.DataLoadContext(resources, worldDataConfiguration, dimensionContextProvider, initialWorldgenDimensions)
-         );
-         LayeredRegistryAccess<RegistryLayer> resourcesLoadContext = initialLayers.replaceFrom(
-            RegistryLayer.WORLDGEN, loadedWorldgenRegistries, worldDataAndRegistries.finalDimensions
-         );
-         return ReloadableServerResources.loadResources(
-               resources,
-               resourcesLoadContext,
-               staticLayerTags,
-               worldDataConfiguration.enabledFeatures(),
-               config.commandSelection(),
-               config.functionCompilationPermissions(),
-               backgroundExecutor,
-               mainThreadExecutor
-            )
-            .whenComplete((managers, throwable) -> {
-               if (throwable != null) {
-                  resources.close();
-               }
-            })
-            .thenApplyAsync(managers -> {
-               managers.updateStaticRegistryTags();
-               return resultFactory.create(resources, managers, resourcesLoadContext, worldDataAndRegistries.cookie);
-            }, mainThreadExecutor);
-      } catch (Exception e) {
-         return CompletableFuture.failedFuture(e);
-      }
    }
 
    public record DataLoadContext(

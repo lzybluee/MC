@@ -21,7 +21,7 @@ public class SquidModel extends EntityModel<SquidRenderState> {
       Arrays.setAll(this.tentacles, i -> root.getChild(createTentacleName(i)));
    }
 
-   private static String createTentacleName(final int i) {
+   protected static String createTentacleName(final int i) {
       return "tentacle" + i;
    }
 

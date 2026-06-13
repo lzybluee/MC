@@ -6,17 +6,19 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OutlineBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.resources.model.AtlasManager;
+import net.minecraft.client.renderer.state.GameRenderState;
+import net.minecraft.client.resources.model.ModelManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 
 public class FeatureRenderDispatcher implements AutoCloseable {
    private final SubmitNodeStorage submitNodeStorage;
-   private final BlockRenderDispatcher blockRenderDispatcher;
+   private final ModelManager modelManager;
    private final MultiBufferSource.BufferSource bufferSource;
    private final AtlasManager atlasManager;
    private final OutlineBufferSource outlineBufferSource;
    private final MultiBufferSource.BufferSource crumblingBufferSource;
    private final Font font;
+   private final GameRenderState gameRenderState;
    private final ShadowFeatureRenderer shadowFeatureRenderer = new ShadowFeatureRenderer();
    private final FlameFeatureRenderer flameFeatureRenderer = new FlameFeatureRenderer();
    private final ModelFeatureRenderer modelFeatureRenderer = new ModelFeatureRenderer();
@@ -31,41 +33,85 @@ public class FeatureRenderDispatcher implements AutoCloseable {
 
    public FeatureRenderDispatcher(
       final SubmitNodeStorage submitNodeStorage,
-      final BlockRenderDispatcher blockRenderDispatcher,
+      final ModelManager modelManager,
       final MultiBufferSource.BufferSource bufferSource,
       final AtlasManager atlasManager,
       final OutlineBufferSource outlineBufferSource,
       final MultiBufferSource.BufferSource crumblingBufferSource,
-      final Font font
+      final Font font,
+      final GameRenderState gameRenderState
    ) {
       this.submitNodeStorage = submitNodeStorage;
-      this.blockRenderDispatcher = blockRenderDispatcher;
+      this.modelManager = modelManager;
       this.bufferSource = bufferSource;
       this.atlasManager = atlasManager;
       this.outlineBufferSource = outlineBufferSource;
       this.crumblingBufferSource = crumblingBufferSource;
       this.font = font;
+      this.gameRenderState = gameRenderState;
    }
 
-   public void renderAllFeatures() {
+   public void renderSolidFeatures() {
       ObjectIterator var1 = this.submitNodeStorage.getSubmitsPerOrder().values().iterator();
 
       while (var1.hasNext()) {
          SubmitNodeCollection collection = (SubmitNodeCollection)var1.next();
-         this.shadowFeatureRenderer.render(collection, this.bufferSource);
-         this.modelFeatureRenderer.render(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
-         this.modelPartFeatureRenderer.render(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
-         this.flameFeatureRenderer.render(collection, this.bufferSource, this.atlasManager);
-         this.nameTagFeatureRenderer.render(collection, this.bufferSource, this.font);
-         this.textFeatureRenderer.render(collection, this.bufferSource);
-         this.leashFeatureRenderer.render(collection, this.bufferSource);
-         this.itemFeatureRenderer.render(collection, this.bufferSource, this.outlineBufferSource);
-         this.blockFeatureRenderer.render(collection, this.bufferSource, this.blockRenderDispatcher, this.outlineBufferSource);
-         this.customFeatureRenderer.render(collection, this.bufferSource);
-         this.particleFeatureRenderer.render(collection);
+         this.modelFeatureRenderer.renderSolid(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
+         this.modelPartFeatureRenderer.renderSolid(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
+         this.flameFeatureRenderer.renderSolid(collection, this.bufferSource, this.atlasManager);
+         this.leashFeatureRenderer.renderSolid(collection, this.bufferSource);
+         this.itemFeatureRenderer.renderSolid(collection, this.bufferSource, this.outlineBufferSource);
+         this.blockFeatureRenderer
+            .renderSolid(
+               collection, this.bufferSource, this.modelManager.getBlockStateModelSet(), this.outlineBufferSource, this.gameRenderState.optionsRenderState
+            );
+         this.customFeatureRenderer.renderSolid(collection, this.bufferSource);
+         this.particleFeatureRenderer.renderSolid(collection);
       }
+   }
 
+   public void renderTranslucentFeatures() {
+      ObjectIterator var1 = this.submitNodeStorage.getSubmitsPerOrder().values().iterator();
+
+      while (var1.hasNext()) {
+         SubmitNodeCollection collection = (SubmitNodeCollection)var1.next();
+         this.shadowFeatureRenderer.renderTranslucent(collection, this.bufferSource);
+         this.modelFeatureRenderer.renderTranslucent(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
+         this.modelPartFeatureRenderer.renderTranslucent(collection, this.bufferSource, this.outlineBufferSource, this.crumblingBufferSource);
+         this.nameTagFeatureRenderer.renderTranslucent(collection, this.bufferSource, this.font);
+         this.textFeatureRenderer.renderTranslucent(collection, this.bufferSource);
+         this.itemFeatureRenderer.renderTranslucent(collection, this.bufferSource, this.outlineBufferSource);
+         this.blockFeatureRenderer
+            .renderTranslucent(
+               collection,
+               this.bufferSource,
+               this.modelManager.getBlockStateModelSet(),
+               this.outlineBufferSource,
+               this.crumblingBufferSource,
+               this.gameRenderState.optionsRenderState
+            );
+         this.customFeatureRenderer.renderTranslucent(collection, this.bufferSource);
+      }
+   }
+
+   public void renderTranslucentParticles() {
+      ObjectIterator var1 = this.submitNodeStorage.getSubmitsPerOrder().values().iterator();
+
+      while (var1.hasNext()) {
+         SubmitNodeCollection collection = (SubmitNodeCollection)var1.next();
+         this.particleFeatureRenderer.renderTranslucent(collection);
+      }
+   }
+
+   public void clearSubmitNodes() {
       this.submitNodeStorage.clear();
+   }
+
+   public void renderAllFeatures() {
+      this.renderSolidFeatures();
+      this.renderTranslucentFeatures();
+      this.renderTranslucentParticles();
+      this.clearSubmitNodes();
    }
 
    public void endFrame() {

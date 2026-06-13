@@ -78,7 +78,7 @@ public class StructureCheck {
    }
 
    public StructureCheckResult checkStart(final ChunkPos pos, final Structure structure, final StructurePlacement placement, final boolean requireUnreferenced) {
-      long posKey = pos.toLong();
+      long posKey = pos.pack();
       Object2IntMap<Structure> cachedResult = (Object2IntMap<Structure>)this.loadedChunks.get(posKey);
       if (cachedResult != null) {
          return this.checkStructureInfo(cachedResult, structure, requireUnreferenced);
@@ -89,7 +89,7 @@ public class StructureCheck {
          return storageCheckResult;
       }
 
-      if (!placement.applyAdditionalChunkRestrictions(pos.x, pos.z, this.seed)) {
+      if (!placement.applyAdditionalChunkRestrictions(pos.x(), pos.z(), this.seed)) {
          return StructureCheckResult.START_NOT_PRESENT;
       }
 
@@ -136,10 +136,6 @@ public class StructureCheck {
          return null;
       } else {
          int version = NbtUtils.getDataVersion(chunkTag);
-         if (version <= 1493) {
-            return StructureCheckResult.CHUNK_LOAD_NEEDED;
-         }
-
          SimpleRegionStorage.injectDatafixingContext(
             chunkTag, ChunkMap.getChunkDataFixContextTag(this.dimension, this.chunkGenerator.getTypeNameForDataFixer())
          );
@@ -203,7 +199,7 @@ public class StructureCheck {
    }
 
    public void onStructureLoad(final ChunkPos pos, final Map<Structure, StructureStart> starts) {
-      long posKey = pos.toLong();
+      long posKey = pos.pack();
       Object2IntMap<Structure> startsToReferences = new Object2IntOpenHashMap();
       starts.forEach((structure, structureStart) -> {
          if (structureStart.isValid()) {
@@ -219,7 +215,7 @@ public class StructureCheck {
    }
 
    public void incrementReference(final ChunkPos chunkPos, final Structure structure) {
-      this.loadedChunks.compute(chunkPos.toLong(), (key, counts) -> {
+      this.loadedChunks.compute(chunkPos.pack(), (key, counts) -> {
          if (counts == null || counts.isEmpty()) {
             counts = new Object2IntOpenHashMap();
          }

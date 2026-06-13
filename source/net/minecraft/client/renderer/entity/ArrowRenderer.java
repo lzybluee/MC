@@ -6,8 +6,7 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.projectile.ArrowModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.ArrowRenderState;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
@@ -25,14 +24,7 @@ public abstract class ArrowRenderer<T extends AbstractArrow, S extends ArrowRend
       poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot - 90.0F));
       poseStack.mulPose(Axis.ZP.rotationDegrees(state.xRot));
       submitNodeCollector.submitModel(
-         this.model,
-         state,
-         poseStack,
-         RenderTypes.entityCutout(this.getTextureLocation(state)),
-         state.lightCoords,
-         OverlayTexture.NO_OVERLAY,
-         state.outlineColor,
-         null
+         this.model, state, poseStack, this.getTextureLocation(state), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null
       );
       poseStack.popPose();
       super.submit(state, poseStack, submitNodeCollector, camera);

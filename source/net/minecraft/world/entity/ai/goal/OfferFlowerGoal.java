@@ -64,7 +64,7 @@ public class OfferFlowerGoal extends Goal {
       this.golem.offerFlower(false);
       if (this.tick == 0
          && this.entity instanceof Mob mob
-         && mob.getType().is(EntityTypeTags.ACCEPTS_IRON_GOLEM_GIFT)
+         && mob.is(EntityTypeTags.ACCEPTS_IRON_GOLEM_GIFT)
          && mob.getItemBySlot(CopperGolem.EQUIPMENT_SLOT_ANTENNA).isEmpty()
          && this.getGolemBoundingBox().intersects(mob.getBoundingBox())) {
          mob.setItemSlot(CopperGolem.EQUIPMENT_SLOT_ANTENNA, OFFER_ITEM.getDefaultInstance());

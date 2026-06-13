@@ -5,7 +5,7 @@ import com.mojang.realmsclient.client.RealmsClient;
 import com.mojang.realmsclient.dto.RealmsServer;
 import com.mojang.realmsclient.exception.RealmsServiceException;
 import com.mojang.realmsclient.util.task.GetServerDetailsTask;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -51,7 +51,7 @@ public class RealmsTermsScreen extends RealmsScreen {
 
    @Override
    public boolean keyPressed(final KeyEvent event) {
-      if (event.key() == 256) {
+      if (event.isEscape()) {
          this.minecraft.setScreen(this.lastScreen);
          return true;
       } else {
@@ -87,16 +87,16 @@ public class RealmsTermsScreen extends RealmsScreen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int xm, final int ym, final float a) {
-      super.render(graphics, xm, ym, a);
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 17, -1);
-      graphics.drawString(this.font, TERMS_STATIC_TEXT, this.width / 2 - 120, row(5), -1);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+      super.extractRenderState(graphics, xm, ym, a);
+      graphics.centeredText(this.font, this.title, this.width / 2, 17, -1);
+      graphics.text(this.font, TERMS_STATIC_TEXT, this.width / 2 - 120, row(5), -1);
       int firstPartWidth = this.font.width(TERMS_STATIC_TEXT);
       int x1 = this.width / 2 - 121 + firstPartWidth;
       int y1 = row(5);
       int x2 = x1 + this.font.width(TERMS_LINK_TEXT) + 1;
       int y2 = y1 + 1 + 9;
       this.onLink = x1 <= xm && xm <= x2 && y1 <= ym && ym <= y2;
-      graphics.drawString(this.font, TERMS_LINK_TEXT, this.width / 2 - 120 + firstPartWidth, row(5), this.onLink ? -9670204 : -13408581);
+      graphics.text(this.font, TERMS_LINK_TEXT, this.width / 2 - 120 + firstPartWidth, row(5), this.onLink ? -9670204 : -13408581);
    }
 }

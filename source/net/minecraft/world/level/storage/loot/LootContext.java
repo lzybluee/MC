@@ -12,6 +12,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
@@ -137,7 +138,7 @@ public class LootContext {
       public LootContext create(final Optional<Identifier> randomSequenceKey) {
          ServerLevel level = this.getLevel();
          MinecraftServer server = level.getServer();
-         RandomSource random = Optional.ofNullable(this.random).or(() -> randomSequenceKey.map(level::getRandomSequence)).orElseGet(level::getRandom);
+         RandomSource random = Optional.ofNullable(this.random).or(() -> randomSequenceKey.map(server::getRandomSequence)).orElseGet(level::getRandom);
          return new LootContext(this.params, random, server.reloadableRegistries().lookup());
       }
    }
@@ -179,19 +180,19 @@ public class LootContext {
       }
    }
 
-   public enum ItemStackTarget implements StringRepresentable, LootContextArg.SimpleGetter<ItemStack> {
+   public enum ItemStackTarget implements StringRepresentable, LootContextArg.SimpleGetter<ItemInstance> {
       TOOL("tool", LootContextParams.TOOL);
 
       private final String name;
-      private final ContextKey<? extends ItemStack> param;
+      private final ContextKey<? extends ItemInstance> param;
 
-      ItemStackTarget(final String name, final ContextKey<? extends ItemStack> param) {
+      ItemStackTarget(final String name, final ContextKey<? extends ItemInstance> param) {
          this.name = name;
          this.param = param;
       }
 
       @Override
-      public ContextKey<? extends ItemStack> contextParam() {
+      public ContextKey<? extends ItemInstance> contextParam() {
          return this.param;
       }
 
@@ -201,6 +202,6 @@ public class LootContext {
       }
    }
 
-   public record VisitedEntry<T>(LootDataType<T> type, T value) {
+   public record VisitedEntry<T extends Validatable>(LootDataType<T> type, T value) {
    }
 }

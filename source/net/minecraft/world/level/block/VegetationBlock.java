@@ -21,7 +21,7 @@ public abstract class VegetationBlock extends Block {
    protected abstract MapCodec<? extends VegetationBlock> codec();
 
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(BlockTags.DIRT) || state.is(Blocks.FARMLAND);
+      return state.is(BlockTags.SUPPORTS_VEGETATION);
    }
 
    @Override

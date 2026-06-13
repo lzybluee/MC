@@ -83,7 +83,7 @@ public class VillagerMakeLove extends Behavior<Villager> {
 
    private boolean isBreedingPossible(final Villager myBody) {
       Brain<Villager> brain = myBody.getBrain();
-      Optional<AgeableMob> breedTarget = brain.getMemory(MemoryModuleType.BREED_TARGET).filter(entity -> entity.getType() == EntityType.VILLAGER);
+      Optional<AgeableMob> breedTarget = brain.getMemory(MemoryModuleType.BREED_TARGET).filter(entity -> entity.is(EntityType.VILLAGER));
       return breedTarget.isEmpty()
          ? false
          : BehaviorUtils.targetIsValid(brain, MemoryModuleType.BREED_TARGET, EntityType.VILLAGER) && myBody.canBreed() && breedTarget.get().canBreed();

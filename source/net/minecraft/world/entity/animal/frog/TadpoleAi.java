@@ -4,10 +4,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.CountDownCooldownTicks;
 import net.minecraft.world.entity.ai.behavior.FollowTemptation;
@@ -27,17 +28,12 @@ public class TadpoleAi {
    private static final float SPEED_MULTIPLIER_WHEN_IDLING_IN_WATER = 0.5F;
    private static final float SPEED_MULTIPLIER_WHEN_TEMPTED = 1.25F;
 
-   protected static Brain<?> makeBrain(final Brain<Tadpole> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   public static List<ActivityData<Tadpole>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity());
    }
 
-   private static void initCoreActivity(final Brain<Tadpole> brain) {
-      brain.addActivity(
+   private static ActivityData<Tadpole> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -46,8 +42,8 @@ public class TadpoleAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Tadpole> brain) {
-      brain.addActivity(
+   private static ActivityData<Tadpole> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),

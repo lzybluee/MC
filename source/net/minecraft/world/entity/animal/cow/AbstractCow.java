@@ -58,27 +58,31 @@ public abstract class AbstractCow extends Animal {
 
    @Override
    protected SoundEvent getAmbientSound() {
-      return SoundEvents.COW_AMBIENT;
+      return this.getSoundSet().ambientSound().value();
    }
 
    @Override
    protected SoundEvent getHurtSound(final DamageSource source) {
-      return SoundEvents.COW_HURT;
+      return this.getSoundSet().hurtSound().value();
    }
 
    @Override
    protected SoundEvent getDeathSound() {
-      return SoundEvents.COW_DEATH;
+      return this.getSoundSet().deathSound().value();
    }
 
    @Override
    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
-      this.playSound(SoundEvents.COW_STEP, 0.15F, 1.0F);
+      this.playSound(this.getSoundSet().stepSound().value(), 0.15F, 1.0F);
    }
 
    @Override
    protected float getSoundVolume() {
       return 0.4F;
+   }
+
+   protected CowSoundVariant getSoundSet() {
+      return SoundEvents.COW_SOUNDS.get(CowSoundVariants.SoundSet.CLASSIC);
    }
 
    @Override

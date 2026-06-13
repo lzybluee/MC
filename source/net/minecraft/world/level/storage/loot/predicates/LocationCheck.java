@@ -22,14 +22,14 @@ public record LocationCheck(Optional<LocationPredicate> predicate, BlockPos offs
          )
          .apply(i, BlockPos::new)
    );
-   public static final MapCodec<LocationCheck> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<LocationCheck> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(LocationPredicate.CODEC.optionalFieldOf("predicate").forGetter(LocationCheck::predicate), OFFSET_CODEC.forGetter(LocationCheck::offset))
          .apply(i, LocationCheck::new)
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.LOCATION_CHECK;
+   public MapCodec<LocationCheck> codec() {
+      return MAP_CODEC;
    }
 
    public boolean test(final LootContext context) {

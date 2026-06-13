@@ -1,24 +1,23 @@
 package net.minecraft.world.level.storage.loot.predicates;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.stream.Stream;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.IntRange;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.Scoreboard;
 
 public record EntityHasScoreCondition(Map<String, IntRange> scores, LootContext.EntityTarget entityTarget) implements LootItemCondition {
-   public static final MapCodec<EntityHasScoreCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<EntityHasScoreCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Codec.unboundedMap(Codec.STRING, IntRange.CODEC).fieldOf("scores").forGetter(EntityHasScoreCondition::scores),
             LootContext.EntityTarget.CODEC.fieldOf("entity").forGetter(EntityHasScoreCondition::entityTarget)
@@ -27,14 +26,19 @@ public record EntityHasScoreCondition(Map<String, IntRange> scores, LootContext.
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.ENTITY_SCORES;
+   public MapCodec<EntityHasScoreCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public Set<ContextKey<?>> getReferencedContextParams() {
-      return Stream.concat(Stream.of(this.entityTarget.contextParam()), this.scores.values().stream().flatMap(r -> r.getReferencedContextParams().stream()))
-         .collect(ImmutableSet.toImmutableSet());
+      return Set.of(this.entityTarget.contextParam());
+   }
+
+   @Override
+   public void validate(final ValidationContext context) {
+      LootItemCondition.super.validate(context);
+      this.scores.forEach((score, value) -> value.validate(context.forMapField("scores", score)));
    }
 
    public boolean test(final LootContext context) {

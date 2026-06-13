@@ -17,10 +17,8 @@ import java.util.function.Function;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.component.PatchedDataComponentMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtOps;
@@ -30,9 +28,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.Unit;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 public class ItemParser {
@@ -51,9 +47,6 @@ public class ItemParser {
    private static final DynamicCommandExceptionType ERROR_REPEATED_COMPONENT = new DynamicCommandExceptionType(
       id -> Component.translatableEscape("arguments.item.component.repeated", id)
    );
-   private static final DynamicCommandExceptionType ERROR_MALFORMED_ITEM = new DynamicCommandExceptionType(
-      id -> Component.translatableEscape("arguments.item.malformed", id)
-   );
    public static final char SYNTAX_START_COMPONENTS = '[';
    public static final char SYNTAX_END_COMPONENTS = ']';
    public static final char SYNTAX_COMPONENT_SEPARATOR = ',';
@@ -70,7 +63,7 @@ public class ItemParser {
       this.tagParser = TagParser.create(this.registryOps);
    }
 
-   public ItemParser.ItemResult parse(final StringReader reader) throws CommandSyntaxException {
+   public ItemInput parse(final StringReader reader) throws CommandSyntaxException {
       final MutableObject<Holder<Item>> itemResult = new MutableObject();
       final DataComponentPatch.Builder componentsBuilder = DataComponentPatch.builder();
       this.parse(reader, new ItemParser.Visitor() {
@@ -91,14 +84,7 @@ public class ItemParser {
       });
       Holder<Item> item = Objects.requireNonNull((Holder<Item>)itemResult.get(), "Parser gave no item");
       DataComponentPatch components = componentsBuilder.build();
-      validateComponents(reader, item, components);
-      return new ItemParser.ItemResult(item, components);
-   }
-
-   private static void validateComponents(final StringReader reader, final Holder<Item> item, final DataComponentPatch components) throws CommandSyntaxException {
-      DataComponentMap patchedComponents = PatchedDataComponentMap.fromPatch(item.value().components(), components);
-      DataResult<Unit> result = ItemStack.validateComponents(patchedComponents);
-      result.getOrThrow(error -> ERROR_MALFORMED_ITEM.createWithContext(reader, error));
+      return new ItemInput(item, components);
    }
 
    public void parse(final StringReader reader, final ItemParser.Visitor visitor) throws CommandSyntaxException {
@@ -124,9 +110,6 @@ public class ItemParser {
       }
 
       return handler.resolveSuggestions(builder, reader);
-   }
-
-   public record ItemResult(Holder<Item> item, DataComponentPatch components) {
    }
 
    private class State {

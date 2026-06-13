@@ -42,7 +42,7 @@ public class ItemEntity extends Entity implements TraceableEntity {
    private static final int LIFETIME = 6000;
    private static final int INFINITE_PICKUP_DELAY = 32767;
    private static final int INFINITE_LIFETIME = -32768;
-   private static final int DEFAULT_HEALTH = 5;
+   public static final int DEFAULT_HEALTH = 5;
    private static final short DEFAULT_AGE = 0;
    private static final short DEFAULT_PICKUP_DELAY = 0;
    private int age = 0;
@@ -58,7 +58,10 @@ public class ItemEntity extends Entity implements TraceableEntity {
    }
 
    public ItemEntity(final Level level, final double x, final double y, final double z, final ItemStack itemStack) {
-      this(level, x, y, z, itemStack, level.random.nextDouble() * 0.2 - 0.1, 0.2, level.random.nextDouble() * 0.2 - 0.1);
+      this(EntityType.ITEM, level);
+      this.setPos(x, y, z);
+      this.setItem(itemStack);
+      this.setDeltaMovement(this.random.nextDouble() * 0.2 - 0.1, 0.2, this.random.nextDouble() * 0.2 - 0.1);
    }
 
    public ItemEntity(
@@ -73,8 +76,8 @@ public class ItemEntity extends Entity implements TraceableEntity {
    ) {
       this(EntityType.ITEM, level);
       this.setPos(x, y, z);
-      this.setDeltaMovement(deltaX, deltaY, deltaZ);
       this.setItem(itemStack);
+      this.setDeltaMovement(deltaX, deltaY, deltaZ);
    }
 
    @Override
@@ -141,7 +144,9 @@ public class ItemEntity extends Entity implements TraceableEntity {
             }
          }
 
-         if (!this.onGround() || this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5F || (this.tickCount + this.getId()) % 4 == 0) {
+         if (this.onGround() && !(this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5F) && (this.tickCount + this.getId()) % 4 != 0) {
+            this.applyEffectsFromBlocksForLastMovements();
+         } else {
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.applyEffectsFromBlocks();
             float friction = 0.98F;
@@ -170,7 +175,7 @@ public class ItemEntity extends Entity implements TraceableEntity {
             this.age++;
          }
 
-         this.needsSync = this.needsSync | this.updateInWaterStateAndDoFluidPushing();
+         this.needsSync = this.needsSync | this.updateFluidInteraction();
          if (!this.level().isClientSide()) {
             double value = this.getDeltaMovement().subtract(oldMovement).lengthSqr();
             if (value > 0.01) {
@@ -376,14 +381,6 @@ public class ItemEntity extends Entity implements TraceableEntity {
 
    public void setItem(final ItemStack itemStack) {
       this.getEntityData().set(DATA_ITEM, itemStack);
-   }
-
-   @Override
-   public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
-      super.onSyncedDataUpdated(accessor);
-      if (DATA_ITEM.equals(accessor)) {
-         this.getItem().setEntityRepresentation(this);
-      }
    }
 
    public void setTarget(final @Nullable UUID target) {

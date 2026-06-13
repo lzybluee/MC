@@ -11,7 +11,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Difficulty;
 
 public class DifficultyCommand {
-   private static final DynamicCommandExceptionType ERROR_ALREADY_DIFFICULT = new DynamicCommandExceptionType(
+   private static final DynamicCommandExceptionType ERROR_ALREADY_SAME_DIFFICULTY = new DynamicCommandExceptionType(
       difficulty -> Component.translatableEscape("commands.difficulty.failure", difficulty)
    );
 
@@ -19,7 +19,7 @@ public class DifficultyCommand {
       LiteralArgumentBuilder<CommandSourceStack> command = Commands.literal("difficulty");
 
       for (Difficulty difficulty : Difficulty.values()) {
-         command.then(Commands.literal(difficulty.getKey()).executes(c -> setDifficulty((CommandSourceStack)c.getSource(), difficulty)));
+         command.then(Commands.literal(difficulty.getSerializedName()).executes(c -> setDifficulty((CommandSourceStack)c.getSource(), difficulty)));
       }
 
       dispatcher.register(
@@ -34,7 +34,7 @@ public class DifficultyCommand {
    public static int setDifficulty(final CommandSourceStack source, final Difficulty difficulty) throws CommandSyntaxException {
       MinecraftServer server = source.getServer();
       if (server.getWorldData().getDifficulty() == difficulty) {
-         throw ERROR_ALREADY_DIFFICULT.create(difficulty.getKey());
+         throw ERROR_ALREADY_SAME_DIFFICULTY.create(difficulty.getSerializedName());
       }
 
       server.setDifficulty(difficulty, true);

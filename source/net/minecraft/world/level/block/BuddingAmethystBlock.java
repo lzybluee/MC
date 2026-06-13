@@ -43,13 +43,13 @@ public class BuddingAmethystBlock extends AmethystBlock {
          if (nextStage != null) {
             BlockState targetState = nextStage.defaultBlockState()
                .setValue(AmethystClusterBlock.FACING, growDirection)
-               .setValue(AmethystClusterBlock.WATERLOGGED, relativeState.getFluidState().getType() == Fluids.WATER);
+               .setValue(AmethystClusterBlock.WATERLOGGED, relativeState.getFluidState().is(Fluids.WATER));
             level.setBlockAndUpdate(growPos, targetState);
          }
       }
    }
 
    public static boolean canClusterGrowAtState(final BlockState state) {
-      return state.isAir() || state.is(Blocks.WATER) && state.getFluidState().getAmount() == 8;
+      return state.isAir() || state.is(Blocks.WATER) && state.getFluidState().isFull();
    }
 }

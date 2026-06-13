@@ -59,7 +59,7 @@ public class RideCommand {
          throw ERROR_ALREADY_RIDING.create(target.getDisplayName(), currentVehicle.getDisplayName());
       }
 
-      if (vehicle.getType() == EntityType.PLAYER) {
+      if (vehicle.is(EntityType.PLAYER)) {
          throw ERROR_MOUNTING_PLAYER.create();
       }
 

@@ -13,7 +13,6 @@ import net.minecraft.world.Nameable;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AbstractBannerBlock;
-import net.minecraft.world.level.block.BannerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -77,7 +76,7 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
    }
 
    public ItemStack getItem() {
-      ItemStack itemStack = new ItemStack(BannerBlock.byColor(this.baseColor));
+      ItemStack itemStack = new ItemStack(this.getBlockState().getBlock());
       itemStack.applyComponents(this.collectComponents());
       return itemStack;
    }

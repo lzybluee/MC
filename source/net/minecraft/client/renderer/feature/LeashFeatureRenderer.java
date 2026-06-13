@@ -1,20 +1,21 @@
 package net.minecraft.client.renderer.feature;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class LeashFeatureRenderer {
    private static final int LEASH_RENDER_STEPS = 24;
    private static final float LEASH_WIDTH = 0.05F;
 
-   public void render(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
+   public void renderSolid(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
       for (SubmitNodeStorage.LeashSubmit leashSubmit : nodeCollection.getLeashSubmits()) {
          renderLeash(leashSubmit.pose(), bufferSource, leashSubmit.leashState());
       }
@@ -41,7 +42,7 @@ public class LeashFeatureRenderer {
 
    private static void addVertexPair(
       final VertexConsumer builder,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final float dx,
       final float dy,
       final float dz,
@@ -55,7 +56,7 @@ public class LeashFeatureRenderer {
       float progress = k / 24.0F;
       int block = (int)Mth.lerp(progress, state.startBlockLight, state.endBlockLight);
       int sky = (int)Mth.lerp(progress, state.startSkyLight, state.endSkyLight);
-      int lightCoords = LightTexture.pack(block, sky);
+      int lightCoords = LightCoordsUtil.pack(block, sky);
       float colorModifier = k % 2 == (backwards ? 1 : 0) ? 0.7F : 1.0F;
       float r = 0.5F * colorModifier;
       float g = 0.4F * colorModifier;

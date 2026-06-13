@@ -5,6 +5,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.advancements.CriterionTriggerInstance;
 import net.minecraft.server.PlayerAdvancements;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 
 public class ImpossibleTrigger implements CriterionTrigger<ImpossibleTrigger.TriggerInstance> {
    @Override
@@ -28,7 +29,7 @@ public class ImpossibleTrigger implements CriterionTrigger<ImpossibleTrigger.Tri
       public static final Codec<ImpossibleTrigger.TriggerInstance> CODEC = MapCodec.unitCodec(new ImpossibleTrigger.TriggerInstance());
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
       }
    }
 }

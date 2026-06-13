@@ -41,7 +41,7 @@ public abstract class LightEngine<M extends DataLayerStorageMap<M>, S extends La
    public static boolean hasDifferentLightProperties(final BlockState oldState, final BlockState newState) {
       return newState == oldState
          ? false
-         : newState.getLightBlock() != oldState.getLightBlock()
+         : newState.getLightDampening() != oldState.getLightDampening()
             || newState.getLightEmission() != oldState.getLightEmission()
             || newState.useShapeForLightOcclusion()
             || oldState.useShapeForLightOcclusion();
@@ -75,7 +75,7 @@ public abstract class LightEngine<M extends DataLayerStorageMap<M>, S extends La
    }
 
    protected int getOpacity(final BlockState state) {
-      return Math.max(1, state.getLightBlock());
+      return Math.max(1, state.getLightDampening());
    }
 
    protected boolean shapeOccludes(final BlockState fromState, final BlockState toState, final Direction direction) {
@@ -85,7 +85,7 @@ public abstract class LightEngine<M extends DataLayerStorageMap<M>, S extends La
    }
 
    protected @Nullable LightChunk getChunk(final int chunkX, final int chunkZ) {
-      long pos = ChunkPos.asLong(chunkX, chunkZ);
+      long pos = ChunkPos.pack(chunkX, chunkZ);
 
       for (int i = 0; i < 2; i++) {
          if (pos == this.lastChunkPos[i]) {
@@ -120,7 +120,7 @@ public abstract class LightEngine<M extends DataLayerStorageMap<M>, S extends La
    }
 
    public void retainData(final ChunkPos pos, final boolean retain) {
-      this.storage.retainData(SectionPos.getZeroNode(pos.x, pos.z), retain);
+      this.storage.retainData(SectionPos.getZeroNode(pos.x(), pos.z()), retain);
    }
 
    @Override
@@ -130,7 +130,7 @@ public abstract class LightEngine<M extends DataLayerStorageMap<M>, S extends La
 
    @Override
    public void setLightEnabled(final ChunkPos pos, final boolean enable) {
-      this.storage.setLightEnabled(SectionPos.getZeroNode(pos.x, pos.z), enable);
+      this.storage.setLightEnabled(SectionPos.getZeroNode(pos.x(), pos.z()), enable);
    }
 
    @Override

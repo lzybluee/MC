@@ -46,6 +46,7 @@ import net.minecraft.world.level.levelgen.feature.rootplacers.MangroveRootPlacem
 import net.minecraft.world.level.levelgen.feature.rootplacers.MangroveRootPlacer;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.levelgen.feature.stateproviders.RandomizedIntStateProvider;
+import net.minecraft.world.level.levelgen.feature.stateproviders.RuleBasedStateProvider;
 import net.minecraft.world.level.levelgen.feature.stateproviders.WeightedStateProvider;
 import net.minecraft.world.level.levelgen.feature.treedecorators.AlterGroundDecorator;
 import net.minecraft.world.level.levelgen.feature.treedecorators.AttachedToLeavesDecorator;
@@ -342,7 +343,8 @@ public class TreeFeatures {
                Blocks.BROWN_MUSHROOM_BLOCK.defaultBlockState().setValue(HugeMushroomBlock.UP, true).setValue(HugeMushroomBlock.DOWN, false)
             ),
             BlockStateProvider.simple(Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)),
-            3
+            3,
+            BlockPredicate.matchesTag(BlockTags.HUGE_BROWN_MUSHROOM_CAN_PLACE_ON)
          )
       );
       FeatureUtils.register(
@@ -352,7 +354,8 @@ public class TreeFeatures {
          new HugeMushroomFeatureConfiguration(
             BlockStateProvider.simple(Blocks.RED_MUSHROOM_BLOCK.defaultBlockState().setValue(HugeMushroomBlock.DOWN, false)),
             BlockStateProvider.simple(Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)),
-            2
+            2,
+            BlockPredicate.matchesTag(BlockTags.HUGE_RED_MUSHROOM_CAN_PLACE_ON)
          )
       );
       BeehiveDecorator beehive0002 = new BeehiveDecorator(0.002F);
@@ -489,7 +492,13 @@ public class TreeFeatures {
                new MegaPineFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0), UniformInt.of(13, 17)),
                new TwoLayersFeatureSize(1, 1, 2)
             )
-            .decorators(ImmutableList.of(new AlterGroundDecorator(BlockStateProvider.simple(Blocks.PODZOL))))
+            .decorators(
+               ImmutableList.of(
+                  new AlterGroundDecorator(
+                     RuleBasedStateProvider.ifTrueThenProvide(BlockPredicate.matchesTag(BlockTags.BENEATH_TREE_PODZOL_REPLACEABLE), Blocks.PODZOL)
+                  )
+               )
+            )
             .build()
       );
       FeatureUtils.register(
@@ -503,7 +512,13 @@ public class TreeFeatures {
                new MegaPineFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0), UniformInt.of(3, 7)),
                new TwoLayersFeatureSize(1, 1, 2)
             )
-            .decorators(ImmutableList.of(new AlterGroundDecorator(BlockStateProvider.simple(Blocks.PODZOL))))
+            .decorators(
+               ImmutableList.of(
+                  new AlterGroundDecorator(
+                     RuleBasedStateProvider.ifTrueThenProvide(BlockPredicate.matchesTag(BlockTags.BENEATH_TREE_PODZOL_REPLACEABLE), Blocks.PODZOL)
+                  )
+               )
+            )
             .build()
       );
       FeatureUtils.register(context, SUPER_BIRCH_BEES_0002, Feature.TREE, createSuperBirch().decorators(ImmutableList.of(beehive0002)).build());
@@ -542,8 +557,7 @@ public class TreeFeatures {
                new RandomSpreadFoliagePlacer(ConstantInt.of(3), ConstantInt.of(0), ConstantInt.of(2), 50),
                new TwoLayersFeatureSize(1, 0, 1)
             )
-            .dirt(BlockStateProvider.simple(Blocks.ROOTED_DIRT))
-            .forceDirt()
+            .belowTrunkProvider(BlockStateProvider.simple(Blocks.ROOTED_DIRT))
             .build()
       );
       FeatureUtils.register(
@@ -572,7 +586,8 @@ public class TreeFeatures {
                      )
                   )
                ),
-               new TwoLayersFeatureSize(2, 0, 2)
+               new TwoLayersFeatureSize(2, 0, 2),
+               TreeConfiguration.PLACE_BELOW_OVERWORLD_TRUNKS
             )
             .decorators(
                List.of(
@@ -621,7 +636,8 @@ public class TreeFeatures {
                      )
                   )
                ),
-               new TwoLayersFeatureSize(3, 0, 2)
+               new TwoLayersFeatureSize(3, 0, 2),
+               TreeConfiguration.PLACE_BELOW_OVERWORLD_TRUNKS
             )
             .decorators(
                List.of(

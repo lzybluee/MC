@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.Layout;
 import net.minecraft.client.gui.layouts.LayoutElement;
@@ -17,21 +17,31 @@ import net.minecraft.network.chat.CommonComponents;
 import org.jspecify.annotations.Nullable;
 
 public class ScrollableLayout implements Layout {
-   private static final int SCROLLBAR_SPACING = 4;
-   private static final int SCROLLBAR_RESERVE = 10;
+   private static final int DEFAULT_SCROLLBAR_SPACING = 4;
    private final Layout content;
    private final ScrollableLayout.Container container;
+   private final ScrollableLayout.ReserveStrategy reserveStrategy;
+   private final int scrollbarSpacing;
    private int minWidth;
+   private int minHeight;
    private int maxHeight;
 
    public ScrollableLayout(final Minecraft minecraft, final Layout content, final int maxHeight) {
       this.content = content;
-      this.container = new ScrollableLayout.Container(minecraft, 0, maxHeight);
+      this.maxHeight = maxHeight;
+      this.reserveStrategy = ScrollableLayout.ReserveStrategy.BOTH;
+      this.scrollbarSpacing = 4;
+      this.container = new ScrollableLayout.Container(minecraft, 0, maxHeight, AbstractScrollArea.defaultSettings(10));
    }
 
    public void setMinWidth(final int minWidth) {
       this.minWidth = minWidth;
       this.container.setWidth(Math.max(this.content.getWidth(), minWidth));
+   }
+
+   public void setMinHeight(final int minHeight) {
+      this.minHeight = minHeight;
+      this.container.setHeight(Math.max(this.content.getHeight(), minHeight));
    }
 
    public void setMaxHeight(final int maxHeight) {
@@ -44,8 +54,13 @@ public class ScrollableLayout implements Layout {
    public void arrangeElements() {
       this.content.arrangeElements();
       int contentWidth = this.content.getWidth();
-      this.container.setWidth(Math.max(contentWidth + 20, this.minWidth));
-      this.container.setHeight(Math.min(this.content.getHeight(), this.maxHeight));
+
+      int scrollbarReserve = switch (this.reserveStrategy) {
+         case RIGHT -> this.container.scrollbarReserve();
+         case BOTH -> 2 * this.container.scrollbarReserve();
+      };
+      this.container.setWidth(Math.max(contentWidth, this.minWidth) + scrollbarReserve);
+      this.container.setHeight(Math.clamp(this.container.getHeight(), this.minHeight, this.maxHeight));
       this.container.refreshScrollAmount();
    }
 
@@ -88,8 +103,8 @@ public class ScrollableLayout implements Layout {
       private final Minecraft minecraft;
       private final List<AbstractWidget> children = new ArrayList<>();
 
-      public Container(final Minecraft minecraft, final int width, final int height) {
-         super(0, 0, width, height, CommonComponents.EMPTY);
+      public Container(final Minecraft minecraft, final int width, final int height, final AbstractScrollArea.ScrollbarSettings scrollbarSettings) {
+         super(0, 0, width, height, CommonComponents.EMPTY, scrollbarSettings);
          this.minecraft = minecraft;
          ScrollableLayout.this.content.visitWidgets(this.children::add);
       }
@@ -100,20 +115,15 @@ public class ScrollableLayout implements Layout {
       }
 
       @Override
-      protected double scrollRate() {
-         return 10.0;
-      }
-
-      @Override
-      protected void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+      protected void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
          graphics.enableScissor(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height);
 
          for (AbstractWidget child : this.children) {
-            child.render(graphics, mouseX, mouseY, a);
+            child.extractRenderState(graphics, mouseX, mouseY, a);
          }
 
          graphics.disableScissor();
-         this.renderScrollbar(graphics, mouseX, mouseY);
+         this.extractScrollbar(graphics, mouseX, mouseY);
       }
 
       @Override
@@ -122,7 +132,10 @@ public class ScrollableLayout implements Layout {
 
       @Override
       public ScreenRectangle getBorderForArrowNavigation(final ScreenDirection opposite) {
-         return new ScreenRectangle(this.getX(), this.getY(), this.width, this.contentHeight());
+         GuiEventListener focused = this.getFocused();
+         return focused != null
+            ? focused.getBorderForArrowNavigation(opposite)
+            : new ScreenRectangle(this.getX(), this.getY(), this.width, this.contentHeight()).getBorder(opposite);
       }
 
       @Override
@@ -133,10 +146,11 @@ public class ScrollableLayout implements Layout {
             ScreenRectangle focusedRect = focused.getRectangle();
             int topDelta = focusedRect.top() - area.top();
             int bottomDelta = focusedRect.bottom() - area.bottom();
+            double scrollRate = this.scrollRate();
             if (topDelta < 0) {
-               this.setScrollAmount(this.scrollAmount() + topDelta - 14.0);
+               this.setScrollAmount(this.scrollAmount() + topDelta - scrollRate);
             } else if (bottomDelta > 0) {
-               this.setScrollAmount(this.scrollAmount() + bottomDelta + 14.0);
+               this.setScrollAmount(this.scrollAmount() + bottomDelta + scrollRate);
             }
          }
       }
@@ -144,13 +158,17 @@ public class ScrollableLayout implements Layout {
       @Override
       public void setX(final int x) {
          super.setX(x);
-         ScrollableLayout.this.content.setX(x + 10);
+         ScrollableLayout.this.content.setX(x + (ScrollableLayout.this.reserveStrategy == ScrollableLayout.ReserveStrategy.BOTH ? this.scrollbarReserve() : 0));
       }
 
       @Override
       public void setY(final int y) {
          super.setY(y);
          ScrollableLayout.this.content.setY(y - (int)this.scrollAmount());
+      }
+
+      private int scrollbarReserve() {
+         return ScrollableLayout.this.scrollbarSpacing + this.scrollbarWidth();
       }
 
       @Override
@@ -168,5 +186,10 @@ public class ScrollableLayout implements Layout {
       public Collection<? extends NarratableEntry> getNarratables() {
          return this.children;
       }
+   }
+
+   public enum ReserveStrategy {
+      RIGHT,
+      BOTH;
    }
 }

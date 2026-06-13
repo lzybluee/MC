@@ -209,8 +209,12 @@ public class SoundManager extends SimplePreparableReloadListener<SoundManager.Pr
       this.soundEngine.stop(sound, source);
    }
 
-   public String getDebugString() {
-      return this.soundEngine.getDebugString();
+   public String getChannelDebugString() {
+      return this.soundEngine.getChannelDebugString();
+   }
+
+   public void getSoundCacheDebugStats(final SoundBufferLibrary.DebugOutput output) {
+      this.soundEngine.getSoundCacheDebugStats(output);
    }
 
    public void reload() {

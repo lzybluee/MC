@@ -5,16 +5,14 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
@@ -24,7 +22,7 @@ public class SetCustomModelDataFunction extends LootItemConditionalFunction {
    private static final Codec<NumberProvider> COLOR_PROVIDER_CODEC = Codec.withAlternative(
       NumberProviders.CODEC, ExtraCodecs.RGB_COLOR_CODEC, ConstantValue::new
    );
-   public static final MapCodec<SetCustomModelDataFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetCustomModelDataFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -56,16 +54,15 @@ public class SetCustomModelDataFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return Stream.concat(this.floats.stream(), this.colors.stream())
-         .flatMap(l -> l.value().stream())
-         .flatMap(e -> e.getReferencedContextParams().stream())
-         .collect(Collectors.toSet());
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      this.floats.ifPresent(f -> Validatable.validate(context, "floats", f.value()));
+      this.colors.ifPresent(c -> Validatable.validate(context, "colors", c.value()));
    }
 
    @Override
-   public LootItemFunctionType<SetCustomModelDataFunction> getType() {
-      return LootItemFunctions.SET_CUSTOM_MODEL_DATA;
+   public MapCodec<SetCustomModelDataFunction> codec() {
+      return MAP_CODEC;
    }
 
    private static <T> List<T> apply(final Optional<ListOperation.StandAlone<T>> operation, final List<T> current) {

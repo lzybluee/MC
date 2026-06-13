@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 
 public class BlockEntityRenderState {
    public BlockPos blockPos = BlockPos.ZERO;
-   public BlockState blockState = Blocks.AIR.defaultBlockState();
+   private BlockState blockState = Blocks.AIR.defaultBlockState();
    public BlockEntityType<?> blockEntityType = BlockEntityType.TEST_BLOCK;
    public int lightCoords;
    public ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress;
@@ -23,7 +23,7 @@ public class BlockEntityRenderState {
       state.blockPos = blockEntity.getBlockPos();
       state.blockState = blockEntity.getBlockState();
       state.blockEntityType = blockEntity.getType();
-      state.lightCoords = blockEntity.getLevel() != null ? LevelRenderer.getLightColor(blockEntity.getLevel(), blockEntity.getBlockPos()) : 15728880;
+      state.lightCoords = blockEntity.getLevel() != null ? LevelRenderer.getLightCoords(blockEntity.getLevel(), blockEntity.getBlockPos()) : 15728880;
       state.breakProgress = breakProgress;
    }
 

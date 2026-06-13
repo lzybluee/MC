@@ -10,7 +10,7 @@ import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class AlternativesEntry extends CompositeEntryBase {
-   public static final MapCodec<AlternativesEntry> CODEC = createCodec(AlternativesEntry::new);
+   public static final MapCodec<AlternativesEntry> MAP_CODEC = createCodec(AlternativesEntry::new);
    public static final ProblemReporter.Problem UNREACHABLE_PROBLEM = new ProblemReporter.Problem() {
       @Override
       public String description() {
@@ -23,8 +23,8 @@ public class AlternativesEntry extends CompositeEntryBase {
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.ALTERNATIVES;
+   public MapCodec<AlternativesEntry> codec() {
+      return MAP_CODEC;
    }
 
    @Override

@@ -78,9 +78,9 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public abstract class BlockLootSubProvider implements LootTableSubProvider {
    protected final HolderLookup.Provider registries;
-   protected final Set<Item> explosionResistant;
-   protected final FeatureFlagSet enabledFeatures;
-   protected final Map<ResourceKey<LootTable>, LootTable.Builder> map;
+   private final Set<Item> explosionResistant;
+   private final FeatureFlagSet enabledFeatures;
+   private final Map<ResourceKey<LootTable>, LootTable.Builder> map = new HashMap<>();
    protected static final float[] NORMAL_LEAVES_SAPLING_CHANCES = new float[]{0.05F, 0.0625F, 0.083333336F, 0.1F};
    private static final float[] NORMAL_LEAVES_STICK_CHANCES = new float[]{0.02F, 0.022222223F, 0.025F, 0.033333335F, 0.1F};
 
@@ -121,18 +121,8 @@ public abstract class BlockLootSubProvider implements LootTableSubProvider {
    }
 
    protected BlockLootSubProvider(final Set<Item> explosionResistant, final FeatureFlagSet enabledFeatures, final HolderLookup.Provider registries) {
-      this(explosionResistant, enabledFeatures, new HashMap<>(), registries);
-   }
-
-   protected BlockLootSubProvider(
-      final Set<Item> explosionResistant,
-      final FeatureFlagSet enabledFeatures,
-      final Map<ResourceKey<LootTable>, LootTable.Builder> map,
-      final HolderLookup.Provider registries
-   ) {
       this.explosionResistant = explosionResistant;
       this.enabledFeatures = enabledFeatures;
-      this.map = map;
       this.registries = registries;
    }
 

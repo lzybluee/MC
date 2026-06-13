@@ -8,12 +8,12 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 public class DisplayInfo {
    public static final Codec<DisplayInfo> CODEC = RecordCodecBuilder.create(
       i -> i.group(
-            ItemStack.STRICT_CODEC.fieldOf("icon").forGetter(DisplayInfo::getIcon),
+            ItemStackTemplate.CODEC.fieldOf("icon").forGetter(DisplayInfo::getIcon),
             ComponentSerialization.CODEC.fieldOf("title").forGetter(DisplayInfo::getTitle),
             ComponentSerialization.CODEC.fieldOf("description").forGetter(DisplayInfo::getDescription),
             ClientAsset.ResourceTexture.CODEC.optionalFieldOf("background").forGetter(DisplayInfo::getBackground),
@@ -29,7 +29,7 @@ public class DisplayInfo {
    );
    private final Component title;
    private final Component description;
-   private final ItemStack icon;
+   private final ItemStackTemplate icon;
    private final Optional<ClientAsset.ResourceTexture> background;
    private final AdvancementType type;
    private final boolean showToast;
@@ -39,7 +39,7 @@ public class DisplayInfo {
    private float y;
 
    public DisplayInfo(
-      final ItemStack icon,
+      final ItemStackTemplate icon,
       final Component title,
       final Component description,
       final Optional<ClientAsset.ResourceTexture> background,
@@ -71,7 +71,7 @@ public class DisplayInfo {
       return this.description;
    }
 
-   public ItemStack getIcon() {
+   public ItemStackTemplate getIcon() {
       return this.icon;
    }
 
@@ -106,7 +106,7 @@ public class DisplayInfo {
    private void serializeToNetwork(final RegistryFriendlyByteBuf output) {
       ComponentSerialization.TRUSTED_STREAM_CODEC.encode(output, this.title);
       ComponentSerialization.TRUSTED_STREAM_CODEC.encode(output, this.description);
-      ItemStack.STREAM_CODEC.encode(output, this.icon);
+      ItemStackTemplate.STREAM_CODEC.encode(output, this.icon);
       output.writeEnum(this.type);
       int flags = 0;
       if (this.background.isPresent()) {
@@ -130,7 +130,7 @@ public class DisplayInfo {
    private static DisplayInfo fromNetwork(final RegistryFriendlyByteBuf input) {
       Component title = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(input);
       Component description = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(input);
-      ItemStack icon = ItemStack.STREAM_CODEC.decode(input);
+      ItemStackTemplate icon = ItemStackTemplate.STREAM_CODEC.decode(input);
       AdvancementType frame = input.readEnum(AdvancementType.class);
       int flags = input.readInt();
       Optional<ClientAsset.ResourceTexture> background = (flags & 1) != 0

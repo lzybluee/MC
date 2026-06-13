@@ -12,8 +12,8 @@ public class RememberIfHoglinWasKilled {
          i -> i.group(i.present(MemoryModuleType.ATTACK_TARGET), i.registered(MemoryModuleType.HUNTED_RECENTLY))
             .apply(i, (attackTarget, huntedRecently) -> (level, body, timestamp) -> {
                LivingEntity target = i.get(attackTarget);
-               if (target.getType() == EntityType.HOGLIN && target.isDeadOrDying()) {
-                  huntedRecently.setWithExpiry(true, PiglinAi.TIME_BETWEEN_HUNTS.sample(body.level().random));
+               if (target.is(EntityType.HOGLIN) && target.isDeadOrDying()) {
+                  huntedRecently.setWithExpiry(true, PiglinAi.TIME_BETWEEN_HUNTS.sample(body.level().getRandom()));
                }
 
                return true;

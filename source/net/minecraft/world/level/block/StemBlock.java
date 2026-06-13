@@ -10,7 +10,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
@@ -33,6 +33,8 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
             ResourceKey.codec(Registries.BLOCK).fieldOf("fruit").forGetter(b -> b.fruit),
             ResourceKey.codec(Registries.BLOCK).fieldOf("attached_stem").forGetter(b -> b.attachedStem),
             ResourceKey.codec(Registries.ITEM).fieldOf("seed").forGetter(b -> b.seed),
+            TagKey.codec(Registries.BLOCK).fieldOf("stem_support_blocks").forGetter(b -> b.stemSupportBlocks),
+            TagKey.codec(Registries.BLOCK).fieldOf("fruit_support_blocks").forGetter(b -> b.fruitSupportBlocks),
             propertiesCodec()
          )
          .apply(i, StemBlock::new)
@@ -43,6 +45,8 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
    private final ResourceKey<Block> fruit;
    private final ResourceKey<Block> attachedStem;
    private final ResourceKey<Item> seed;
+   private final TagKey<Block> stemSupportBlocks;
+   private final TagKey<Block> fruitSupportBlocks;
 
    @Override
    public MapCodec<StemBlock> codec() {
@@ -50,12 +54,19 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
    }
 
    protected StemBlock(
-      final ResourceKey<Block> fruit, final ResourceKey<Block> attachedStem, final ResourceKey<Item> seed, final BlockBehaviour.Properties properties
+      final ResourceKey<Block> fruit,
+      final ResourceKey<Block> attachedStem,
+      final ResourceKey<Item> seed,
+      final TagKey<Block> stemSupportBlocks,
+      final TagKey<Block> fruitSupportBlocks,
+      final BlockBehaviour.Properties properties
    ) {
       super(properties);
       this.fruit = fruit;
       this.attachedStem = attachedStem;
       this.seed = seed;
+      this.stemSupportBlocks = stemSupportBlocks;
+      this.fruitSupportBlocks = fruitSupportBlocks;
       this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
    }
 
@@ -66,7 +77,7 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(Blocks.FARMLAND);
+      return state.is(this.stemSupportBlocks);
    }
 
    @Override
@@ -82,7 +93,7 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
                Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(random);
                BlockPos relative = pos.relative(direction);
                BlockState stateBelow = level.getBlockState(relative.below());
-               if (level.getBlockState(relative).isAir() && (stateBelow.is(Blocks.FARMLAND) || stateBelow.is(BlockTags.DIRT))) {
+               if (level.getBlockState(relative).isAir() && stateBelow.is(this.fruitSupportBlocks)) {
                   Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
                   Optional<Block> fruit = blocks.getOptional(this.fruit);
                   Optional<Block> stem = blocks.getOptional(this.attachedStem);
@@ -113,11 +124,11 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
 
    @Override
    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
-      int age = Math.min(7, state.getValue(AGE) + Mth.nextInt(level.random, 2, 5));
+      int age = Math.min(7, state.getValue(AGE) + Mth.nextInt(random, 2, 5));
       BlockState newState = state.setValue(AGE, age);
       level.setBlock(pos, newState, 2);
       if (age == 7) {
-         newState.randomTick(level, pos, level.random);
+         newState.randomTick(level, pos, random);
       }
    }
 

@@ -3,6 +3,7 @@ package net.minecraft.world.level.levelgen.feature.configurations;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class ReplaceSphereConfiguration implements FeatureConfiguration {
@@ -10,7 +11,7 @@ public class ReplaceSphereConfiguration implements FeatureConfiguration {
       i -> i.group(
             BlockState.CODEC.fieldOf("target").forGetter(c -> c.targetState),
             BlockState.CODEC.fieldOf("state").forGetter(c -> c.replaceState),
-            IntProvider.codec(0, 12).fieldOf("radius").forGetter(c -> c.radius)
+            IntProviders.codec(0, 12).fieldOf("radius").forGetter(c -> c.radius)
          )
          .apply(i, ReplaceSphereConfiguration::new)
    );

@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -46,7 +47,7 @@ public class CropBlock extends VegetationBlock implements BonemealableBlock {
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(Blocks.FARMLAND);
+      return state.is(BlockTags.SUPPORTS_CROPS);
    }
 
    protected IntegerProperty getAgeProperty() {
@@ -93,7 +94,7 @@ public class CropBlock extends VegetationBlock implements BonemealableBlock {
    }
 
    protected int getBonemealAgeIncrease(final Level level) {
-      return Mth.nextInt(level.random, 2, 5);
+      return Mth.nextInt(level.getRandom(), 2, 5);
    }
 
    protected static float getGrowthSpeed(final Block type, final BlockGetter level, final BlockPos pos) {
@@ -104,9 +105,9 @@ public class CropBlock extends VegetationBlock implements BonemealableBlock {
          for (int zz = -1; zz <= 1; zz++) {
             float blockSpeed = 0.0F;
             BlockState blockState = level.getBlockState(below.offset(xx, 0, zz));
-            if (blockState.is(Blocks.FARMLAND)) {
+            if (blockState.is(BlockTags.GROWS_CROPS)) {
                blockSpeed = 1.0F;
-               if (blockState.getValue(FarmBlock.MOISTURE) > 0) {
+               if (blockState.getValueOrElse(FarmlandBlock.MOISTURE, 0) > 0) {
                   blockSpeed = 3.0F;
                }
             }

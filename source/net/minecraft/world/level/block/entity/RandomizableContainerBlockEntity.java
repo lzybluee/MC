@@ -76,7 +76,7 @@ public abstract class RandomizableContainerBlockEntity extends BaseContainerBloc
 
    @Override
    public boolean canOpen(final Player player) {
-      return super.canOpen(player) && (this.lootTable == null || !player.isSpectator());
+      return (this.lootTable == null || !player.isSpectator()) && super.canOpen(player);
    }
 
    @Override
@@ -84,10 +84,13 @@ public abstract class RandomizableContainerBlockEntity extends BaseContainerBloc
       if (this.canOpen(player)) {
          this.unpackLootTable(inventory.player);
          return this.createMenu(containerId, inventory);
-      } else {
-         BaseContainerBlockEntity.sendChestLockedNotifications(this.getBlockPos().getCenter(), player, this.getDisplayName());
-         return null;
       }
+
+      if (!player.isSpectator()) {
+         BaseContainerBlockEntity.sendChestLockedNotifications(this.getBlockPos().getCenter(), player, this.getDisplayName());
+      }
+
+      return null;
    }
 
    @Override

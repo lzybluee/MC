@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.Vec3;
 
 public class MinecartChest extends AbstractMinecartContainer {
    public MinecartChest(final EntityType<? extends MinecartChest> type, final Level level) {
@@ -61,7 +62,7 @@ public class MinecartChest extends AbstractMinecartContainer {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       InteractionResult result = this.interactWithContainerVehicle(player);
       if (result.consumesAction() && player.level() instanceof ServerLevel serverLevel) {
          this.gameEvent(GameEvent.CONTAINER_OPEN, player);

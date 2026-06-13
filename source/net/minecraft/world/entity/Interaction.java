@@ -116,7 +116,7 @@ public class Interaction extends Entity implements Attackable, Targeting {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       if (this.level().isClientSide()) {
          return this.getResponse() ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
       }

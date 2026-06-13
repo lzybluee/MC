@@ -64,7 +64,7 @@ public class BlockCollisions<T> extends AbstractIterator<T> {
    private @Nullable BlockGetter getChunk(final int x, final int z) {
       int chunkX = SectionPos.blockToSectionCoord(x);
       int chunkZ = SectionPos.blockToSectionCoord(z);
-      long chunkPos = ChunkPos.asLong(chunkX, chunkZ);
+      long chunkPos = ChunkPos.pack(chunkX, chunkZ);
       if (this.cachedBlockGetter != null && this.cachedBlockGetterPos == chunkPos) {
          return this.cachedBlockGetter;
       }

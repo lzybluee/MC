@@ -12,7 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Unit;
 
 public class TridentModel extends Model<Unit> {
-   public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/trident.png");
+   public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/trident/trident.png");
 
    public TridentModel(final ModelPart root) {
       super(root, RenderTypes::entitySolid);

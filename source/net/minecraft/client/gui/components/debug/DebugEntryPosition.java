@@ -31,7 +31,7 @@ public class DebugEntryPosition implements DebugScreenEntry {
       Entity entity = minecraft.getCameraEntity();
       if (entity != null) {
          BlockPos feetPos = minecraft.getCameraEntity().blockPosition();
-         ChunkPos chunkPos = new ChunkPos(feetPos);
+         ChunkPos chunkPos = ChunkPos.containing(feetPos);
          Direction direction = entity.getDirection();
 
          String faceString = switch (direction) {
@@ -56,9 +56,9 @@ public class DebugEntryPosition implements DebugScreenEntry {
                String.format(
                   Locale.ROOT,
                   "Chunk: %d %d %d [%d %d in r.%d.%d.mca]",
-                  chunkPos.x,
+                  chunkPos.x(),
                   SectionPos.blockToSectionCoord(feetPos.getY()),
-                  chunkPos.z,
+                  chunkPos.z(),
                   chunkPos.getRegionLocalX(),
                   chunkPos.getRegionLocalZ(),
                   chunkPos.getRegionX(),

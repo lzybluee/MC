@@ -9,7 +9,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.util.Mth;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.ItemStack;
@@ -26,7 +25,7 @@ import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 import org.apache.commons.lang3.mutable.MutableInt;
 
-public class LootPool {
+public class LootPool implements Validatable {
    public static final Codec<LootPool> CODEC = RecordCodecBuilder.create(
       i -> i.group(
             LootPoolEntries.CODEC.listOf().fieldOf("entries").forGetter(p -> p.entries),
@@ -105,21 +104,13 @@ public class LootPool {
       }
    }
 
+   @Override
    public void validate(final ValidationContext output) {
-      for (int i = 0; i < this.conditions.size(); i++) {
-         this.conditions.get(i).validate(output.forChild(new ProblemReporter.IndexedFieldPathElement("conditions", i)));
-      }
-
-      for (int i = 0; i < this.functions.size(); i++) {
-         this.functions.get(i).validate(output.forChild(new ProblemReporter.IndexedFieldPathElement("functions", i)));
-      }
-
-      for (int i = 0; i < this.entries.size(); i++) {
-         this.entries.get(i).validate(output.forChild(new ProblemReporter.IndexedFieldPathElement("entries", i)));
-      }
-
-      this.rolls.validate(output.forChild(new ProblemReporter.FieldPathElement("rolls")));
-      this.bonusRolls.validate(output.forChild(new ProblemReporter.FieldPathElement("bonus_rolls")));
+      Validatable.validate(output, "conditions", this.conditions);
+      Validatable.validate(output, "functions", this.functions);
+      Validatable.validate(output, "entries", this.entries);
+      Validatable.validate(output, "rolls", this.rolls);
+      Validatable.validate(output, "bonus_rolls", this.bonusRolls);
    }
 
    public static LootPool.Builder lootPool() {

@@ -25,7 +25,7 @@ import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.npc.villager.VillagerType;
 
-public class VillagerProfessionLayer<S extends LivingEntityRenderState & VillagerDataHolderRenderState, M extends EntityModel<S> & VillagerLikeModel>
+public class VillagerProfessionLayer<S extends LivingEntityRenderState & VillagerDataHolderRenderState, M extends EntityModel<S> & VillagerLikeModel<S>>
    extends RenderLayer<S, M> {
    private static final Int2ObjectMap<Identifier> LEVEL_LOCATIONS = Util.make(new Int2ObjectOpenHashMap(), map -> {
       map.put(1, Identifier.withDefaultNamespace("stone"));
@@ -62,7 +62,7 @@ public class VillagerProfessionLayer<S extends LivingEntityRenderState & Village
             VillagerMetadataSection.Hat typeHat = this.getHatData(this.typeHatCache, "type", type);
             VillagerMetadataSection.Hat professionHat = this.getHatData(this.professionHatCache, "profession", profession);
             M model = this.getParentModel();
-            Identifier typeTexture = this.getIdentifier("type", type);
+            Identifier typeTexture = this.getIdentifier(state.isBaby ? "baby" : "type", type);
             boolean typeHatVisible = professionHat == VillagerMetadataSection.Hat.NONE
                || professionHat == VillagerMetadataSection.Hat.PARTIAL && typeHat != VillagerMetadataSection.Hat.FULL;
             M noHatModel = state.isBaby ? this.noHatBabyModel : this.noHatModel;

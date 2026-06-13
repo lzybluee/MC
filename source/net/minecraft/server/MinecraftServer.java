@@ -43,6 +43,7 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
@@ -137,6 +138,9 @@ import net.minecraft.util.thread.ReentrantBlockableEventLoop;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.RandomSequences;
 import net.minecraft.world.Stopwatches;
+import net.minecraft.world.clock.ClockTimeMarkers;
+import net.minecraft.world.clock.ServerClockManager;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.ai.village.VillageSiege;
 import net.minecraft.world.entity.npc.CatSpawner;
 import net.minecraft.world.entity.npc.wanderingtrader.WanderingTraderSpawner;
@@ -156,28 +160,31 @@ import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.FuelValues;
-import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.storage.ChunkIOErrorReporter;
 import net.minecraft.world.level.chunk.storage.RegionStorageInfo;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.gamerules.GameRule;
+import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.gamerules.GameRuleTypeVisitor;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.PatrolSpawner;
 import net.minecraft.world.level.levelgen.PhantomSpawner;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraft.world.level.saveddata.WeatherData;
 import net.minecraft.world.level.storage.CommandStorage;
 import net.minecraft.world.level.storage.DerivedLevelData;
-import net.minecraft.world.level.storage.DimensionDataStorage;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PlayerDataStorage;
+import net.minecraft.world.level.storage.SavedDataStorage;
 import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.level.storage.WorldData;
+import net.minecraft.world.level.timers.TimerQueue;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.ScoreboardSaveData;
@@ -198,17 +205,21 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    private static final int MAX_STATUS_PLAYER_SAMPLE = 12;
    public static final int SPAWN_POSITION_SEARCH_RADIUS = 5;
    private static final int SERVER_ACTIVITY_MONITOR_SECONDS_BETWEEN_NOTIFICATIONS = 30;
+   private static final Map<String, String> LEGACY_WORLD_NAMES_FOR_REALMS_LOG = Map.of("overworld", "world", "the_nether", "DIM-1", "the_end", "DIM1");
    private static final int AUTOSAVE_INTERVAL = 6000;
    private static final int MIMINUM_AUTOSAVE_TICKS = 100;
    private static final int MAX_TICK_LATENCY = 3;
    public static final int ABSOLUTE_MAX_WORLD_SIZE = 29999984;
    public static final LevelSettings DEMO_SETTINGS = new LevelSettings(
-      "Demo World", GameType.SURVIVAL, false, Difficulty.NORMAL, false, new GameRules(FeatureFlags.DEFAULT_FLAGS), WorldDataConfiguration.DEFAULT
+      "Demo World", GameType.SURVIVAL, LevelSettings.DifficultySettings.DEFAULT, false, WorldDataConfiguration.DEFAULT
    );
+   public static final Supplier<GameRules> DEFAULT_GAME_RULES = () -> new GameRules(WorldDataConfiguration.DEFAULT.enabledFeatures());
    public static final NameAndId ANONYMOUS_PLAYER_PROFILE = new NameAndId(Util.NIL_UUID, "Anonymous Player");
    protected final LevelStorageSource.LevelStorageAccess storageSource;
    protected final PlayerDataStorage playerDataStorage;
+   private final SavedDataStorage savedDataStorage;
    private final List<Runnable> tickables = Lists.newArrayList();
+   private final GameRules gameRules;
    private MetricsRecorder metricsRecorder = InactiveMetricsRecorder.INSTANCE;
    private Consumer<ProfileResults> onMetricsRecordingStopped = results -> this.stopRecordingMetrics();
    private Consumer<Path> onMetricsRecordingFinished = ignored -> {};
@@ -255,10 +266,13 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    private long delayedTasksMaxNextTickTimeNanos;
    private boolean mayHaveDelayedTasks;
    private final PackRepository packRepository;
+   private final WorldGenSettings worldGenSettings;
    private final ServerScoreboard scoreboard = new ServerScoreboard(this);
    private @Nullable Stopwatches stopwatches;
    private @Nullable CommandStorage commandStorage;
-   private final CustomBossEvents customBossEvents = new CustomBossEvents();
+   private final CustomBossEvents customBossEvents;
+   private final RandomSequences randomSequences;
+   private final WeatherData weatherData;
    private final ServerFunctionManager functionManager;
    private boolean enforceWhitelist;
    private boolean usingWhitelist;
@@ -275,10 +289,11 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    private FuelValues fuelValues;
    private int emptyTicks;
    private volatile boolean isSaving;
-   private static final AtomicReference<@Nullable RuntimeException> fatalException = new AtomicReference<>();
    private final SuppressedExceptionCollector suppressedExceptions = new SuppressedExceptionCollector();
    private final DiscontinuousFrame tickFrame;
    private final PacketProcessor packetProcessor;
+   private final TimerQueue<MinecraftServer> scheduledEvents;
+   private final ServerClockManager clockManager;
 
    public static <S extends MinecraftServer> S spin(final Function<Thread, S> factory) {
       AtomicReference<S> serverReference = new AtomicReference<>();
@@ -299,18 +314,23 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       final LevelStorageSource.LevelStorageAccess storageSource,
       final PackRepository packRepository,
       final WorldStem worldStem,
+      final Optional<GameRules> gameRules,
       final Proxy proxy,
       final DataFixer fixerUpper,
       final Services services,
-      final LevelLoadListener levelLoadListener
+      final LevelLoadListener levelLoadListener,
+      final boolean propagatesCrashes
    ) {
-      super("Server");
+      super("Server", propagatesCrashes);
       this.registries = worldStem.registries();
-      this.worldData = worldStem.worldData();
       if (!this.registries.compositeAccess().lookupOrThrow(Registries.LEVEL_STEM).containsKey(LevelStem.OVERWORLD)) {
          throw new IllegalStateException("Missing Overworld dimension data");
       }
 
+      this.savedDataStorage = new SavedDataStorage(storageSource.getLevelPath(LevelResource.DATA), fixerUpper, this.registries.compositeAccess());
+      this.worldData = worldStem.worldDataAndGenSettings().data();
+      this.worldGenSettings = worldStem.worldDataAndGenSettings().genSettings();
+      this.savedDataStorage.set(WorldGenSettings.TYPE, this.worldGenSettings);
       this.proxy = proxy;
       this.packRepository = packRepository;
       this.resources = new MinecraftServer.ReloadableResources(worldStem.resourceManager(), worldStem.dataPackResources());
@@ -320,6 +340,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       this.levelLoadListener = levelLoadListener;
       this.storageSource = storageSource;
       this.playerDataStorage = storageSource.createPlayerStorage();
+      this.randomSequences = this.savedDataStorage.computeIfAbsent(RandomSequences.TYPE);
+      this.weatherData = this.getDataStorage().computeIfAbsent(WeatherData.TYPE);
+      this.gameRules = new GameRules(this.worldData.enabledFeatures(), this.savedDataStorage.computeIfAbsent(GameRuleMap.TYPE));
+      gameRules.ifPresent(g -> this.gameRules.setAll(g, null));
       this.fixerUpper = fixerUpper;
       this.functionManager = new ServerFunctionManager(this, this.resources.managers.getFunctionLibrary());
       HolderGetter<Block> blockLookup = this.registries.compositeAccess().lookupOrThrow(Registries.BLOCK).filterFeatures(this.worldData.enabledFeatures());
@@ -333,6 +357,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       this.notificationManager = new NotificationManager();
       this.serverActivityMonitor = new ServerActivityMonitor(this.notificationManager, 30);
       this.packetProcessor = new PacketProcessor(serverThread);
+      this.clockManager = this.getDataStorage().computeIfAbsent(ServerClockManager.TYPE);
+      this.clockManager.init(this);
+      this.customBossEvents = this.savedDataStorage.computeIfAbsent(CustomBossEvents.TYPE);
+      this.scheduledEvents = this.savedDataStorage.computeIfAbsent(TimerQueue.TYPE);
    }
 
    protected abstract boolean initServer() throws IOException;
@@ -347,15 +375,13 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          public void moveTo(final ResourceKey<Level> dimension, final ChunkPos centerChunk) {
             ServerLevel level = MinecraftServer.this.getLevel(dimension);
             this.chunkMap = level != null ? level.getChunkSource().chunkMap : null;
-            this.centerChunkX = centerChunk.x;
-            this.centerChunkZ = centerChunk.z;
+            this.centerChunkX = centerChunk.x();
+            this.centerChunkZ = centerChunk.z();
          }
 
          @Override
          public @Nullable ChunkStatus get(final int x, final int z) {
-            return this.chunkMap == null
-               ? null
-               : this.chunkMap.getLatestStatus(ChunkPos.asLong(x + this.centerChunkX - radius, z + this.centerChunkZ - radius));
+            return this.chunkMap == null ? null : this.chunkMap.getLatestStatus(ChunkPos.pack(x + this.centerChunkX - radius, z + this.centerChunkZ - radius));
          }
 
          @Override
@@ -394,21 +420,20 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       ServerLevelData levelData = this.worldData.overworldData();
       boolean isDebug = this.worldData.isDebugWorld();
       Registry<LevelStem> dimensions = this.registries.compositeAccess().lookupOrThrow(Registries.LEVEL_STEM);
-      WorldOptions worldOptions = this.worldData.worldGenOptions();
+      WorldOptions worldOptions = this.worldGenSettings.options();
       long seed = worldOptions.seed();
       long biomeZoomSeed = BiomeManager.obfuscateSeed(seed);
       List<CustomSpawner> overworldCustomSpawners = ImmutableList.of(
-         new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(levelData)
+         new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(this.savedDataStorage)
       );
       LevelStem overworldData = dimensions.getValue(LevelStem.OVERWORLD);
       ServerLevel overworld = new ServerLevel(
-         this, this.executor, this.storageSource, levelData, Level.OVERWORLD, overworldData, isDebug, biomeZoomSeed, overworldCustomSpawners, true, null
+         this, this.executor, this.storageSource, levelData, Level.OVERWORLD, overworldData, isDebug, biomeZoomSeed, overworldCustomSpawners, true
       );
       this.levels.put(Level.OVERWORLD, overworld);
-      DimensionDataStorage overworldDataStorage = overworld.getDataStorage();
-      this.scoreboard.load(overworldDataStorage.computeIfAbsent(ScoreboardSaveData.TYPE).getData());
-      this.commandStorage = new CommandStorage(overworldDataStorage);
-      this.stopwatches = overworldDataStorage.computeIfAbsent(Stopwatches.TYPE);
+      this.scoreboard.load(this.savedDataStorage.computeIfAbsent(ScoreboardSaveData.TYPE).getData());
+      this.commandStorage = new CommandStorage(this.savedDataStorage);
+      this.stopwatches = this.savedDataStorage.computeIfAbsent(Stopwatches.TYPE);
       if (!levelData.isInitialized()) {
          try {
             setInitialSpawn(overworld, levelData, worldOptions.generateBonusChest(), isDebug, this.levelLoadListener);
@@ -421,7 +446,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
 
             try {
                overworld.fillReportDetails(report);
-            } catch (Throwable var27) {
+            } catch (Throwable var19) {
             }
 
             throw new ReportedException(report);
@@ -431,13 +456,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       }
 
       GlobalPos focusPos = this.selectLevelLoadFocusPos();
-      this.levelLoadListener.updateFocus(focusPos.dimension(), new ChunkPos(focusPos.pos()));
-      if (this.worldData.getCustomBossEvents() != null) {
-         this.getCustomBossEvents().load(this.worldData.getCustomBossEvents(), this.registryAccess());
-      }
-
-      RandomSequences randomSequences = overworld.getRandomSequences();
-      boolean hasLegacyWorldBorder = false;
+      this.levelLoadListener.updateFocus(focusPos.dimension(), ChunkPos.containing(focusPos.pos()));
 
       for (Entry<ResourceKey<LevelStem>, LevelStem> entry : dimensions.entrySet()) {
          ResourceKey<LevelStem> name = entry.getKey();
@@ -446,54 +465,15 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
             ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, name.identifier());
             DerivedLevelData derivedLevelData = new DerivedLevelData(this.worldData, levelData);
             level = new ServerLevel(
-               this,
-               this.executor,
-               this.storageSource,
-               derivedLevelData,
-               dimension,
-               entry.getValue(),
-               isDebug,
-               biomeZoomSeed,
-               ImmutableList.of(),
-               false,
-               randomSequences
+               this, this.executor, this.storageSource, derivedLevelData, dimension, entry.getValue(), isDebug, biomeZoomSeed, ImmutableList.of(), false
             );
             this.levels.put(dimension, level);
          } else {
             level = overworld;
          }
 
-         Optional<WorldBorder.Settings> savedWorldBorderSettings = levelData.getLegacyWorldBorderSettings();
-         if (savedWorldBorderSettings.isPresent()) {
-            WorldBorder.Settings legacySettings = savedWorldBorderSettings.get();
-            DimensionDataStorage storage = level.getDataStorage();
-            if (storage.get(WorldBorder.TYPE) == null) {
-               double coordinateScale = level.dimensionType().coordinateScale();
-               WorldBorder.Settings scaleAdjustedSettings = new WorldBorder.Settings(
-                  legacySettings.centerX() / coordinateScale,
-                  legacySettings.centerZ() / coordinateScale,
-                  legacySettings.damagePerBlock(),
-                  legacySettings.safeZone(),
-                  legacySettings.warningBlocks(),
-                  legacySettings.warningTime(),
-                  legacySettings.size(),
-                  legacySettings.lerpTime(),
-                  legacySettings.lerpTarget()
-               );
-               WorldBorder newWorldBorder = new WorldBorder(scaleAdjustedSettings);
-               newWorldBorder.applyInitialSettings(level.getGameTime());
-               storage.set(WorldBorder.TYPE, newWorldBorder);
-            }
-
-            hasLegacyWorldBorder = true;
-         }
-
          level.getWorldBorder().setAbsoluteMaxSize(this.getAbsoluteMaxWorldSize());
          this.getPlayerList().addWorldborderListener(level);
-      }
-
-      if (hasLegacyWorldBorder) {
-         levelData.setLegacyWorldBorderSettings(Optional.empty());
       }
    }
 
@@ -506,7 +486,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          levelData.setSpawn(LevelData.RespawnData.of(level.dimension(), BlockPos.ZERO.above(80), 0.0F, 0.0F));
       } else {
          ServerChunkCache chunkSource = level.getChunkSource();
-         ChunkPos spawnChunk = new ChunkPos(chunkSource.randomState().sampler().findSpawnPosition());
+         ChunkPos spawnChunk = ChunkPos.containing(chunkSource.randomState().sampler().findSpawnPosition());
          levelLoadListener.start(LevelLoadListener.Stage.PREPARE_GLOBAL_SPAWN, 0);
          levelLoadListener.updateFocus(level.dimension(), spawnChunk);
          int height = chunkSource.getGenerator().getSpawnHeight(level);
@@ -523,7 +503,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
 
          for (int i = 0; i < Mth.square(11); i++) {
             if (xChunkOffset >= -5 && xChunkOffset <= 5 && zChunkOffset >= -5 && zChunkOffset <= 5) {
-               BlockPos testedPos = PlayerSpawnFinder.getSpawnPosInChunk(level, new ChunkPos(spawnChunk.x + xChunkOffset, spawnChunk.z + zChunkOffset));
+               BlockPos testedPos = PlayerSpawnFinder.getSpawnPosInChunk(level, new ChunkPos(spawnChunk.x() + xChunkOffset, spawnChunk.z() + zChunkOffset));
                if (testedPos != null) {
                   levelData.setSpawn(LevelData.RespawnData.of(level.dimension(), testedPos, 0.0F, 0.0F));
                   break;
@@ -544,7 +524,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
             level.registryAccess()
                .lookup(Registries.CONFIGURED_FEATURE)
                .flatMap(registry -> registry.get(MiscOverworldFeatures.BONUS_CHEST))
-               .ifPresent(feature -> feature.value().place(level, chunkSource.getGenerator(), level.random, levelData.getRespawnData().pos()));
+               .ifPresent(feature -> feature.value().place(level, chunkSource.getGenerator(), level.getRandom(), levelData.getRespawnData().pos()));
          }
 
          levelLoadListener.finish(LevelLoadListener.Stage.PREPARE_GLOBAL_SPAWN);
@@ -555,10 +535,8 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       worldData.setDifficulty(Difficulty.PEACEFUL);
       worldData.setDifficultyLocked(true);
       ServerLevelData levelData = worldData.overworldData();
-      levelData.setRaining(false);
-      levelData.setThundering(false);
-      levelData.setClearWeatherTime(1000000000);
-      levelData.setDayTime(6000L);
+      this.getGameRules().set(GameRules.ADVANCE_WEATHER, false, this);
+      this.clockManager.moveToTimeMarker(this.registryAccess().getOrThrow(WorldClocks.OVERWORLD), ClockTimeMarkers.NOON);
       levelData.setGameType(GameType.SPECTATOR);
    }
 
@@ -606,7 +584,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    public abstract boolean shouldRconBroadcast();
 
    public boolean saveAllChunks(final boolean silent, final boolean flush, final boolean force) {
-      this.scoreboard.storeToSaveDataIfDirty(this.overworld().getDataStorage().computeIfAbsent(ScoreboardSaveData.TYPE));
+      this.scoreboard.storeToSaveDataIfDirty(this.getDataStorage().computeIfAbsent(ScoreboardSaveData.TYPE));
       boolean result = false;
 
       for (ServerLevel level : this.getAllLevels()) {
@@ -618,11 +596,18 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          result = true;
       }
 
-      this.worldData.setCustomBossEvents(this.getCustomBossEvents().save(this.registryAccess()));
-      this.storageSource.saveDataTag(this.registryAccess(), this.worldData, this.getPlayerList().getSingleplayerData());
+      GameProfile singleplayerProfile = this.getSingleplayerProfile();
+      this.storageSource.saveDataTag(this.worldData, singleplayerProfile == null ? null : singleplayerProfile.id());
+      if (flush) {
+         this.savedDataStorage.saveAndJoin();
+      } else {
+         this.savedDataStorage.scheduleSave();
+      }
+
       if (flush) {
          for (ServerLevel level : this.getAllLevels()) {
-            LOGGER.info("ThreadedAnvilChunkStorage ({}): All chunks are saved", level.getChunkSource().chunkMap.getStorageName());
+            String storageName = level.getChunkSource().chunkMap.getStorageName();
+            LOGGER.info("ThreadedAnvilChunkStorage ({}): All chunks are saved", LEGACY_WORLD_NAMES_FOR_REALMS_LOG.getOrDefault(storageName, storageName));
          }
 
          LOGGER.info("ThreadedAnvilChunkStorage: All dimensions are saved");
@@ -635,7 +620,9 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       try {
          this.isSaving = true;
          this.getPlayerList().saveAll();
-         return this.saveAllChunks(silent, flush, force);
+         boolean result = this.saveAllChunks(silent, flush, force);
+         this.warnOnLowDiskSpace();
+         return result;
       } finally {
          this.isSaving = false;
       }
@@ -693,6 +680,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       }
 
       this.isSaving = false;
+      this.savedDataStorage.close();
       this.resources.close();
 
       try {
@@ -857,24 +845,6 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
 
    private boolean haveTime() {
       return this.runningTask() || Util.getNanos() < (this.mayHaveDelayedTasks ? this.delayedTasksMaxNextTickTimeNanos : this.nextTickTimeNanos);
-   }
-
-   public static boolean throwIfFatalException() {
-      RuntimeException e = fatalException.get();
-      if (e != null) {
-         throw e;
-      } else {
-         return true;
-      }
-   }
-
-   public static void setFatalException(final RuntimeException exception) {
-      fatalException.compareAndSet(null, exception);
-   }
-
-   @Override
-   public void managedBlock(final BooleanSupplier condition) {
-      super.managedBlock(() -> throwIfFatalException() && condition.getAsBoolean());
    }
 
    public NotificationManager notificationManager() {
@@ -1115,17 +1085,24 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       this.getPlayerList().getPlayers().forEach(playerx -> playerx.connection.suspendFlushing());
       profiler.push("commandFunctions");
       this.getFunctions().tick();
-      profiler.popPush("levels");
+      profiler.pop();
+      if (this.tickRateManager.runsNormally()) {
+         profiler.push("clocks");
+         this.clockManager.tick();
+         profiler.pop();
+      }
+
+      if (this.tickCount % 20 == 0) {
+         profiler.push("timeSync");
+         this.forceGameTimeSynchronization();
+         profiler.pop();
+      }
+
+      profiler.push("levels");
       this.updateEffectiveRespawnData();
 
       for (ServerLevel level : this.getAllLevels()) {
          profiler.push(() -> level + " " + level.dimension().identifier());
-         if (this.tickCount % 20 == 0) {
-            profiler.push("timeSync");
-            this.synchronizeTime(level);
-            profiler.pop();
-         }
-
          profiler.push("tick");
 
          try {
@@ -1178,21 +1155,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       this.getConnection().tick();
    }
 
-   private void synchronizeTime(final ServerLevel level) {
-      this.playerList
-         .broadcastAll(
-            new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.getGameRules().get(GameRules.ADVANCE_TIME)), level.dimension()
-         );
-   }
-
-   public void forceTimeSynchronization() {
+   public void forceGameTimeSynchronization() {
       ProfilerFiller profiler = Profiler.get();
       profiler.push("timeSync");
-
-      for (ServerLevel level : this.getAllLevels()) {
-         this.synchronizeTime(level);
-      }
-
+      this.playerList.broadcastAll(new ClientboundSetTimePacket(this.overworld().getGameTime(), Map.of()));
       profiler.pop();
    }
 
@@ -1246,6 +1212,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       return "vanilla";
    }
 
+   public ServerClockManager clockManager() {
+      return this.clockManager;
+   }
+
    public SystemReport fillSystemReport(final SystemReport systemReport) {
       systemReport.setDetail("Server Running", () -> Boolean.toString(this.running));
       if (this.playerList != null) {
@@ -1261,7 +1231,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          () -> FeatureFlags.REGISTRY.toNames(this.worldData.enabledFeatures()).stream().map(Identifier::toString).collect(Collectors.joining(", "))
       );
       systemReport.setDetail("World Generation", () -> this.worldData.worldGenSettingsLifecycle().toString());
-      systemReport.setDetail("World Seed", () -> String.valueOf(this.worldData.worldGenOptions().seed()));
+      systemReport.setDetail("World Seed", () -> String.valueOf(this.worldGenSettings.options().seed()));
       systemReport.setDetail("Suppressed Exceptions", this.suppressedExceptions::dump);
       if (this.serverId != null) {
          systemReport.setDetail("Server Id", () -> this.serverId);
@@ -1564,7 +1534,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
             this.packRepository.setSelected(packsToEnable);
             WorldDataConfiguration newConfig = new WorldDataConfiguration(getSelectedPacks(this.packRepository, true), this.worldData.enabledFeatures());
             this.worldData.setDataConfiguration(newConfig);
-            this.resources.managers.updateStaticRegistryTags();
+            this.resources.managers.updateComponentsAndStaticRegistryTags();
             this.resources.managers.getRecipeManager().finalizeRecipeLoading(this.worldData.enabledFeatures());
             this.getPlayerList().saveAll();
             this.getPlayerList().reloadResources();
@@ -1753,6 +1723,10 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    @Override
    public abstract boolean shouldInformAdmins();
 
+   public WorldGenSettings getWorldGenSettings() {
+      return this.worldGenSettings;
+   }
+
    public RecipeManager getRecipeManager() {
       return this.resources.managers.getRecipeManager();
    }
@@ -1779,6 +1753,27 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
 
    public CustomBossEvents getCustomBossEvents() {
       return this.customBossEvents;
+   }
+
+   public RandomSource getRandomSequence(final Identifier key) {
+      return this.randomSequences.get(key, this.worldGenSettings.options().seed());
+   }
+
+   public RandomSequences getRandomSequences() {
+      return this.randomSequences;
+   }
+
+   public void setWeatherParameters(final int clearTime, final int rainTime, final boolean raining, final boolean thundering) {
+      WeatherData weatherData = this.getWeatherData();
+      weatherData.setClearWeatherTime(clearTime);
+      weatherData.setRainTime(rainTime);
+      weatherData.setThunderTime(rainTime);
+      weatherData.setRaining(raining);
+      weatherData.setThundering(thundering);
+   }
+
+   public WeatherData getWeatherData() {
+      return this.weatherData;
    }
 
    public boolean isEnforceWhitelist() {
@@ -1841,7 +1836,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
       try {
          for (Entry<ResourceKey<Level>, ServerLevel> level : this.levels.entrySet()) {
             Identifier levelId = level.getKey().identifier();
-            Path levelPath = levelsDir.resolve(levelId.getNamespace()).resolve(levelId.getPath());
+            Path levelPath = levelId.resolveAgainst(levelsDir);
             Files.createDirectories(levelPath);
             level.getValue().saveDebugReport(levelPath);
          }
@@ -1869,7 +1864,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
    private void dumpGameRules(final Path path) throws IOException {
       try (Writer output = Files.newBufferedWriter(path)) {
          final List<String> entries = Lists.newArrayList();
-         final GameRules gameRules = this.worldData.getGameRules();
+         final GameRules gameRules = this.getGameRules();
          gameRules.visitGameRuleTypes(new GameRuleTypeVisitor() {
             @Override
             public <T> void visit(final GameRule<T> gameRule) {
@@ -2119,7 +2114,26 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          });
       } else if (rule == GameRules.SPAWN_MONSTERS) {
          this.updateMobSpawningFlags();
+      } else if (rule == GameRules.ADVANCE_TIME) {
+         this.getPlayerList().broadcastAll(this.clockManager().createFullSyncPacket());
       }
+   }
+
+   @Deprecated
+   public GameRules getGlobalGameRules() {
+      return this.overworld().getGameRules();
+   }
+
+   public SavedDataStorage getDataStorage() {
+      return this.savedDataStorage;
+   }
+
+   public TimerQueue<MinecraftServer> getScheduledEvents() {
+      return this.scheduledEvents;
+   }
+
+   public GameRules getGameRules() {
+      return this.gameRules;
    }
 
    public boolean acceptsTransfers() {
@@ -2155,16 +2169,28 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
 
    @Override
    public void reportChunkLoadFailure(final Throwable throwable, final RegionStorageInfo storageInfo, final ChunkPos pos) {
-      LOGGER.error("Failed to load chunk {},{}", new Object[]{pos.x, pos.z, throwable});
+      LOGGER.error("Failed to load chunk {},{}", new Object[]{pos.x(), pos.z(), throwable});
       this.suppressedExceptions.addEntry("chunk/load", throwable);
       this.storeChunkIoError(CrashReport.forThrowable(throwable, "Chunk load failure"), pos, storageInfo);
+      this.warnOnLowDiskSpace();
    }
 
    @Override
    public void reportChunkSaveFailure(final Throwable throwable, final RegionStorageInfo storageInfo, final ChunkPos pos) {
-      LOGGER.error("Failed to save chunk {},{}", new Object[]{pos.x, pos.z, throwable});
+      LOGGER.error("Failed to save chunk {},{}", new Object[]{pos.x(), pos.z(), throwable});
       this.suppressedExceptions.addEntry("chunk/save", throwable);
       this.storeChunkIoError(CrashReport.forThrowable(throwable, "Chunk save failure"), pos, storageInfo);
+      this.warnOnLowDiskSpace();
+   }
+
+   protected void warnOnLowDiskSpace() {
+      if (this.storageSource.checkForLowDiskSpace()) {
+         this.sendLowDiskSpaceWarning();
+      }
+   }
+
+   public void sendLowDiskSpaceWarning() {
+      LOGGER.warn("Low disk space! Might not be able to save the world.");
    }
 
    public void reportPacketHandlingException(final Throwable throwable, final PacketType<?> packetType) {

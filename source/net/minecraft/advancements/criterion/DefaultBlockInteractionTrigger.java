@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
@@ -45,9 +47,9 @@ public class DefaultBlockInteractionTrigger extends SimpleCriterionTrigger<Defau
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         this.location.ifPresent(predicate -> validator.validate(predicate, LootContextParamSets.BLOCK_USE, "location"));
+         Validatable.validate(validator.context(LootContextParamSets.BLOCK_USE), "location", this.location);
       }
    }
 }

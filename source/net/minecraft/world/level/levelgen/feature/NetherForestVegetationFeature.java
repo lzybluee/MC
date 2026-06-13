@@ -34,7 +34,7 @@ public class NetherForestVegetationFeature extends Feature<NetherForestVegetatio
                random.nextInt(config.spreadHeight) - random.nextInt(config.spreadHeight),
                random.nextInt(config.spreadWidth) - random.nextInt(config.spreadWidth)
             );
-            BlockState state = config.stateProvider.getState(random, finalPos);
+            BlockState state = config.stateProvider.getState(level, random, finalPos);
             if (level.isEmptyBlock(finalPos) && finalPos.getY() > level.getMinY() && state.canSurvive(level, finalPos)) {
                level.setBlock(finalPos, state, 2);
                placed++;

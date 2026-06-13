@@ -254,10 +254,7 @@ public class CaveFeatures {
             20,
             2,
             BlockPredicate.allOf(
-               BlockPredicate.anyOf(
-                  BlockPredicate.matchesBlocks(List.of(Blocks.AIR, Blocks.CAVE_AIR, Blocks.VOID_AIR)),
-                  BlockPredicate.matchesTag(BlockTags.REPLACEABLE_BY_TREES)
-               ),
+               BlockPredicate.anyOf(BlockPredicate.ONLY_IN_AIR_PREDICATE, BlockPredicate.matchesTag(BlockTags.REPLACEABLE_BY_TREES)),
                BlockPredicate.matchesTag(Direction.DOWN.getUnitVec3i(), BlockTags.AZALEA_GROWS_ON)
             )
          )

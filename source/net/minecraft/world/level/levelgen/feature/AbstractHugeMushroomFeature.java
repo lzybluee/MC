@@ -11,12 +11,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 
 public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFeatureConfiguration> {
+   public static final int MIN_MUSHROOM_HEIGHT = 4;
+
    public AbstractHugeMushroomFeature(final Codec<HugeMushroomFeatureConfiguration> codec) {
       super(codec);
    }
 
    protected void placeTrunk(
-      final LevelAccessor level,
+      final WorldGenLevel level,
       final RandomSource random,
       final BlockPos origin,
       final HugeMushroomFeatureConfiguration config,
@@ -25,7 +27,7 @@ public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFe
    ) {
       for (int dy = 0; dy < treeHeight; dy++) {
          blockPos.set(origin).move(Direction.UP, dy);
-         this.placeMushroomBlock(level, blockPos, config.stemProvider.getState(random, origin));
+         this.placeMushroomBlock(level, blockPos, config.stemProvider().getState(level, random, origin));
       }
    }
 
@@ -46,7 +48,7 @@ public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFe
    }
 
    protected boolean isValidPosition(
-      final LevelAccessor level,
+      final WorldGenLevel level,
       final BlockPos origin,
       final int treeHeight,
       final BlockPos.MutableBlockPos blockPos,
@@ -54,13 +56,12 @@ public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFe
    ) {
       int y = origin.getY();
       if (y >= level.getMinY() + 1 && y + treeHeight + 1 <= level.getMaxY()) {
-         BlockState belowState = level.getBlockState(origin.below());
-         if (!isDirt(belowState) && !belowState.is(BlockTags.MUSHROOM_GROW_BLOCK)) {
+         if (!config.canPlaceOn().test(level, origin.below())) {
             return false;
          }
 
          for (int dy = 0; dy <= treeHeight; dy++) {
-            int radius = this.getTreeRadiusForHeight(-1, -1, config.foliageRadius, dy);
+            int radius = this.getTreeRadiusForHeight(-1, -1, config.foliageRadius(), dy);
 
             for (int dx = -radius; dx <= radius; dx++) {
                for (int dz = -radius; dz <= radius; dz++) {
@@ -98,7 +99,7 @@ public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFe
    protected abstract int getTreeRadiusForHeight(final int trunkHeight, final int treeHeight, final int leafRadius, final int yo);
 
    protected abstract void makeCap(
-      final LevelAccessor level,
+      final WorldGenLevel level,
       final RandomSource random,
       final BlockPos origin,
       final int treeHeight,

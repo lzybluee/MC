@@ -141,7 +141,7 @@ public class CaveWorldCarver extends WorldCarver<CaveCarverConfiguration> {
       final CarvingMask mask,
       final WorldCarver.CarveSkipChecker skipChecker
    ) {
-      RandomSource random = RandomSource.create(tunnelSeed);
+      RandomSource random = RandomSource.createThreadLocalInstance(tunnelSeed);
       int splitPoint = random.nextInt(dist / 2) + dist / 4;
       boolean steep = random.nextInt(6) == 0;
       float yRota = 0.0F;

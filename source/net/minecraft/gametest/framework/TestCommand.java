@@ -106,7 +106,7 @@ public class TestCommand {
          .toList();
 
       for (TestInstanceBlockEntity testInstanceBlockEntity : tests) {
-         StructureUtils.clearSpaceForStructure(testInstanceBlockEntity.getStructureBoundingBox(), level);
+         StructureUtils.clearSpaceForStructure(testInstanceBlockEntity.getTestBoundingBox(), level);
          testInstanceBlockEntity.removeBarriers();
          level.destroyBlock(testInstanceBlockEntity.getBlockPos(), false);
       }

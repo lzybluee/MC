@@ -3,6 +3,7 @@ package net.minecraft.world.entity;
 import java.util.Optional;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -11,11 +12,14 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -126,6 +130,13 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
    }
 
    protected void applyTamingSideEffects() {
+   }
+
+   protected void feed(final Player player, final InteractionHand hand, final ItemStack itemStack, final float healingFactor, final float defaultHeal) {
+      FoodProperties foodProperties = itemStack.get(DataComponents.FOOD);
+      this.usePlayerItem(player, hand, itemStack);
+      this.heal(foodProperties != null ? healingFactor * foodProperties.nutrition() : defaultHeal);
+      this.playEatingSound();
    }
 
    public boolean isInSittingPose() {

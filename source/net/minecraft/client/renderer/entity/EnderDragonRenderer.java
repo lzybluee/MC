@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.EnderDragonRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -28,12 +28,11 @@ import org.joml.Vector3f;
 public class EnderDragonRenderer extends EntityRenderer<EnderDragon, EnderDragonRenderState> {
    public static final Identifier CRYSTAL_BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/end_crystal/end_crystal_beam.png");
    private static final Identifier DRAGON_EXPLODING_LOCATION = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon_exploding.png");
-   private static final Identifier DRAGON_LOCATION = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon.png");
+   private static final Identifier DRAGON_TEXTURE_LOCATION = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon.png");
    private static final Identifier DRAGON_EYES_LOCATION = Identifier.withDefaultNamespace("textures/entity/enderdragon/dragon_eyes.png");
-   private static final RenderType RENDER_TYPE = RenderTypes.entityCutoutNoCull(DRAGON_LOCATION);
-   private static final RenderType DECAL = RenderTypes.entityDecal(DRAGON_LOCATION);
+   private static final RenderType DYING_RENDER_TYPE = RenderTypes.entityCutoutDissolve(DRAGON_TEXTURE_LOCATION, DRAGON_EXPLODING_LOCATION);
    private static final RenderType EYES = RenderTypes.eyes(DRAGON_EYES_LOCATION);
-   private static final RenderType BEAM = RenderTypes.entitySmoothCutout(CRYSTAL_BEAM_LOCATION);
+   private static final RenderType BEAM = RenderTypes.endCrystalBeam(CRYSTAL_BEAM_LOCATION);
    private static final float HALF_SQRT_3 = (float)(Math.sqrt(3.0) / 2.0);
    private final EnderDragonModel model;
 
@@ -56,24 +55,12 @@ public class EnderDragonRenderer extends EntityRenderer<EnderDragon, EnderDragon
       poseStack.translate(0.0F, -1.501F, 0.0F);
       int overlayCoords = OverlayTexture.pack(0.0F, state.hasRedOverlay);
       if (state.deathTime > 0.0F) {
-         int color = ARGB.white(state.deathTime / 200.0F);
-         submitNodeCollector.order(0)
-            .submitModel(
-               this.model,
-               state,
-               poseStack,
-               RenderTypes.dragonExplosionAlpha(DRAGON_EXPLODING_LOCATION),
-               state.lightCoords,
-               OverlayTexture.NO_OVERLAY,
-               color,
-               null,
-               state.outlineColor,
-               null
-            );
-         submitNodeCollector.order(1).submitModel(this.model, state, poseStack, DECAL, state.lightCoords, overlayCoords, -1, null, state.outlineColor, null);
+         int color = ARGB.white(1.0F - state.deathTime / 200.0F);
+         submitNodeCollector.submitModel(
+            this.model, state, poseStack, DYING_RENDER_TYPE, state.lightCoords, OverlayTexture.NO_OVERLAY, color, null, state.outlineColor, null
+         );
       } else {
-         submitNodeCollector.order(0)
-            .submitModel(this.model, state, poseStack, RENDER_TYPE, state.lightCoords, overlayCoords, -1, null, state.outlineColor, null);
+         submitNodeCollector.submitModel(this.model, state, poseStack, DRAGON_TEXTURE_LOCATION, state.lightCoords, overlayCoords, state.outlineColor, null);
       }
 
       submitNodeCollector.submitModel(this.model, state, poseStack, EYES, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
@@ -110,7 +97,7 @@ public class EnderDragonRenderer extends EntityRenderer<EnderDragon, EnderDragon
             float overDrive = Math.min(deathTime > 0.8F ? (deathTime - 0.8F) / 0.2F : 0.0F, 1.0F);
             int innerColor = ARGB.colorFromFloat(1.0F - overDrive, 1.0F, 1.0F, 1.0F);
             int outerColor = 16711935;
-            RandomSource random = RandomSource.create(432L);
+            RandomSource random = RandomSource.createThreadLocalInstance(432L);
             Vector3f origin = new Vector3f();
             Vector3f outerLeft = new Vector3f();
             Vector3f outerRight = new Vector3f();

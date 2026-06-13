@@ -47,7 +47,7 @@ public record ReplaceDisk(
       for (BlockPos pos : BlockPos.betweenClosed(centerBlock.offset(-dist, 0, -dist), centerBlock.offset(dist, Math.min(height - 1, 0), dist))) {
          if (pos.distToCenterSqr(position.x(), pos.getY() + 0.5, position.z()) < Mth.square(dist)
             && this.predicate.map(p -> p.test(serverLevel, pos)).orElse(true)
-            && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(random, pos))) {
+            && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(serverLevel, random, pos))) {
             this.triggerGameEvent.ifPresent(event -> serverLevel.gameEvent(entity, (Holder<GameEvent>)event, pos));
          }
       }

@@ -1,6 +1,7 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,6 +33,11 @@ public abstract class Behavior<E extends LivingEntity> implements BehaviorContro
    @Override
    public Behavior.Status getStatus() {
       return this.status;
+   }
+
+   @Override
+   public Set<MemoryModuleType<?>> getRequiredMemories() {
+      return this.entryCondition.keySet();
    }
 
    @Override

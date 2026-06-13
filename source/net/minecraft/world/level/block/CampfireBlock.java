@@ -126,7 +126,7 @@ public class CampfireBlock extends BaseEntityBlock implements SimpleWaterloggedB
    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
       LevelAccessor level = context.getLevel();
       BlockPos pos = context.getClickedPos();
-      boolean replacedWater = level.getFluidState(pos).getType() == Fluids.WATER;
+      boolean replacedWater = level.getFluidState(pos).is(Fluids.WATER);
       return this.defaultBlockState()
          .setValue(WATERLOGGED, replacedWater)
          .setValue(SIGNAL_FIRE, this.isSmokeSource(level.getBlockState(pos.below())))
@@ -201,7 +201,7 @@ public class CampfireBlock extends BaseEntityBlock implements SimpleWaterloggedB
 
    @Override
    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
-      if (!state.getValue(BlockStateProperties.WATERLOGGED) && fluidState.getType() == Fluids.WATER) {
+      if (!state.getValue(BlockStateProperties.WATERLOGGED) && fluidState.is(Fluids.WATER)) {
          boolean isLit = state.getValue(LIT);
          if (isLit) {
             if (!level.isClientSide()) {

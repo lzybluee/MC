@@ -119,7 +119,7 @@ public class BellBlockEntity extends BlockEntity {
 
    private static boolean areRaidersNearby(final BlockPos bellPos, final List<LivingEntity> nearbyEntities) {
       for (LivingEntity entity : nearbyEntities) {
-         if (entity.isAlive() && !entity.isRemoved() && bellPos.closerToCenterThan(entity.position(), 32.0) && entity.getType().is(EntityTypeTags.RAIDERS)) {
+         if (entity.isAlive() && !entity.isRemoved() && bellPos.closerToCenterThan(entity.position(), 32.0) && entity.is(EntityTypeTags.RAIDERS)) {
             return true;
          }
       }
@@ -155,7 +155,7 @@ public class BellBlockEntity extends BlockEntity {
    }
 
    private static boolean isRaiderWithinRange(final BlockPos blockPos, final LivingEntity entity) {
-      return entity.isAlive() && !entity.isRemoved() && blockPos.closerToCenterThan(entity.position(), 48.0) && entity.getType().is(EntityTypeTags.RAIDERS);
+      return entity.isAlive() && !entity.isRemoved() && blockPos.closerToCenterThan(entity.position(), 48.0) && entity.is(EntityTypeTags.RAIDERS);
    }
 
    private static void glow(final LivingEntity raider) {

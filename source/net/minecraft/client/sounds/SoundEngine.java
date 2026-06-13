@@ -6,6 +6,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.audio.Channel;
+import com.mojang.blaze3d.audio.DeviceList;
+import com.mojang.blaze3d.audio.DeviceTracker;
 import com.mojang.blaze3d.audio.Library;
 import com.mojang.blaze3d.audio.Listener;
 import com.mojang.blaze3d.audio.ListenerTransform;
@@ -15,10 +17,10 @@ import it.unimi.dsi.fastutil.objects.Object2FloatOpenHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Options;
@@ -48,7 +50,6 @@ public class SoundEngine {
    private static final float VOLUME_MAX = 1.0F;
    private static final int MIN_SOURCE_LIFETIME = 20;
    private static final Set<Identifier> ONLY_WARN_ONCE = Sets.newHashSet();
-   private static final long DEFAULT_DEVICE_CHECK_INTERVAL_MS = 1000L;
    public static final String MISSING_SOUND = "FOR THE DEBUG!";
    public static final String OPEN_AL_SOFT_PREFIX = "OpenAL Soft on ";
    public static final int OPEN_AL_SOFT_PREFIX_LENGTH = "OpenAL Soft on ".length();
@@ -61,8 +62,8 @@ public class SoundEngine {
    private final SoundEngineExecutor executor = new SoundEngineExecutor();
    private final ChannelAccess channelAccess = new ChannelAccess(this.library, this.executor);
    private int tickCount;
-   private long lastDeviceCheckTime;
-   private final AtomicReference<SoundEngine.DeviceCheckState> devicePoolState = new AtomicReference<>(SoundEngine.DeviceCheckState.NO_CHANGE);
+   private DeviceList lastSeenDevices;
+   private final DeviceTracker deviceTracker = Library.createDeviceTracker();
    private final Map<SoundInstance, ChannelAccess.ChannelHandle> instanceToChannel = Maps.newHashMap();
    private final Multimap<SoundSource, SoundInstance> instanceBySource = HashMultimap.create();
    private final Object2FloatMap<SoundSource> gainBySource = Util.make(new Object2FloatOpenHashMap(), map -> map.defaultReturnValue(1.0F));
@@ -77,6 +78,7 @@ public class SoundEngine {
       this.soundManager = soundManager;
       this.options = options;
       this.soundBuffers = new SoundBufferLibrary(resourceProvider);
+      this.lastSeenDevices = this.deviceTracker.currentDevices();
    }
 
    public void reload() {
@@ -100,7 +102,8 @@ public class SoundEngine {
       if (!this.loaded) {
          try {
             String soundDevice = this.options.soundDevice().get();
-            this.library.init("".equals(soundDevice) ? null : soundDevice, this.options.directionalAudio().get());
+            DeviceList currentDevices = this.deviceTracker.currentDevices();
+            this.library.init(Options.isSoundDeviceDefault(soundDevice) ? null : soundDevice, currentDevices, this.options.directionalAudio().get());
             this.listener.reset();
             this.soundBuffers.preload(this.preloadQueue).thenRun(this.preloadQueue::clear);
             this.loaded = true;
@@ -177,32 +180,36 @@ public class SoundEngine {
    private boolean shouldChangeDevice() {
       if (this.library.isCurrentDeviceDisconnected()) {
          LOGGER.info("Audio device was lost!");
+         this.deviceTracker.forceRefresh();
          return true;
       }
 
-      long now = Util.getMillis();
-      boolean doExpensiveChecks = now - this.lastDeviceCheckTime >= 1000L;
-      if (doExpensiveChecks) {
-         this.lastDeviceCheckTime = now;
-         if (this.devicePoolState.compareAndSet(SoundEngine.DeviceCheckState.NO_CHANGE, SoundEngine.DeviceCheckState.ONGOING)) {
-            String currentDevice = this.options.soundDevice().get();
-            Util.ioPool().execute(() -> {
-               if ("".equals(currentDevice)) {
-                  if (this.library.hasDefaultDeviceChanged()) {
-                     LOGGER.info("System default audio device has changed!");
-                     this.devicePoolState.compareAndSet(SoundEngine.DeviceCheckState.ONGOING, SoundEngine.DeviceCheckState.CHANGE_DETECTED);
-                  }
-               } else if (!this.library.getCurrentDeviceName().equals(currentDevice) && this.library.getAvailableSoundDevices().contains(currentDevice)) {
-                  LOGGER.info("Preferred audio device has become available!");
-                  this.devicePoolState.compareAndSet(SoundEngine.DeviceCheckState.ONGOING, SoundEngine.DeviceCheckState.CHANGE_DETECTED);
-               }
-
-               this.devicePoolState.compareAndSet(SoundEngine.DeviceCheckState.ONGOING, SoundEngine.DeviceCheckState.NO_CHANGE);
-            });
+      this.deviceTracker.tick();
+      boolean shouldChangeDevice = false;
+      DeviceList currentDevices = this.deviceTracker.currentDevices();
+      if (!currentDevices.equals(this.lastSeenDevices)) {
+         String currentDeviceName = this.library.currentDeviceName();
+         if (!currentDevices.allDevices().contains(currentDeviceName)) {
+            LOGGER.info("Current audio device has disapeared!");
+            shouldChangeDevice = true;
          }
+
+         String userSelectedDevice = this.options.soundDevice().get();
+         if (Options.isSoundDeviceDefault(userSelectedDevice)) {
+            String newDefault = currentDevices.defaultDevice();
+            if (!Objects.equals(currentDeviceName, newDefault)) {
+               LOGGER.info("System default audio device has changed!");
+               shouldChangeDevice = true;
+            }
+         } else if (!Objects.equals(currentDeviceName, userSelectedDevice) && currentDevices.allDevices().contains(userSelectedDevice)) {
+            LOGGER.info("Preferred audio device has become available!");
+            shouldChangeDevice = true;
+         }
+
+         this.lastSeenDevices = currentDevices;
       }
 
-      return this.devicePoolState.compareAndSet(SoundEngine.DeviceCheckState.CHANGE_DETECTED, SoundEngine.DeviceCheckState.NO_CHANGE);
+      return shouldChangeDevice;
    }
 
    public void tick(final boolean paused) {
@@ -506,22 +513,20 @@ public class SoundEngine {
       }
    }
 
-   public String getDebugString() {
-      return this.library.getDebugString();
+   public String getChannelDebugString() {
+      return this.library.getChannelDebugString();
+   }
+
+   public void getSoundCacheDebugStats(final SoundBufferLibrary.DebugOutput output) {
+      this.soundBuffers.enumerate(output);
    }
 
    public List<String> getAvailableSoundDevices() {
-      return this.library.getAvailableSoundDevices();
+      return this.deviceTracker.currentDevices().allDevices();
    }
 
    public ListenerTransform getListenerTransform() {
       return this.listener.getTransform();
-   }
-
-   private enum DeviceCheckState {
-      ONGOING,
-      CHANGE_DETECTED,
-      NO_CHANGE;
    }
 
    public enum PlayResult {

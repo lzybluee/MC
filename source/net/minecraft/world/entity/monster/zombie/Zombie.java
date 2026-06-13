@@ -22,12 +22,15 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ConversionParams;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -83,7 +86,9 @@ public class Zombie extends Monster {
    public static final int REINFORCEMENT_RANGE_MAX = 40;
    public static final int REINFORCEMENT_RANGE_MIN = 7;
    private static final int NOT_CONVERTING = -1;
-   private static final EntityDimensions BABY_DIMENSIONS = EntityType.ZOMBIE.getDimensions().scale(0.5F).withEyeHeight(0.93F);
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.99F)
+      .withEyeHeight(0.775F)
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, 0.0F, 0.1875F, 0.0F));
    private static final float BREAK_DOOR_CHANCE = 0.1F;
    private static final Predicate<Difficulty> DOOR_BREAKING_PREDICATE = d -> d == Difficulty.HARD;
    private static final boolean DEFAULT_BABY = false;
@@ -242,7 +247,7 @@ public class Zombie extends Monster {
       this.convertTo(
          zombieType,
          ConversionParams.single(this, true, true),
-         newZombie -> newZombie.handleAttributes(level.getCurrentDifficultyAt(newZombie.blockPosition()).getSpecialMultiplier())
+         newZombie -> newZombie.handleAttributes(level.getCurrentDifficultyAt(newZombie.blockPosition()).getSpecialMultiplier(), EntitySpawnReason.CONVERSION)
       );
    }
 
@@ -301,7 +306,7 @@ public class Zombie extends Monster {
             int zt = z + Mth.nextInt(this.random, 7, 40) * Mth.nextInt(this.random, -1, 1);
             BlockPos spawnPos = new BlockPos(xt, yt, zt);
             if (SpawnPlacements.isSpawnPositionOk(type, level, spawnPos)
-               && SpawnPlacements.checkSpawnRules(type, level, EntitySpawnReason.REINFORCEMENT, spawnPos, level.random)) {
+               && SpawnPlacements.checkSpawnRules(type, level, EntitySpawnReason.REINFORCEMENT, spawnPos, level.getRandom())) {
                reinforcement.setPos(xt, yt, zt);
                if (!level.hasNearbyAlivePlayer(xt, yt, zt, 7.0)
                   && level.isUnobstructed(reinforcement)
@@ -495,8 +500,16 @@ public class Zombie extends Monster {
          this.setDropChance(EquipmentSlot.HEAD, 0.0F);
       }
 
-      this.handleAttributes(difficultyModifier);
+      this.handleAttributes(difficultyModifier, spawnReason);
       return groupData;
+   }
+
+   @Override
+   protected void onOffspringSpawnedFromEgg(final Player spawner, final Mob offspring) {
+      if (this.level() instanceof ServerLevel serverLevel) {
+         float difficultyModifier = serverLevel.getCurrentDifficultyAt(offspring.blockPosition()).getSpecialMultiplier();
+         offspring.setCanPickUpLoot(this.random.nextFloat() < 0.55F * difficultyModifier);
+      }
    }
 
    @VisibleForTesting
@@ -513,7 +526,7 @@ public class Zombie extends Monster {
       return random.nextFloat() < 0.05F;
    }
 
-   protected void handleAttributes(final float difficultyModifier) {
+   protected void handleAttributes(final float difficultyModifier, final EntitySpawnReason spawnReason) {
       this.randomizeReinforcementsChance();
       this.getAttribute(Attributes.KNOCKBACK_RESISTANCE)
          .addOrReplacePermanentModifier(new AttributeModifier(RANDOM_SPAWN_BONUS_ID, this.random.nextDouble() * 0.05F, AttributeModifier.Operation.ADD_VALUE));
@@ -534,6 +547,10 @@ public class Zombie extends Monster {
             .addOrReplacePermanentModifier(
                new AttributeModifier(LEADER_ZOMBIE_BONUS_ID, this.random.nextDouble() * 3.0 + 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
             );
+         if (spawnReason != EntitySpawnReason.CONVERSION && spawnReason != EntitySpawnReason.LOAD && spawnReason != EntitySpawnReason.DIMENSION_TRAVEL) {
+            this.setHealth(this.getMaxHealth());
+         }
+
          this.setCanBreakDoors(true);
       }
    }
@@ -554,7 +571,7 @@ public class Zombie extends Monster {
 
       @Override
       public void playBreakSound(final Level level, final BlockPos pos) {
-         level.playSound(null, pos, SoundEvents.TURTLE_EGG_BREAK, SoundSource.BLOCKS, 0.7F, 0.9F + level.random.nextFloat() * 0.2F);
+         level.playSound(null, pos, SoundEvents.TURTLE_EGG_BREAK, SoundSource.BLOCKS, 0.7F, 0.9F + level.getRandom().nextFloat() * 0.2F);
       }
 
       @Override

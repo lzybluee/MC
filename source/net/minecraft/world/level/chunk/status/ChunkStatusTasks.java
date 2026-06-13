@@ -41,7 +41,7 @@ public class ChunkStatusTasks {
       final WorldGenContext context, final ChunkStep step, final StaticCache2D<GenerationChunkHolder> chunks, final ChunkAccess chunk
    ) {
       ServerLevel level = context.level();
-      if (level.getServer().getWorldData().worldGenOptions().generateStructures()) {
+      if (level.getServer().getWorldGenSettings().options().generateStructures()) {
          context.generator()
             .createStructures(
                level.registryAccess(),
@@ -177,7 +177,7 @@ public class ChunkStatusTasks {
       final WorldGenContext context, final ChunkStep step, final StaticCache2D<GenerationChunkHolder> chunks, final ChunkAccess chunk
    ) {
       ChunkPos pos = chunk.getPos();
-      GenerationChunkHolder holder = chunks.get(pos.x, pos.z);
+      GenerationChunkHolder holder = chunks.get(pos.x(), pos.z());
       return CompletableFuture.supplyAsync(() -> {
          ProtoChunk protoChunk = (ProtoChunk)chunk;
          ServerLevel level = context.level();

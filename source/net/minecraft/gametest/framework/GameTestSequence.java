@@ -26,6 +26,11 @@ public class GameTestSequence {
       return this;
    }
 
+   public GameTestSequence thenWaitAtLeast(final long minimumDelay, final Runnable assertion) {
+      this.events.add(GameTestEvent.createWithMinimumDelay(minimumDelay, assertion));
+      return this;
+   }
+
    public GameTestSequence thenIdle(final int delta) {
       return this.thenExecuteAfter(delta, () -> {});
    }
@@ -103,6 +108,11 @@ public class GameTestSequence {
          int delay = tick - this.lastTick;
          int prevTick = this.lastTick;
          this.lastTick = tick;
+         if (event.minimumDelay != null && event.minimumDelay > delay) {
+            this.parent.fail(new GameTestAssertException(Component.translatable("test.error.sequence.minimum_tick", prevTick + event.minimumDelay), tick));
+            break;
+         }
+
          if (event.expectedDelay != null && event.expectedDelay != delay) {
             this.parent.fail(new GameTestAssertException(Component.translatable("test.error.sequence.invalid_tick", prevTick + event.expectedDelay), tick));
             break;

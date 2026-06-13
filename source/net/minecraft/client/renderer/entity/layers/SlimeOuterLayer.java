@@ -33,16 +33,7 @@ public class SlimeOuterLayer extends RenderLayer<SlimeRenderState, SlimeModel> {
          if (appearsGlowingWithInvisibility) {
             submitNodeCollector.order(1)
                .submitModel(
-                  this.model,
-                  state,
-                  poseStack,
-                  RenderTypes.outline(SlimeRenderer.SLIME_LOCATION),
-                  lightCoords,
-                  overlayCoords,
-                  -1,
-                  null,
-                  state.outlineColor,
-                  null
+                  this.model, state, poseStack, RenderTypes.outline(SlimeRenderer.SLIME_LOCATION), lightCoords, overlayCoords, state.outlineColor, null
                );
          } else {
             submitNodeCollector.order(1)
@@ -53,8 +44,6 @@ public class SlimeOuterLayer extends RenderLayer<SlimeRenderState, SlimeModel> {
                   RenderTypes.entityTranslucent(SlimeRenderer.SLIME_LOCATION),
                   lightCoords,
                   overlayCoords,
-                  -1,
-                  null,
                   state.outlineColor,
                   null
                );

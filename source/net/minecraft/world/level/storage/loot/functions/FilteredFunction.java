@@ -5,14 +5,14 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.advancements.criterion.ItemPredicate;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class FilteredFunction extends LootItemConditionalFunction {
-   public static final MapCodec<FilteredFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<FilteredFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -37,8 +37,8 @@ public class FilteredFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<FilteredFunction> getType() {
-      return LootItemFunctions.FILTERED;
+   public MapCodec<FilteredFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -50,8 +50,8 @@ public class FilteredFunction extends LootItemConditionalFunction {
    @Override
    public void validate(final ValidationContext context) {
       super.validate(context);
-      this.onPass.ifPresent(f -> f.validate(context.forChild(new ProblemReporter.FieldPathElement("on_pass"))));
-      this.onFail.ifPresent(f -> f.validate(context.forChild(new ProblemReporter.FieldPathElement("on_fail"))));
+      Validatable.validate(context, "on_pass", this.onPass);
+      Validatable.validate(context, "on_fail", this.onFail);
    }
 
    public static FilteredFunction.Builder filtered(final ItemPredicate predicate) {

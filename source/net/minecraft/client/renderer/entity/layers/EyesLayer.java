@@ -18,7 +18,7 @@ public abstract class EyesLayer<S extends EntityRenderState, M extends EntityMod
       final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
    ) {
       submitNodeCollector.order(1)
-         .submitModel(this.getParentModel(), state, poseStack, this.renderType(), lightCoords, OverlayTexture.NO_OVERLAY, -1, null, state.outlineColor, null);
+         .submitModel(this.getParentModel(), state, poseStack, this.renderType(), lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
    }
 
    public abstract RenderType renderType();

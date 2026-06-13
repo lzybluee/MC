@@ -439,7 +439,7 @@ public abstract class BlockItemTagsProvider {
             Blocks.WAXED_WEATHERED_COPPER_TRAPDOOR,
             Blocks.WAXED_OXIDIZED_COPPER_TRAPDOOR
          );
-      this.tag(BlockTags.SMALL_FLOWERS, ItemTags.SMALL_FLOWERS).add(smallFlowersInteractingWithBees).add(Blocks.CLOSED_EYEBLOSSOM);
+      this.tag(BlockTags.SMALL_FLOWERS, ItemTags.SMALL_FLOWERS).add(smallFlowersInteractingWithBees).add(Blocks.CLOSED_EYEBLOSSOM, Blocks.GOLDEN_DANDELION);
       this.tag(BlockTags.FLOWERS, ItemTags.FLOWERS).addTag(BlockTags.SMALL_FLOWERS).add(otherFlowers);
       this.tag(BlockTags.BEDS, ItemTags.BEDS)
          .add(
@@ -491,19 +491,10 @@ public abstract class BlockItemTagsProvider {
       this.tag(BlockTags.COAL_ORES, ItemTags.COAL_ORES).add(Blocks.COAL_ORE, Blocks.DEEPSLATE_COAL_ORE);
       this.tag(BlockTags.EMERALD_ORES, ItemTags.EMERALD_ORES).add(Blocks.EMERALD_ORE, Blocks.DEEPSLATE_EMERALD_ORE);
       this.tag(BlockTags.COPPER_ORES, ItemTags.COPPER_ORES).add(Blocks.COPPER_ORE, Blocks.DEEPSLATE_COPPER_ORE);
-      this.tag(BlockTags.DIRT, ItemTags.DIRT)
-         .add(
-            Blocks.DIRT,
-            Blocks.GRASS_BLOCK,
-            Blocks.PODZOL,
-            Blocks.COARSE_DIRT,
-            Blocks.MYCELIUM,
-            Blocks.ROOTED_DIRT,
-            Blocks.MOSS_BLOCK,
-            Blocks.PALE_MOSS_BLOCK,
-            Blocks.MUD,
-            Blocks.MUDDY_MANGROVE_ROOTS
-         );
+      this.tag(BlockTags.DIRT, ItemTags.DIRT).add(Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT);
+      this.tag(BlockTags.MUD, ItemTags.MUD).add(Blocks.MUD, Blocks.MUDDY_MANGROVE_ROOTS);
+      this.tag(BlockTags.MOSS_BLOCKS, ItemTags.MOSS_BLOCKS).add(Blocks.MOSS_BLOCK, Blocks.PALE_MOSS_BLOCK);
+      this.tag(BlockTags.GRASS_BLOCKS, ItemTags.GRASS_BLOCKS).add(Blocks.GRASS_BLOCK, Blocks.PODZOL, Blocks.MYCELIUM);
       this.tag(BlockTags.TERRACOTTA, ItemTags.TERRACOTTA)
          .add(
             Blocks.TERRACOTTA,

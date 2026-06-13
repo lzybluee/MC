@@ -2,6 +2,7 @@ package net.minecraft.world.item.slot;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -13,7 +14,7 @@ public interface SlotCollection {
 
    Stream<ItemStack> itemCopies();
 
-   default SlotCollection filter(final Predicate<ItemStack> predicate) {
+   default SlotCollection filter(final Predicate<? super ItemStack> predicate) {
       return new SlotCollection.Filtered(this, predicate);
    }
 
@@ -50,15 +51,16 @@ public interface SlotCollection {
       };
    }
 
-   record Filtered(SlotCollection slots, Predicate<ItemStack> filter) implements SlotCollection {
+   record Filtered(SlotCollection slots, Predicate<? super ItemStack> filter) implements SlotCollection {
       @Override
       public Stream<ItemStack> itemCopies() {
          return this.slots.itemCopies().filter(this.filter);
       }
 
       @Override
-      public SlotCollection filter(final Predicate<ItemStack> predicate) {
-         return new SlotCollection.Filtered(this.slots, this.filter.and(predicate));
+      public SlotCollection filter(final Predicate<? super ItemStack> predicate) {
+         Objects.requireNonNull(predicate);
+         return new SlotCollection.Filtered(this.slots, t -> this.filter.test(t) && predicate.test(t));
       }
    }
 

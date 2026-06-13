@@ -129,7 +129,7 @@ public class ShelfBlock extends BaseEntityBlock implements SelectableSlotContain
       return this.defaultBlockState()
          .setValue(FACING, context.getHorizontalDirection().getOpposite())
          .setValue(POWERED, context.getLevel().hasNeighborSignal(context.getClickedPos()))
-         .setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+         .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
    }
 
    @Override

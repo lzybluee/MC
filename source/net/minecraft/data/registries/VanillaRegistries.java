@@ -25,12 +25,17 @@ import net.minecraft.network.chat.ChatType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.dialog.Dialogs;
 import net.minecraft.util.Util;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.animal.chicken.ChickenSoundVariants;
 import net.minecraft.world.entity.animal.chicken.ChickenVariants;
+import net.minecraft.world.entity.animal.cow.CowSoundVariants;
 import net.minecraft.world.entity.animal.cow.CowVariants;
+import net.minecraft.world.entity.animal.feline.CatSoundVariants;
 import net.minecraft.world.entity.animal.feline.CatVariants;
 import net.minecraft.world.entity.animal.frog.FrogVariants;
 import net.minecraft.world.entity.animal.nautilus.ZombieNautilusVariants;
+import net.minecraft.world.entity.animal.pig.PigSoundVariants;
 import net.minecraft.world.entity.animal.pig.PigVariants;
 import net.minecraft.world.entity.animal.wolf.WolfSoundVariants;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
@@ -41,6 +46,8 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.providers.VanillaEnchantmentProviders;
 import net.minecraft.world.item.equipment.trim.TrimMaterials;
 import net.minecraft.world.item.equipment.trim.TrimPatterns;
+import net.minecraft.world.item.trading.TradeSets;
+import net.minecraft.world.item.trading.VillagerTrades;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
 import net.minecraft.world.level.block.entity.BannerPatterns;
@@ -84,15 +91,22 @@ public class VanillaRegistries {
       .add(Registries.JUKEBOX_SONG, JukeboxSongs::bootstrap)
       .add(Registries.INSTRUMENT, Instruments::bootstrap)
       .add(Registries.PIG_VARIANT, PigVariants::bootstrap)
+      .add(Registries.PIG_SOUND_VARIANT, PigSoundVariants::bootstrap)
       .add(Registries.COW_VARIANT, CowVariants::bootstrap)
+      .add(Registries.COW_SOUND_VARIANT, CowSoundVariants::bootstrap)
       .add(Registries.CHICKEN_VARIANT, ChickenVariants::bootstrap)
+      .add(Registries.CHICKEN_SOUND_VARIANT, ChickenSoundVariants::bootstrap)
       .add(Registries.ZOMBIE_NAUTILUS_VARIANT, ZombieNautilusVariants::bootstrap)
       .add(Registries.TEST_ENVIRONMENT, GameTestEnvironments::bootstrap)
       .add(Registries.TEST_INSTANCE, GameTestInstances::bootstrap)
       .add(Registries.FROG_VARIANT, FrogVariants::bootstrap)
       .add(Registries.CAT_VARIANT, CatVariants::bootstrap)
+      .add(Registries.CAT_SOUND_VARIANT, CatSoundVariants::bootstrap)
       .add(Registries.DIALOG, Dialogs::bootstrap)
-      .add(Registries.TIMELINE, Timelines::bootstrap);
+      .add(Registries.WORLD_CLOCK, WorldClocks::bootstrap)
+      .add(Registries.TIMELINE, Timelines::bootstrap)
+      .add(Registries.VILLAGER_TRADE, VillagerTrades::bootstrap)
+      .add(Registries.TRADE_SET, TradeSets::bootstrap);
 
    private static void validateThatAllBiomeFeaturesHaveBiomeFilter(final HolderLookup.Provider provider) {
       validateThatAllBiomeFeaturesHaveBiomeFilter(provider.lookupOrThrow(Registries.PLACED_FEATURE), provider.lookupOrThrow(Registries.BIOME));

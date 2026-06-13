@@ -21,10 +21,10 @@ public class SpearUseGoal<T extends Monster> extends Goal {
    private static final double MAX_FLEEING_TIME = reducedTickDelay(100);
    private final T mob;
    private SpearUseGoal.@Nullable SpearUseState state;
-   double speedModifierWhenCharging;
-   double speedModifierWhenRepositioning;
-   float approachDistanceSq;
-   float targetInRangeRadiusSq;
+   private final double speedModifierWhenCharging;
+   private final double speedModifierWhenRepositioning;
+   private final float approachDistanceSq;
+   private final float targetInRangeRadiusSq;
 
    public SpearUseGoal(
       final T mob,

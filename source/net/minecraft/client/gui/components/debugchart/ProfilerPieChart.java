@@ -2,10 +2,11 @@ package net.minecraft.client.gui.components.debugchart;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.profiling.ProfileResults;
 import net.minecraft.util.profiling.ResultField;
 import org.jspecify.annotations.Nullable;
@@ -13,7 +14,10 @@ import org.jspecify.annotations.Nullable;
 public class ProfilerPieChart {
    public static final int RADIUS = 105;
    public static final int PIE_CHART_THICKNESS = 10;
+   private static final DecimalFormat PERCENTAGE_FORMAT = new DecimalFormat("##0.00", DecimalFormatSymbols.getInstance(Locale.ROOT));
    private static final int MARGIN = 5;
+   private static final int WIDTH = 260;
+   private static final int SUBSEQUENT_LINES_INDENT = 10;
    private final Font font;
    private @Nullable ProfileResults profilerPieChartResults;
    private String profilerTreePath = "root";
@@ -31,38 +35,41 @@ public class ProfilerPieChart {
       this.bottomOffset = bottomOffset;
    }
 
-   public void render(final GuiGraphics graphics) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics) {
       if (this.profilerPieChartResults != null) {
          List<ResultField> list = this.profilerPieChartResults.getTimes(this.profilerTreePath);
-         ResultField rootNode = list.removeFirst();
-         int chartCenterX = graphics.guiWidth() - 105 - 10;
-         int left = chartCenterX - 105;
-         int right = chartCenterX + 105;
+         ResultField currentNode = list.removeFirst();
+         int chartCenterX = graphics.guiWidth() - 130 - 10;
+         int left = chartCenterX - 130;
+         int right = chartCenterX + 130;
          int textUnderChartHeight = list.size() * 9;
          int bottom = graphics.guiHeight() - this.bottomOffset - 5;
          int textStartY = bottom - textUnderChartHeight;
          int chartHalfSizeY = 62;
          int chartCenterY = textStartY - 62 - 5;
-         graphics.fill(left - 5, chartCenterY - 62 - 5, right + 5, bottom + 5, -1873784752);
-         graphics.submitProfilerChartRenderState(list, left, chartCenterY - 62 + 10, right, chartCenterY + 62);
-         DecimalFormat format = new DecimalFormat("##0.00", DecimalFormatSymbols.getInstance(Locale.ROOT));
-         String rootNodeName = ProfileResults.demanglePath(rootNode.name);
-         String topText = "";
-         if (!"unspecified".equals(rootNodeName)) {
-            topText = topText + "[0] ";
+         String globalPercentage = PERCENTAGE_FORMAT.format(currentNode.globalPercentage) + "%";
+         int globalPercentageWidth = this.font.width(globalPercentage);
+         int zeroPrefixWidth = this.font.width("[0] ");
+         int topTextMaxWidth = right - globalPercentageWidth - 5 - left - zeroPrefixWidth;
+         String currentNodeName = ProfileResults.demanglePath(currentNode.name);
+         List<String> currentNodeNameLines = this.splitNodeName(currentNodeName, topTextMaxWidth, topTextMaxWidth - 10);
+         int currentNodeNameTop = chartCenterY - 62 - (currentNodeNameLines.size() - 1) * 9;
+         graphics.fill(left - 5, currentNodeNameTop - 5, right + 5, bottom + 5, -1873784752);
+         graphics.profilerChart(list, left, chartCenterY - 62 + 10, right, chartCenterY + 62);
+         String firstLineText = "";
+         if (!"unspecified".equals(currentNodeName) && !"root".equals(currentNodeName)) {
+            firstLineText = firstLineText + "[0] ";
          }
 
-         if (rootNodeName.isEmpty()) {
-            topText = topText + "ROOT ";
-         } else {
-            topText = topText + rootNodeName + " ";
-         }
-
+         firstLineText = firstLineText + currentNodeNameLines.getFirst();
          int col = -1;
-         int topTextY = chartCenterY - 62;
-         graphics.drawString(this.font, topText, left, topTextY, -1);
-         topText = format.format(rootNode.globalPercentage) + "%";
-         graphics.drawString(this.font, topText, right - this.font.width(topText), topTextY, -1);
+         graphics.text(this.font, firstLineText, left, currentNodeNameTop, -1);
+
+         for (int i = 1; i < currentNodeNameLines.size(); i++) {
+            graphics.text(this.font, currentNodeNameLines.get(i), left + 10 + zeroPrefixWidth, currentNodeNameTop + i * 9, -1);
+         }
+
+         graphics.text(this.font, globalPercentage, right - globalPercentageWidth, currentNodeNameTop, -1);
 
          for (int i = 0; i < list.size(); i++) {
             ResultField result = list.get(i);
@@ -75,13 +82,45 @@ public class ProfilerPieChart {
 
             String msg = string.append(result.name).toString();
             int textY = textStartY + i * 9;
-            graphics.drawString(this.font, msg, left, textY, result.getColor());
-            msg = format.format(result.percentage) + "%";
-            graphics.drawString(this.font, msg, right - 50 - this.font.width(msg), textY, result.getColor());
-            msg = format.format(result.globalPercentage) + "%";
-            graphics.drawString(this.font, msg, right - this.font.width(msg), textY, result.getColor());
+            graphics.text(this.font, msg, left, textY, result.getColor());
+            msg = PERCENTAGE_FORMAT.format(result.percentage) + "%";
+            graphics.text(this.font, msg, right - 50 - this.font.width(msg), textY, result.getColor());
+            msg = PERCENTAGE_FORMAT.format(result.globalPercentage) + "%";
+            graphics.text(this.font, msg, right - this.font.width(msg), textY, result.getColor());
          }
       }
+   }
+
+   private List<String> splitNodeName(final String nodeName, final int firstLineMaxWidth, final int maxWidth) {
+      String[] nodeNameSplit = nodeName.split("\\.");
+      List<String> lines = new ArrayList<>();
+      String currentLine = "";
+      int nameIndex = 0;
+
+      while (nameIndex < nodeNameSplit.length) {
+         String currentName = nodeNameSplit[nameIndex];
+         String currentNameWithPeriod = (nameIndex != 0 ? "." : "") + currentName;
+         String newLine = currentLine + currentNameWithPeriod;
+         int newWidth = this.font.width(newLine);
+         if (newWidth > (!lines.isEmpty() ? maxWidth : firstLineMaxWidth)) {
+            if (currentLine.isEmpty()) {
+               lines.add(currentNameWithPeriod);
+               nameIndex++;
+            } else {
+               lines.add(currentLine);
+               currentLine = "";
+            }
+         } else {
+            currentLine = newLine;
+            nameIndex++;
+         }
+      }
+
+      if (!currentLine.isEmpty()) {
+         lines.add(currentLine);
+      }
+
+      return lines;
    }
 
    public void profilerPieChartKeyPress(int key) {

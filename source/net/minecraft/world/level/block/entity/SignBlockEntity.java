@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -46,7 +47,7 @@ public class SignBlockEntity extends BlockEntity {
       this(BlockEntityType.SIGN, worldPosition, blockState);
    }
 
-   public SignBlockEntity(final BlockEntityType type, final BlockPos worldPosition, final BlockState blockState) {
+   public SignBlockEntity(final BlockEntityType<? extends SignBlockEntity> type, final BlockPos worldPosition, final BlockState blockState) {
       super(type, worldPosition, blockState);
       this.frontText = this.createDefaultSignText();
       this.backText = this.createDefaultSignText();
@@ -118,7 +119,7 @@ public class SignBlockEntity extends BlockEntity {
    private Component loadLine(final Component component) {
       if (this.level instanceof ServerLevel serverLevel) {
          try {
-            return ComponentUtils.updateForEntity(createCommandSourceStack(null, serverLevel, this.worldPosition), component, null, 0);
+            return ComponentUtils.resolve(ResolutionContext.create(createCommandSourceStack(null, serverLevel, this.worldPosition)), component);
          } catch (CommandSyntaxException var4) {
          }
       }

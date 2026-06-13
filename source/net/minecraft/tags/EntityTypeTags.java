@@ -51,6 +51,7 @@ public interface EntityTypeTags {
    TagKey<EntityType<?>> CANDIDATE_FOR_IRON_GOLEM_GIFT = create("candidate_for_iron_golem_gift");
    TagKey<EntityType<?>> NAUTILUS_HOSTILES = create("nautilus_hostiles");
    TagKey<EntityType<?>> CAN_FLOAT_WHILE_RIDDEN = create("can_float_while_ridden");
+   TagKey<EntityType<?>> CANNOT_BE_AGE_LOCKED = create("cannot_be_age_locked");
 
    private static TagKey<EntityType<?>> create(final String name) {
       return TagKey.create(Registries.ENTITY_TYPE, Identifier.withDefaultNamespace(name));

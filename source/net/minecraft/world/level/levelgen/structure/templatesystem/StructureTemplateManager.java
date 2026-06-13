@@ -1,67 +1,55 @@
 package net.minecraft.world.level.levelgen.structure.templatesystem;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.collect.ImmutableList.Builder;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.logging.LogUtils;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
-import net.minecraft.IdentifierException;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.structures.NbtToSnbt;
 import net.minecraft.gametest.framework.StructureUtils;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.util.FastBufferedInputStream;
 import net.minecraft.util.FileUtil;
-import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.DirectoryTemplateSource;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.ResourceManagerTemplateSource;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.TemplatePathFactory;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.TemplateSource;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
-import org.apache.commons.io.IOUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class StructureTemplateManager {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final String STRUCTURE_RESOURCE_DIRECTORY_NAME = "structure";
-   private static final String STRUCTURE_GENERATED_DIRECTORY_NAME = "structures";
    private static final String STRUCTURE_FILE_EXTENSION = ".nbt";
    private static final String STRUCTURE_TEXT_FILE_EXTENSION = ".snbt";
-   private final Map<Identifier, Optional<StructureTemplate>> structureRepository = Maps.newConcurrentMap();
-   private final DataFixer fixerUpper;
-   private ResourceManager resourceManager;
-   private final Path generatedDir;
-   private final List<StructureTemplateManager.Source> sources;
-   private final HolderGetter<Block> blockLookup;
-   private static final FileToIdConverter RESOURCE_LISTER = new FileToIdConverter("structure", ".nbt");
+   public static final String STRUCTURE_DIRECTORY_NAME = "structure";
+   public static final FileToIdConverter WORLD_STRUCTURE_LISTER = new FileToIdConverter("structure", ".nbt");
+   private static final FileToIdConverter WORLD_TEXT_STRUCTURE_LISTER = new FileToIdConverter("structure", ".snbt");
+   private static final FileToIdConverter RESOURCE_STRUCTURE_LISTER = new FileToIdConverter("structure", ".nbt");
+   public static final FileToIdConverter RESOURCE_TEXT_STRUCTURE_LISTER = new FileToIdConverter("structure", ".snbt");
+   private final Map<Identifier, Optional<StructureTemplate>> structureRepository = new ConcurrentHashMap<>();
+   private final ResourceManagerTemplateSource resourceManagerSource;
+   private final List<TemplateSource> sources;
+   private final TemplatePathFactory worldTemplates;
+   private final @Nullable TemplatePathFactory testTemplates;
 
    public StructureTemplateManager(
       final ResourceManager resourceManager,
@@ -69,18 +57,27 @@ public class StructureTemplateManager {
       final DataFixer fixerUpper,
       final HolderGetter<Block> blockLookup
    ) {
-      this.resourceManager = resourceManager;
-      this.fixerUpper = fixerUpper;
-      this.generatedDir = storage.getLevelPath(LevelResource.GENERATED_DIR).normalize();
-      this.blockLookup = blockLookup;
-      Builder<StructureTemplateManager.Source> builder = ImmutableList.builder();
-      builder.add(new StructureTemplateManager.Source(this::loadFromGenerated, this::listGenerated));
-      if (SharedConstants.IS_RUNNING_IN_IDE) {
-         builder.add(new StructureTemplateManager.Source(this::loadFromTestStructures, this::listTestStructures));
+      this.resourceManagerSource = new ResourceManagerTemplateSource(fixerUpper, blockLookup, resourceManager, RESOURCE_STRUCTURE_LISTER);
+      Path generatedDir = storage.getLevelPath(LevelResource.GENERATED_DIR).normalize();
+      this.worldTemplates = new TemplatePathFactory(generatedDir);
+      if (StructureUtils.testStructuresTargetDir != null) {
+         this.testTemplates = new TemplatePathFactory(StructureUtils.testStructuresTargetDir, PackType.SERVER_DATA);
+      } else {
+         this.testTemplates = null;
       }
 
-      builder.add(new StructureTemplateManager.Source(this::loadFromResource, this::listResources));
-      this.sources = builder.build();
+      Builder<TemplateSource> sources = ImmutableList.builder();
+      sources.add(new DirectoryTemplateSource(fixerUpper, blockLookup, generatedDir, WORLD_STRUCTURE_LISTER, false));
+      if (StructureUtils.testStructuresSourceDir != null) {
+         sources.add(
+            new DirectoryTemplateSource(
+               fixerUpper, blockLookup, StructureUtils.testStructuresSourceDir, PackType.SERVER_DATA, RESOURCE_TEXT_STRUCTURE_LISTER, true
+            )
+         );
+      }
+
+      sources.add(this.resourceManagerSource);
+      this.sources = sources.build();
    }
 
    public StructureTemplate getOrCreate(final Identifier id) {
@@ -99,13 +96,13 @@ public class StructureTemplateManager {
    }
 
    public Stream<Identifier> listTemplates() {
-      return this.sources.stream().flatMap(s -> s.lister().get()).distinct();
+      return this.sources.stream().flatMap(TemplateSource::list).distinct();
    }
 
    private Optional<StructureTemplate> tryLoad(final Identifier id) {
-      for (StructureTemplateManager.Source source : this.sources) {
+      for (TemplateSource source : this.sources) {
          try {
-            Optional<StructureTemplate> loaded = source.loader().apply(id);
+            Optional<StructureTemplate> loaded = source.load(id);
             if (loaded.isPresent()) {
                return loaded;
             }
@@ -117,197 +114,62 @@ public class StructureTemplateManager {
    }
 
    public void onResourceManagerReload(final ResourceManager resourceManager) {
-      this.resourceManager = resourceManager;
+      this.resourceManagerSource.setResourceManager(resourceManager);
       this.structureRepository.clear();
    }
 
-   private Optional<StructureTemplate> loadFromResource(final Identifier id) {
-      Identifier identifier = RESOURCE_LISTER.idToFile(id);
-      return this.load(() -> this.resourceManager.open(identifier), e -> LOGGER.error("Couldn't load structure {}", id, e));
-   }
-
-   private Stream<Identifier> listResources() {
-      return RESOURCE_LISTER.listMatchingResources(this.resourceManager).keySet().stream().map(RESOURCE_LISTER::fileToId);
-   }
-
-   private Optional<StructureTemplate> loadFromTestStructures(final Identifier id) {
-      return this.loadFromSnbt(id, StructureUtils.testStructuresDir);
-   }
-
-   private Stream<Identifier> listTestStructures() {
-      if (!Files.isDirectory(StructureUtils.testStructuresDir)) {
-         return Stream.empty();
-      }
-
-      List<Identifier> result = new ArrayList<>();
-      this.listFolderContents(StructureUtils.testStructuresDir, "minecraft", ".snbt", result::add);
-      return result.stream();
-   }
-
-   private Optional<StructureTemplate> loadFromGenerated(final Identifier id) {
-      if (!Files.isDirectory(this.generatedDir)) {
-         return Optional.empty();
-      }
-
-      Path file = this.createAndValidatePathToGeneratedStructure(id, ".nbt");
-      return this.load(() -> new FileInputStream(file.toFile()), e -> LOGGER.error("Couldn't load structure from {}", file, e));
-   }
-
-   private Stream<Identifier> listGenerated() {
-      if (!Files.isDirectory(this.generatedDir)) {
-         return Stream.empty();
-      }
-
-      try {
-         List<Identifier> result = new ArrayList<>();
-
-         try (DirectoryStream<Path> contents = Files.newDirectoryStream(this.generatedDir, x$0 -> Files.isDirectory(x$0))) {
-            for (Path namespaceDir : contents) {
-               String namespace = namespaceDir.getFileName().toString();
-               Path structureDir = namespaceDir.resolve("structures");
-               this.listFolderContents(structureDir, namespace, ".nbt", result::add);
-            }
-         }
-
-         return result.stream();
-      } catch (IOException e) {
-         return Stream.empty();
-      }
-   }
-
-   private void listFolderContents(final Path folder, final String namespace, final String extension, final Consumer<Identifier> output) {
-      int extensionLength = extension.length();
-      Function<String, String> pathProcessor = s -> s.substring(0, s.length() - extensionLength);
-
-      try (Stream<Path> contents = Files.find(
-            folder, Integer.MAX_VALUE, (path, attributes) -> attributes.isRegularFile() && path.toString().endsWith(extension)
-         )) {
-         contents.forEach(file -> {
-            try {
-               output.accept(Identifier.fromNamespaceAndPath(namespace, pathProcessor.apply(this.relativize(folder, file))));
-            } catch (IdentifierException e) {
-               LOGGER.error("Invalid location while listing folder {} contents", folder, ex);
-            }
-         });
-      } catch (IOException e) {
-         LOGGER.error("Failed to list folder {} contents", folder, e);
-      }
-   }
-
-   private String relativize(final Path root, final Path file) {
-      return root.relativize(file).toString().replace(File.separator, "/");
-   }
-
-   private Optional<StructureTemplate> loadFromSnbt(final Identifier id, final Path dir) {
-      if (!Files.isDirectory(dir)) {
-         return Optional.empty();
-      }
-
-      Path file = FileUtil.createPathToResource(dir, id.getPath(), ".snbt");
-
-      try (BufferedReader reader = Files.newBufferedReader(file)) {
-         String input = IOUtils.toString(reader);
-         return Optional.of(this.readStructure(NbtUtils.snbtToStructure(input)));
-      } catch (NoSuchFileException e) {
-         return Optional.empty();
-      } catch (IOException | CommandSyntaxException e) {
-         LOGGER.error("Couldn't load structure from {}", file, e);
-         return Optional.empty();
-      }
-   }
-
-   private Optional<StructureTemplate> load(final StructureTemplateManager.InputStreamOpener opener, final Consumer<Throwable> onError) {
-      try (
-         InputStream rawInput = opener.open();
-         InputStream input = new FastBufferedInputStream(rawInput);
-      ) {
-         return Optional.of(this.readStructure(input));
-      } catch (FileNotFoundException e) {
-         return Optional.empty();
-      } catch (Throwable e) {
-         onError.accept(e);
-         return Optional.empty();
-      }
-   }
-
-   private StructureTemplate readStructure(final InputStream input) throws IOException {
-      CompoundTag tag = NbtIo.readCompressed(input, NbtAccounter.unlimitedHeap());
-      return this.readStructure(tag);
-   }
-
-   public StructureTemplate readStructure(final CompoundTag tag) {
-      StructureTemplate structureTemplate = new StructureTemplate();
-      int version = NbtUtils.getDataVersion(tag, 500);
-      structureTemplate.load(this.blockLookup, DataFixTypes.STRUCTURE.updateToCurrentVersion(this.fixerUpper, tag, version));
-      return structureTemplate;
-   }
-
    public boolean save(final Identifier id) {
-      Optional<StructureTemplate> maybeStructureTemplate = this.structureRepository.get(id);
-      if (maybeStructureTemplate.isEmpty()) {
+      Optional<StructureTemplate> structureTemplate = this.structureRepository.get(id);
+      if (structureTemplate.isEmpty()) {
          return false;
       }
 
-      StructureTemplate structureTemplate = maybeStructureTemplate.get();
-      Path file = this.createAndValidatePathToGeneratedStructure(id, SharedConstants.DEBUG_SAVE_STRUCTURES_AS_SNBT ? ".snbt" : ".nbt");
+      Path file;
+      boolean saveAsText;
+      if (SharedConstants.DEBUG_SAVE_STRUCTURES_AS_SNBT) {
+         file = this.worldTemplates.createAndValidatePathToStructure(id, WORLD_TEXT_STRUCTURE_LISTER);
+         saveAsText = true;
+      } else {
+         file = this.worldTemplates.createAndValidatePathToStructure(id, WORLD_STRUCTURE_LISTER);
+         saveAsText = false;
+      }
+
+      try {
+         return save(file, structureTemplate.get(), saveAsText);
+      } catch (Exception e) {
+         LOGGER.warn("Failed to save structure file {} to {}", new Object[]{id, file, e});
+         return false;
+      }
+   }
+
+   public static boolean save(final Path file, final StructureTemplate structureTemplate, final boolean asText) throws IOException {
       Path parent = file.getParent();
       if (parent == null) {
          return false;
       }
 
-      try {
-         Files.createDirectories(Files.exists(parent) ? parent.toRealPath() : parent);
-      } catch (IOException e) {
-         LOGGER.error("Failed to create parent directory: {}", parent);
-         return false;
-      }
-
+      FileUtil.createDirectoriesSafe(parent);
       CompoundTag tag = structureTemplate.save(new CompoundTag());
-      if (SharedConstants.DEBUG_SAVE_STRUCTURES_AS_SNBT) {
-         try {
-            NbtToSnbt.writeSnbt(CachedOutput.NO_CACHE, file, NbtUtils.structureToSnbt(tag));
-         } catch (Throwable ignored) {
-            return false;
-         }
+      if (asText) {
+         NbtToSnbt.writeSnbt(CachedOutput.NO_CACHE, file, NbtUtils.structureToSnbt(tag));
       } else {
          try (OutputStream output = new FileOutputStream(file.toFile())) {
             NbtIo.writeCompressed(tag, output);
-         } catch (Throwable ignored) {
-            return false;
          }
       }
 
       return true;
    }
 
-   public Path createAndValidatePathToGeneratedStructure(final Identifier id, final String extension) {
-      if (id.getPath().contains("//")) {
-         throw new IdentifierException("Invalid resource path: " + id);
-      }
+   public TemplatePathFactory worldTemplates() {
+      return this.worldTemplates;
+   }
 
-      try {
-         Path namespaceDir = this.generatedDir.resolve(id.getNamespace());
-         Path structureDir = namespaceDir.resolve("structures");
-         Path pathToResource = FileUtil.createPathToResource(structureDir, id.getPath(), extension);
-         if (pathToResource.startsWith(this.generatedDir) && FileUtil.isPathNormalized(pathToResource) && FileUtil.isPathPortable(pathToResource)) {
-            return pathToResource;
-         } else {
-            throw new IdentifierException("Invalid resource path: " + pathToResource);
-         }
-      } catch (InvalidPathException e) {
-         throw new IdentifierException("Invalid resource path: " + id, e);
-      }
+   public @Nullable TemplatePathFactory testTemplates() {
+      return this.testTemplates;
    }
 
    public void remove(final Identifier id) {
       this.structureRepository.remove(id);
-   }
-
-   @FunctionalInterface
-   private interface InputStreamOpener {
-      InputStream open() throws IOException;
-   }
-
-   private record Source(Function<Identifier, Optional<StructureTemplate>> loader, Supplier<Stream<Identifier>> lister) {
    }
 }

@@ -4,7 +4,7 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -133,7 +133,7 @@ public class OverlayRecipeComponent implements GuiEventListener, Renderable {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.isVisible) {
          int maxRow = this.recipeButtons.size() <= 16 ? 4 : 5;
          int width = Math.min(this.recipeButtons.size(), maxRow);
@@ -142,7 +142,7 @@ public class OverlayRecipeComponent implements GuiEventListener, Renderable {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, OVERLAY_RECIPE_SPRITE, this.x, this.y, width * 25 + 8, height * 25 + 8);
 
          for (OverlayRecipeComponent.OverlayRecipeButton component : this.recipeButtons) {
-            component.render(graphics, mouseX, mouseY, a);
+            component.extractRenderState(graphics, mouseX, mouseY, a);
          }
       }
    }
@@ -243,7 +243,7 @@ public class OverlayRecipeComponent implements GuiEventListener, Renderable {
       }
 
       @Override
-      public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+      public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(this.isCraftable), this.getX(), this.getY(), this.width, this.height);
          float gridPosX = this.getX() + 2;
          float gridPosY = this.getY() + 2;
@@ -253,7 +253,7 @@ public class OverlayRecipeComponent implements GuiEventListener, Renderable {
             graphics.pose().translate(gridPosX + pos.x, gridPosY + pos.y);
             graphics.pose().scale(0.375F, 0.375F);
             graphics.pose().translate(-8.0F, -8.0F);
-            graphics.renderItem(pos.selectIngredient(OverlayRecipeComponent.this.slotSelectTime.currentIndex()), 0, 0);
+            graphics.item(pos.selectIngredient(OverlayRecipeComponent.this.slotSelectTime.currentIndex()), 0, 0);
             graphics.pose().popMatrix();
          }
       }

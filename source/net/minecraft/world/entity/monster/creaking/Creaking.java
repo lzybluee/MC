@@ -1,6 +1,5 @@
 package net.minecraft.world.entity.monster.creaking;
 
-import com.mojang.serialization.Dynamic;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -31,6 +30,7 @@ import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -57,6 +57,9 @@ public class Creaking extends Monster {
    private static final EntityDataAccessor<Boolean> IS_ACTIVE = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.BOOLEAN);
    private static final EntityDataAccessor<Boolean> IS_TEARING_DOWN = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.BOOLEAN);
    private static final EntityDataAccessor<Optional<BlockPos>> HOME_POS = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+   private static final Brain.Provider<Creaking> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS), CreakingAi::getActivities
+   );
    private static final int ATTACK_ANIMATION_DURATION = 15;
    private static final int MAX_HEALTH = 1;
    private static final float ATTACK_DAMAGE = 3.0F;
@@ -91,11 +94,11 @@ public class Creaking extends Monster {
 
    public void setTransient(final BlockPos pos) {
       this.setHomePos(pos);
-      this.setPathfindingMalus(PathType.DAMAGE_OTHER, 8.0F);
+      this.setPathfindingMalus(PathType.DAMAGING, 8.0F);
       this.setPathfindingMalus(PathType.POWDER_SNOW, 8.0F);
       this.setPathfindingMalus(PathType.LAVA, 8.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, 0.0F);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE, 0.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 0.0F);
    }
 
    public boolean isHeartBound() {
@@ -108,13 +111,8 @@ public class Creaking extends Monster {
    }
 
    @Override
-   protected Brain.Provider<Creaking> brainProvider() {
-      return CreakingAi.brainProvider();
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return CreakingAi.makeBrain(this, this.brainProvider().makeBrain(input));
+   protected Brain<Creaking> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
@@ -200,7 +198,7 @@ public class Creaking extends Monster {
 
    @Override
    public Brain<Creaking> getBrain() {
-      return (Brain<Creaking>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override

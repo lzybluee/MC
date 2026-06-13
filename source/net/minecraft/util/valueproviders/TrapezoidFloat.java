@@ -6,12 +6,12 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.RandomSource;
 
-public class TrapezoidFloat extends FloatProvider {
-   public static final MapCodec<TrapezoidFloat> CODEC = RecordCodecBuilder.mapCodec(
+public record TrapezoidFloat(float min, float max, float plateau) implements FloatProvider {
+   public static final MapCodec<TrapezoidFloat> MAP_CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
-               Codec.FLOAT.fieldOf("min").forGetter(t -> t.min),
-               Codec.FLOAT.fieldOf("max").forGetter(t -> t.max),
-               Codec.FLOAT.fieldOf("plateau").forGetter(t -> t.plateau)
+               Codec.FLOAT.fieldOf("min").forGetter(TrapezoidFloat::min),
+               Codec.FLOAT.fieldOf("max").forGetter(TrapezoidFloat::max),
+               Codec.FLOAT.fieldOf("plateau").forGetter(TrapezoidFloat::plateau)
             )
             .apply(i, TrapezoidFloat::new)
       )
@@ -26,18 +26,9 @@ public class TrapezoidFloat extends FloatProvider {
             }
          }
       );
-   private final float min;
-   private final float max;
-   private final float plateau;
 
    public static TrapezoidFloat of(final float min, final float max, final float plateau) {
       return new TrapezoidFloat(min, max, plateau);
-   }
-
-   private TrapezoidFloat(final float min, final float max, final float plateau) {
-      this.min = min;
-      this.max = max;
-      this.plateau = plateau;
    }
 
    @Override
@@ -49,18 +40,8 @@ public class TrapezoidFloat extends FloatProvider {
    }
 
    @Override
-   public float getMinValue() {
-      return this.min;
-   }
-
-   @Override
-   public float getMaxValue() {
-      return this.max;
-   }
-
-   @Override
-   public FloatProviderType<?> getType() {
-      return FloatProviderType.TRAPEZOID;
+   public MapCodec<TrapezoidFloat> codec() {
+      return MAP_CODEC;
    }
 
    @Override

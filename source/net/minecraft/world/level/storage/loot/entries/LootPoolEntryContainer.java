@@ -2,18 +2,19 @@ package net.minecraft.world.level.storage.loot.entries;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.Products.P1;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
-public abstract class LootPoolEntryContainer implements ComposableEntryContainer {
+public abstract class LootPoolEntryContainer implements ComposableEntryContainer, Validatable {
    protected final List<LootItemCondition> conditions;
    private final Predicate<LootContext> compositeCondition;
 
@@ -26,17 +27,16 @@ public abstract class LootPoolEntryContainer implements ComposableEntryContainer
       return i.group(LootItemCondition.DIRECT_CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(e -> e.conditions));
    }
 
+   @Override
    public void validate(final ValidationContext output) {
-      for (int i = 0; i < this.conditions.size(); i++) {
-         this.conditions.get(i).validate(output.forChild(new ProblemReporter.IndexedFieldPathElement("conditions", i)));
-      }
+      Validatable.validate(output, "conditions", this.conditions);
    }
 
    protected final boolean canRun(final LootContext context) {
       return this.compositeCondition.test(context);
    }
 
-   public abstract LootPoolEntryType getType();
+   public abstract MapCodec<? extends LootPoolEntryContainer> codec();
 
    public abstract static class Builder<T extends LootPoolEntryContainer.Builder<T>> implements ConditionUserBuilder<T> {
       private final com.google.common.collect.ImmutableList.Builder<LootItemCondition> conditions = ImmutableList.builder();

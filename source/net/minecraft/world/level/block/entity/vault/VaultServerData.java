@@ -17,7 +17,7 @@ import net.minecraft.world.item.ItemStack;
 
 public class VaultServerData {
    static final String TAG_NAME = "server_data";
-   static Codec<VaultServerData> CODEC = RecordCodecBuilder.create(
+   static final Codec<VaultServerData> CODEC = RecordCodecBuilder.create(
       i -> i.group(
             UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("rewarded_players", Set.of()).forGetter(vault -> vault.rewardedPlayers),
             Codec.LONG.lenientOptionalFieldOf("state_updating_resumes_at", 0L).forGetter(vault -> vault.stateUpdatingResumesAt),

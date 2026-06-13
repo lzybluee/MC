@@ -7,6 +7,7 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.LivingEntity;
@@ -119,11 +120,12 @@ public class HoneyBlock extends HalfTransparentBlock {
 
    private void maybeDoSlideEffects(final Level level, final Entity entity) {
       if (doesEntityDoHoneyBlockSlideEffects(entity)) {
-         if (level.random.nextInt(5) == 0) {
+         RandomSource random = level.getRandom();
+         if (random.nextInt(5) == 0) {
             entity.playSound(SoundEvents.HONEY_BLOCK_SLIDE, 1.0F, 1.0F);
          }
 
-         if (!level.isClientSide() && level.random.nextInt(5) == 0) {
+         if (!level.isClientSide() && random.nextInt(5) == 0) {
             level.broadcastEntityEvent(entity, (byte)53);
          }
       }

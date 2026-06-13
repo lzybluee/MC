@@ -106,7 +106,7 @@ public class MinecartFurnace extends AbstractMinecart {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       ItemStack itemStack = player.getItemInHand(hand);
       if (this.addFuel(player.position(), itemStack)) {
          itemStack.consume(1, player);

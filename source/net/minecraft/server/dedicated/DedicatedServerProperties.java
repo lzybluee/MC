@@ -63,7 +63,7 @@ public class DedicatedServerProperties extends Settings<DedicatedServerPropertie
    public final Settings<DedicatedServerProperties>.MutableValue<Boolean> forceGameMode = this.getMutable("force-gamemode", false);
    public final Settings<DedicatedServerProperties>.MutableValue<Boolean> enforceWhitelist = this.getMutable("enforce-whitelist", false);
    public final Settings<DedicatedServerProperties>.MutableValue<Difficulty> difficulty = this.getMutable(
-      "difficulty", dispatchNumberOrString(Difficulty::byId, Difficulty::byName), Difficulty::getKey, Difficulty.EASY
+      "difficulty", dispatchNumberOrString(Difficulty::byId, Difficulty::byName), Difficulty::getSerializedName, Difficulty.EASY
    );
    public final Settings<DedicatedServerProperties>.MutableValue<GameType> gameMode = this.getMutable(
       "gamemode", dispatchNumberOrString(GameType::byId, GameType::byName), GameType::getName, GameType.SURVIVAL
@@ -126,7 +126,7 @@ public class DedicatedServerProperties extends Settings<DedicatedServerPropertie
    public final Settings<DedicatedServerProperties>.MutableValue<Integer> pauseWhenEmptySeconds = this.getMutable("pause-when-empty-seconds", 60);
    private final DedicatedServerProperties.WorldDimensionData worldDimensionData;
    public final WorldOptions worldOptions;
-   public Settings<DedicatedServerProperties>.MutableValue<Boolean> acceptsTransfers = this.getMutable("accepts-transfers", false);
+   public final Settings<DedicatedServerProperties>.MutableValue<Boolean> acceptsTransfers = this.getMutable("accepts-transfers", false);
 
    public DedicatedServerProperties(final Properties settings) {
       super(settings);

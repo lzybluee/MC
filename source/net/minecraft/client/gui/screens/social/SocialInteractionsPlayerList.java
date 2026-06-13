@@ -12,7 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -33,15 +33,15 @@ public class SocialInteractionsPlayerList extends ContainerObjectSelectionList<P
    }
 
    @Override
-   protected void renderListBackground(final GuiGraphics graphics) {
+   protected void extractListBackground(final GuiGraphicsExtractor graphics) {
    }
 
    @Override
-   protected void renderListSeparators(final GuiGraphics graphics) {
+   protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
    }
 
    @Override
-   protected void enableScissor(final GuiGraphics graphics) {
+   protected void enableScissor(final GuiGraphicsExtractor graphics) {
       graphics.enableScissor(this.getX(), this.getY() + 4, this.getRight(), this.getBottom());
    }
 

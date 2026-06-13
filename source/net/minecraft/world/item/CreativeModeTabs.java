@@ -1610,6 +1610,7 @@ public class CreativeModeTabs {
                   consumables.accept(Items.BAKED_POTATO);
                   consumables.accept(Items.POISONOUS_POTATO);
                   consumables.accept(Items.BEETROOT);
+                  consumables.accept(Items.GOLDEN_DANDELION);
                   consumables.accept(Items.DRIED_KELP);
                   consumables.accept(Items.BEEF);
                   consumables.accept(Items.COOKED_BEEF);

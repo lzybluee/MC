@@ -9,7 +9,7 @@ import net.minecraft.client.gui.font.GlyphRenderTypes;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.Style;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
    public static final float Z_FIGHTER = 0.001F;
@@ -75,7 +75,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
    }
 
    private void renderChar(
-      final BakedSheetGlyph.GlyphInstance glyphInstance, final Matrix4f pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat
+      final BakedSheetGlyph.GlyphInstance glyphInstance, final Matrix4fc pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat
    ) {
       Style style = glyphInstance.style();
       boolean italic = style.isItalic();
@@ -118,7 +118,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
       final float x,
       final float y,
       final float z,
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final VertexConsumer builder,
       final int color,
       final boolean bold,
@@ -150,7 +150,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
    }
 
    private void renderEffect(
-      final BakedSheetGlyph.EffectInstance effect, final Matrix4f pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat
+      final BakedSheetGlyph.EffectInstance effect, final Matrix4fc pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat
    ) {
       float depth = flat ? 0.0F : effect.depth;
       if (effect.hasShadow()) {
@@ -168,7 +168,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
       final int color,
       final VertexConsumer buffer,
       final int packedLightCoords,
-      final Matrix4f pose
+      final Matrix4fc pose
    ) {
       buffer.addVertex(pose, effect.x0 + offset, effect.y1 + offset, z).setColor(color).setUv(this.u0, this.v0).setLight(packedLightCoords);
       buffer.addVertex(pose, effect.x1 + offset, effect.y1 + offset, z).setColor(color).setUv(this.u0, this.v1).setLight(packedLightCoords);
@@ -222,7 +222,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
       }
 
       @Override
-      public void render(final Matrix4f pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat) {
+      public void render(final Matrix4fc pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat) {
          this.glyph.renderEffect(this, pose, buffer, packedLightCoords, false);
       }
 
@@ -274,7 +274,7 @@ public class BakedSheetGlyph implements EffectGlyph, BakedGlyph {
       }
 
       @Override
-      public void render(final Matrix4f pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat) {
+      public void render(final Matrix4fc pose, final VertexConsumer buffer, final int packedLightCoords, final boolean flat) {
          this.glyph.renderChar(this, pose, buffer, packedLightCoords, flat);
       }
 

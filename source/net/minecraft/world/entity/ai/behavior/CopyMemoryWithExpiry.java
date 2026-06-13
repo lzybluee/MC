@@ -15,7 +15,7 @@ public class CopyMemoryWithExpiry {
             return false;
          }
 
-         target.setWithExpiry(i.get(source), durationOfCopy.sample(level.random));
+         target.setWithExpiry(i.get(source), durationOfCopy.sample(level.getRandom()));
          return true;
       }));
    }

@@ -173,7 +173,7 @@ public class FillCommand {
       final @Nullable Predicate<BlockInWorld> predicate,
       final boolean strict
    ) throws CommandSyntaxException {
-      int area = region.getXSpan() * region.getYSpan() * region.getZSpan();
+      long area = (long)region.getXSpan() * region.getYSpan() * region.getZSpan();
       int limit = source.getLevel().getGameRules().get(GameRules.MAX_BLOCK_MODIFICATIONS);
       if (area > limit) {
          throw ERROR_AREA_TOO_LARGE.create(limit, area);

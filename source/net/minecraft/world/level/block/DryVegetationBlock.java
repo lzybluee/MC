@@ -32,7 +32,7 @@ public class DryVegetationBlock extends VegetationBlock {
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(BlockTags.DRY_VEGETATION_MAY_PLACE_ON);
+      return state.is(BlockTags.SUPPORTS_DRY_VEGETATION);
    }
 
    @Override

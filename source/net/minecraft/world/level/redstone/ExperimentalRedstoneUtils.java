@@ -8,7 +8,7 @@ import org.jspecify.annotations.Nullable;
 public class ExperimentalRedstoneUtils {
    public static @Nullable Orientation initialOrientation(final Level level, final @Nullable Direction front, final @Nullable Direction up) {
       if (level.enabledFeatures().contains(FeatureFlags.REDSTONE_EXPERIMENTS)) {
-         Orientation orientation = Orientation.random(level.random).withSideBias(Orientation.SideBias.LEFT);
+         Orientation orientation = Orientation.random(level.getRandom()).withSideBias(Orientation.SideBias.LEFT);
          if (up != null) {
             orientation = orientation.withUp(up);
          }

@@ -96,14 +96,14 @@ public class AnimalMakeLove extends Behavior<Animal> {
 
    private boolean hasBreedTargetOfRightType(final Animal body) {
       Brain<?> brain = body.getBrain();
-      return brain.hasMemoryValue(MemoryModuleType.BREED_TARGET) && brain.getMemory(MemoryModuleType.BREED_TARGET).get().getType() == this.partnerType;
+      return brain.hasMemoryValue(MemoryModuleType.BREED_TARGET) && brain.getMemory(MemoryModuleType.BREED_TARGET).get().is(this.partnerType);
    }
 
    private Optional<? extends Animal> findValidBreedPartner(final Animal body) {
       return body.getBrain()
          .getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
          .get()
-         .findClosest(entity -> entity.getType() == this.partnerType && entity instanceof Animal animal && body.canMate(animal) && !animal.isPanicking())
+         .findClosest(entity -> entity.is(this.partnerType) && entity instanceof Animal animal && body.canMate(animal) && !animal.isPanicking())
          .map(Animal.class::cast);
    }
 }

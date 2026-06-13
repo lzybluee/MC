@@ -10,7 +10,6 @@ import java.util.function.Function;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.BuiltInMetadata;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackSelectionConfig;
@@ -22,6 +21,7 @@ import net.minecraft.server.packs.repository.BuiltInPackSource;
 import net.minecraft.server.packs.repository.KnownPack;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.world.level.validation.DirectoryValidator;
 import org.jspecify.annotations.Nullable;
 
@@ -29,7 +29,7 @@ public class ClientPackSource extends BuiltInPackSource {
    private static final PackMetadataSection VERSION_METADATA_SECTION = new PackMetadataSection(
       Component.translatable("resourcePack.vanilla.description"), SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES).minorRange()
    );
-   private static final BuiltInMetadata BUILT_IN_METADATA = BuiltInMetadata.of(PackMetadataSection.CLIENT_TYPE, VERSION_METADATA_SECTION);
+   private static final ResourceMetadata BUILT_IN_METADATA = ResourceMetadata.of(PackMetadataSection.CLIENT_TYPE, VERSION_METADATA_SECTION);
    public static final String HIGH_CONTRAST_PACK = "high_contrast";
    private static final Map<String, Component> SPECIAL_PACK_NAMES = Map.of(
       "programmer_art", Component.translatable("resourcePack.programmer_art.name"), "high_contrast", Component.translatable("resourcePack.high_contrast.name")
@@ -63,8 +63,13 @@ public class ClientPackSource extends BuiltInPackSource {
    }
 
    private static VanillaPackResources createVanillaPackSource(final Path externalAssetRoot) {
-      VanillaPackResourcesBuilder builder = new VanillaPackResourcesBuilder().setMetadata(BUILT_IN_METADATA).exposeNamespace("minecraft", "realms");
-      return builder.applyDevelopmentConfig().pushJarResources().pushAssetPath(PackType.CLIENT_RESOURCES, externalAssetRoot).build(VANILLA_PACK_INFO);
+      return new VanillaPackResourcesBuilder()
+         .setMetadata(BUILT_IN_METADATA)
+         .exposeNamespace("minecraft", "realms")
+         .applyDevelopmentConfig()
+         .pushJarResources()
+         .pushAssetPath(PackType.CLIENT_RESOURCES, externalAssetRoot)
+         .build(VANILLA_PACK_INFO);
    }
 
    @Override

@@ -4,19 +4,19 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BannerPatternTags;
-import net.minecraft.tags.TagKey;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BannerPattern;
@@ -70,13 +70,13 @@ public class LoomMenu extends AbstractContainerMenu {
       this.dyeSlot = this.addSlot(new Slot(this.inputContainer, 1, 33, 26) {
          @Override
          public boolean mayPlace(final ItemStack itemStack) {
-            return itemStack.getItem() instanceof DyeItem;
+            return LoomMenu.isDyeItem(itemStack);
          }
       });
       this.patternSlot = this.addSlot(new Slot(this.inputContainer, 2, 23, 45) {
          @Override
          public boolean mayPlace(final ItemStack itemStack) {
-            return itemStack.has(DataComponents.PROVIDES_BANNER_PATTERNS);
+            return LoomMenu.isPatternItem(itemStack);
          }
       });
       this.resultSlot = this.addSlot(new Slot(this.outputContainer, 0, 143, 57) {
@@ -108,6 +108,14 @@ public class LoomMenu extends AbstractContainerMenu {
       this.patternGetter = inventory.player.registryAccess().lookupOrThrow(Registries.BANNER_PATTERN);
    }
 
+   private static boolean isPatternItem(final ItemStack itemStack) {
+      return itemStack.is(ItemTags.LOOM_PATTERNS) && itemStack.has(DataComponents.PROVIDES_BANNER_PATTERNS);
+   }
+
+   private static boolean isDyeItem(final ItemStack itemStack) {
+      return itemStack.is(ItemTags.LOOM_DYES) && itemStack.has(DataComponents.DYE);
+   }
+
    @Override
    public boolean stillValid(final Player player) {
       return stillValid(this.access, player, Blocks.LOOM);
@@ -129,10 +137,8 @@ public class LoomMenu extends AbstractContainerMenu {
          return this.patternGetter.get(BannerPatternTags.NO_ITEM_REQUIRED).<List<Holder<BannerPattern>>>map(ImmutableList::copyOf).orElse(ImmutableList.of());
       }
 
-      TagKey<BannerPattern> providedPatterns = patternStack.get(DataComponents.PROVIDES_BANNER_PATTERNS);
-      return providedPatterns != null
-         ? this.patternGetter.get(providedPatterns).<List<Holder<BannerPattern>>>map(ImmutableList::copyOf).orElse(ImmutableList.of())
-         : List.of();
+      HolderSet<BannerPattern> itemPatterns = patternStack.get(DataComponents.PROVIDES_BANNER_PATTERNS);
+      return itemPatterns != null ? ImmutableList.copyOf(itemPatterns) : ImmutableList.of();
    }
 
    private boolean isValidPatternIndex(final int selectedPattern) {
@@ -219,11 +225,11 @@ public class LoomMenu extends AbstractContainerMenu {
                if (!this.moveItemStackTo(stack, this.bannerSlot.index, this.bannerSlot.index + 1, false)) {
                   return ItemStack.EMPTY;
                }
-            } else if (stack.getItem() instanceof DyeItem) {
+            } else if (isDyeItem(stack)) {
                if (!this.moveItemStackTo(stack, this.dyeSlot.index, this.dyeSlot.index + 1, false)) {
                   return ItemStack.EMPTY;
                }
-            } else if (stack.has(DataComponents.PROVIDES_BANNER_PATTERNS)) {
+            } else if (isPatternItem(stack)) {
                if (!this.moveItemStackTo(stack, this.patternSlot.index, this.patternSlot.index + 1, false)) {
                   return ItemStack.EMPTY;
                }
@@ -265,13 +271,15 @@ public class LoomMenu extends AbstractContainerMenu {
       ItemStack dyeStack = this.dyeSlot.getItem();
       ItemStack result = ItemStack.EMPTY;
       if (!bannerStack.isEmpty() && !dyeStack.isEmpty()) {
-         result = bannerStack.copyWithCount(1);
-         DyeColor patternColor = ((DyeItem)dyeStack.getItem()).getDyeColor();
-         result.update(
-            DataComponents.BANNER_PATTERNS,
-            BannerPatternLayers.EMPTY,
-            layers -> new BannerPatternLayers.Builder().addAll(layers).add(pattern, patternColor).build()
-         );
+         DyeColor patternColor = dyeStack.get(DataComponents.DYE);
+         if (patternColor != null) {
+            result = bannerStack.copyWithCount(1);
+            result.update(
+               DataComponents.BANNER_PATTERNS,
+               BannerPatternLayers.EMPTY,
+               layers -> new BannerPatternLayers.Builder().addAll(layers).add(pattern, patternColor).build()
+            );
+         }
       }
 
       if (!ItemStack.matches(result, this.resultSlot.getItem())) {

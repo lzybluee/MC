@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -52,13 +53,13 @@ public class MangrovePropaguleBlock extends SaplingBlock implements SimpleWaterl
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return super.mayPlaceOn(state, level, pos) || state.is(Blocks.CLAY);
+      return state.is(BlockTags.SUPPORTS_MANGROVE_PROPAGULE);
    }
 
    @Override
    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource).setValue(AGE, 4);
    }
 
@@ -70,7 +71,7 @@ public class MangrovePropaguleBlock extends SaplingBlock implements SimpleWaterl
 
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
-      return isHanging(state) ? level.getBlockState(pos.above()).is(Blocks.MANGROVE_LEAVES) : super.canSurvive(state, level, pos);
+      return isHanging(state) ? level.getBlockState(pos.above()).is(BlockTags.SUPPORTS_HANGING_MANGROVE_PROPAGULE) : super.canSurvive(state, level, pos);
    }
 
    @Override

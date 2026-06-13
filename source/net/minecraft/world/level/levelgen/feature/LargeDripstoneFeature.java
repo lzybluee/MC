@@ -43,8 +43,8 @@ public class LargeDripstoneFeature extends Feature<LargeDripstoneConfiguration> 
          }
 
          int maxColumnRadiusBasedOnColumnHeight = (int)(columnRange.height() * config.maxColumnRadiusToCaveHeightRatio);
-         int maxColumnRadius = Mth.clamp(maxColumnRadiusBasedOnColumnHeight, config.columnRadius.getMinValue(), config.columnRadius.getMaxValue());
-         int radius = Mth.randomBetweenInclusive(random, config.columnRadius.getMinValue(), maxColumnRadius);
+         int maxColumnRadius = Mth.clamp(maxColumnRadiusBasedOnColumnHeight, config.columnRadius.minInclusive(), config.columnRadius.maxInclusive());
+         int radius = Mth.randomBetweenInclusive(random, config.columnRadius.minInclusive(), maxColumnRadius);
          LargeDripstoneFeature.LargeDripstone stalactite = makeDripstone(
             origin.atY(columnRange.ceiling() - 1), false, random, radius, config.stalactiteBluntness, config.heightScale
          );

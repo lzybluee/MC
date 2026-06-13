@@ -22,8 +22,8 @@ public record VaultConfig(
    PlayerDetector.EntitySelector entitySelector
 ) {
    static final String TAG_NAME = "config";
-   static VaultConfig DEFAULT = new VaultConfig();
-   static Codec<VaultConfig> CODEC = RecordCodecBuilder.create(
+   static final VaultConfig DEFAULT = new VaultConfig();
+   static final Codec<VaultConfig> CODEC = RecordCodecBuilder.create(
          i -> i.group(
                LootTable.KEY_CODEC.lenientOptionalFieldOf("loot_table", DEFAULT.lootTable()).forGetter(VaultConfig::lootTable),
                Codec.DOUBLE.lenientOptionalFieldOf("activation_range", DEFAULT.activationRange()).forGetter(VaultConfig::activationRange),

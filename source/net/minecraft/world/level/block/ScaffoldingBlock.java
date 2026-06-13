@@ -79,7 +79,7 @@ public class ScaffoldingBlock extends Block implements SimpleWaterloggedBlock {
       Level level = context.getLevel();
       int distance = getDistance(level, pos);
       return this.defaultBlockState()
-         .setValue(WATERLOGGED, level.getFluidState(pos).getType() == Fluids.WATER)
+         .setValue(WATERLOGGED, level.getFluidState(pos).is(Fluids.WATER))
          .setValue(DISTANCE, distance)
          .setValue(BOTTOM, this.isBottom(level, pos, distance));
    }

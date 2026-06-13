@@ -4,7 +4,9 @@ import com.mojang.serialization.Codec;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -14,7 +16,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.EncoderCache;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Unit;
@@ -22,11 +23,14 @@ import net.minecraft.world.LockCode;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
+import net.minecraft.world.entity.animal.chicken.ChickenSoundVariant;
 import net.minecraft.world.entity.animal.chicken.ChickenVariant;
+import net.minecraft.world.entity.animal.cow.CowSoundVariant;
 import net.minecraft.world.entity.animal.cow.CowVariant;
 import net.minecraft.world.entity.animal.cow.MushroomCow;
 import net.minecraft.world.entity.animal.equine.Llama;
 import net.minecraft.world.entity.animal.equine.Variant;
+import net.minecraft.world.entity.animal.feline.CatSoundVariant;
 import net.minecraft.world.entity.animal.feline.CatVariant;
 import net.minecraft.world.entity.animal.fish.Salmon;
 import net.minecraft.world.entity.animal.fish.TropicalFish;
@@ -34,6 +38,7 @@ import net.minecraft.world.entity.animal.fox.Fox;
 import net.minecraft.world.entity.animal.frog.FrogVariant;
 import net.minecraft.world.entity.animal.nautilus.ZombieNautilusVariant;
 import net.minecraft.world.entity.animal.parrot.Parrot;
+import net.minecraft.world.entity.animal.pig.PigSoundVariant;
 import net.minecraft.world.entity.animal.pig.PigVariant;
 import net.minecraft.world.entity.animal.rabbit.Rabbit;
 import net.minecraft.world.entity.animal.wolf.WolfSoundVariant;
@@ -43,7 +48,6 @@ import net.minecraft.world.entity.npc.villager.VillagerType;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.EitherHolder;
 import net.minecraft.world.item.JukeboxPlayable;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.alchemy.PotionContents;
@@ -73,7 +77,6 @@ import net.minecraft.world.item.component.MapItemColor;
 import net.minecraft.world.item.component.MapPostProcessing;
 import net.minecraft.world.item.component.OminousBottleAmplifier;
 import net.minecraft.world.item.component.PiercingWeapon;
-import net.minecraft.world.item.component.ProvidesTrimMaterial;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.item.component.SeededContainerLoot;
 import net.minecraft.world.item.component.SuspiciousStewEffects;
@@ -93,6 +96,7 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.enchantment.Repairable;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.item.equipment.trim.ArmorTrim;
+import net.minecraft.world.item.equipment.trim.TrimMaterial;
 import net.minecraft.world.level.block.entity.BannerPattern;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -121,10 +125,8 @@ public class DataComponents {
    public static final DataComponentType<Float> MINIMUM_ATTACK_CHARGE = register(
       "minimum_attack_charge", b -> b.persistent(ExtraCodecs.floatRange(0.0F, 1.0F)).networkSynchronized(ByteBufCodecs.FLOAT)
    );
-   public static final DataComponentType<EitherHolder<DamageType>> DAMAGE_TYPE = register(
-      "damage_type",
-      b -> b.persistent(EitherHolder.codec(Registries.DAMAGE_TYPE, DamageType.CODEC))
-         .networkSynchronized(EitherHolder.streamCodec(Registries.DAMAGE_TYPE, DamageType.STREAM_CODEC))
+   public static final DataComponentType<Holder<DamageType>> DAMAGE_TYPE = register(
+      "damage_type", b -> b.persistent(DamageType.CODEC).networkSynchronized(DamageType.STREAM_CODEC)
    );
    public static final DataComponentType<Component> ITEM_NAME = register(
       "item_name", b -> b.persistent(ComponentSerialization.CODEC).networkSynchronized(ComponentSerialization.STREAM_CODEC).cacheEncoding()
@@ -212,9 +214,11 @@ public class DataComponents {
    public static final DataComponentType<SwingAnimation> SWING_ANIMATION = register(
       "swing_animation", b -> b.persistent(SwingAnimation.CODEC).networkSynchronized(SwingAnimation.STREAM_CODEC)
    );
+   public static final DataComponentType<Integer> ADDITIONAL_TRADE_COST = register("additional_trade_cost", b -> b.networkSynchronized(ByteBufCodecs.VAR_INT));
    public static final DataComponentType<ItemEnchantments> STORED_ENCHANTMENTS = register(
       "stored_enchantments", b -> b.persistent(ItemEnchantments.CODEC).networkSynchronized(ItemEnchantments.STREAM_CODEC).cacheEncoding()
    );
+   public static final DataComponentType<DyeColor> DYE = register("dye", b -> b.persistent(DyeColor.CODEC).networkSynchronized(DyeColor.STREAM_CODEC));
    public static final DataComponentType<DyedItemColor> DYED_COLOR = register(
       "dyed_color", b -> b.persistent(DyedItemColor.CODEC).networkSynchronized(DyedItemColor.STREAM_CODEC)
    );
@@ -267,8 +271,8 @@ public class DataComponents {
    public static final DataComponentType<InstrumentComponent> INSTRUMENT = register(
       "instrument", b -> b.persistent(InstrumentComponent.CODEC).networkSynchronized(InstrumentComponent.STREAM_CODEC).cacheEncoding()
    );
-   public static final DataComponentType<ProvidesTrimMaterial> PROVIDES_TRIM_MATERIAL = register(
-      "provides_trim_material", b -> b.persistent(ProvidesTrimMaterial.CODEC).networkSynchronized(ProvidesTrimMaterial.STREAM_CODEC).cacheEncoding()
+   public static final DataComponentType<Holder<TrimMaterial>> PROVIDES_TRIM_MATERIAL = register(
+      "provides_trim_material", b -> b.persistent(TrimMaterial.CODEC).networkSynchronized(TrimMaterial.STREAM_CODEC).cacheEncoding()
    );
    public static final DataComponentType<OminousBottleAmplifier> OMINOUS_BOTTLE_AMPLIFIER = register(
       "ominous_bottle_amplifier", b -> b.persistent(OminousBottleAmplifier.CODEC).networkSynchronized(OminousBottleAmplifier.STREAM_CODEC)
@@ -276,9 +280,11 @@ public class DataComponents {
    public static final DataComponentType<JukeboxPlayable> JUKEBOX_PLAYABLE = register(
       "jukebox_playable", b -> b.persistent(JukeboxPlayable.CODEC).networkSynchronized(JukeboxPlayable.STREAM_CODEC)
    );
-   public static final DataComponentType<TagKey<BannerPattern>> PROVIDES_BANNER_PATTERNS = register(
+   public static final DataComponentType<HolderSet<BannerPattern>> PROVIDES_BANNER_PATTERNS = register(
       "provides_banner_patterns",
-      b -> b.persistent(TagKey.hashedCodec(Registries.BANNER_PATTERN)).networkSynchronized(TagKey.streamCodec(Registries.BANNER_PATTERN)).cacheEncoding()
+      b -> b.persistent(RegistryCodecs.homogeneousList(Registries.BANNER_PATTERN))
+         .networkSynchronized(ByteBufCodecs.holderSet(Registries.BANNER_PATTERN))
+         .cacheEncoding()
    );
    public static final DataComponentType<List<ResourceKey<Recipe<?>>>> RECIPES = register(
       "recipes", b -> b.persistent(Recipe.KEY_CODEC.listOf()).cacheEncoding()
@@ -358,18 +364,23 @@ public class DataComponents {
    public static final DataComponentType<Holder<PigVariant>> PIG_VARIANT = register(
       "pig/variant", b -> b.persistent(PigVariant.CODEC).networkSynchronized(PigVariant.STREAM_CODEC)
    );
+   public static final DataComponentType<Holder<PigSoundVariant>> PIG_SOUND_VARIANT = register(
+      "pig/sound_variant", b -> b.persistent(PigSoundVariant.CODEC).networkSynchronized(PigSoundVariant.STREAM_CODEC)
+   );
    public static final DataComponentType<Holder<CowVariant>> COW_VARIANT = register(
       "cow/variant", b -> b.persistent(CowVariant.CODEC).networkSynchronized(CowVariant.STREAM_CODEC)
    );
-   public static final DataComponentType<EitherHolder<ChickenVariant>> CHICKEN_VARIANT = register(
-      "chicken/variant",
-      b -> b.persistent(EitherHolder.codec(Registries.CHICKEN_VARIANT, ChickenVariant.CODEC))
-         .networkSynchronized(EitherHolder.streamCodec(Registries.CHICKEN_VARIANT, ChickenVariant.STREAM_CODEC))
+   public static final DataComponentType<Holder<CowSoundVariant>> COW_SOUND_VARIANT = register(
+      "cow/sound_variant", b -> b.persistent(CowSoundVariant.CODEC).networkSynchronized(CowSoundVariant.STREAM_CODEC)
    );
-   public static final DataComponentType<EitherHolder<ZombieNautilusVariant>> ZOMBIE_NAUTILUS_VARIANT = register(
-      "zombie_nautilus/variant",
-      b -> b.persistent(EitherHolder.codec(Registries.ZOMBIE_NAUTILUS_VARIANT, ZombieNautilusVariant.CODEC))
-         .networkSynchronized(EitherHolder.streamCodec(Registries.ZOMBIE_NAUTILUS_VARIANT, ZombieNautilusVariant.STREAM_CODEC))
+   public static final DataComponentType<Holder<ChickenVariant>> CHICKEN_VARIANT = register(
+      "chicken/variant", b -> b.persistent(ChickenVariant.CODEC).networkSynchronized(ChickenVariant.STREAM_CODEC)
+   );
+   public static final DataComponentType<Holder<ChickenSoundVariant>> CHICKEN_SOUND_VARIANT = register(
+      "chicken/sound_variant", b -> b.persistent(ChickenSoundVariant.CODEC).networkSynchronized(ChickenSoundVariant.STREAM_CODEC)
+   );
+   public static final DataComponentType<Holder<ZombieNautilusVariant>> ZOMBIE_NAUTILUS_VARIANT = register(
+      "zombie_nautilus/variant", b -> b.persistent(ZombieNautilusVariant.CODEC).networkSynchronized(ZombieNautilusVariant.STREAM_CODEC)
    );
    public static final DataComponentType<Holder<FrogVariant>> FROG_VARIANT = register(
       "frog/variant", b -> b.persistent(FrogVariant.CODEC).networkSynchronized(FrogVariant.STREAM_CODEC)
@@ -388,6 +399,9 @@ public class DataComponents {
    );
    public static final DataComponentType<Holder<CatVariant>> CAT_VARIANT = register(
       "cat/variant", b -> b.persistent(CatVariant.CODEC).networkSynchronized(CatVariant.STREAM_CODEC)
+   );
+   public static final DataComponentType<Holder<CatSoundVariant>> CAT_SOUND_VARIANT = register(
+      "cat/sound_variant", b -> b.persistent(CatSoundVariant.CODEC).networkSynchronized(CatSoundVariant.STREAM_CODEC)
    );
    public static final DataComponentType<DyeColor> CAT_COLLAR = register(
       "cat/collar", b -> b.persistent(DyeColor.CODEC).networkSynchronized(DyeColor.STREAM_CODEC)

@@ -387,7 +387,7 @@ public class TagValueInput implements ValueInput {
       public Stream<T> stream() {
          return Streams.mapWithIndex(this.list.stream(), (value, index) -> {
             return switch (this.codec.parse(this.context.ops(), value)) {
-               case Success<T> success -> (Object)success.value();
+               case Success<T> success -> success.value();
                case Error<T> error -> {
                   this.reportIndexUnwrapProblem((int)index, value, error);
                   yield error.partialValue().orElse(null);

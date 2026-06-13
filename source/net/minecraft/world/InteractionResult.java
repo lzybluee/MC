@@ -23,8 +23,8 @@ public sealed interface InteractionResult
    }
 
    record ItemContext(boolean wasItemInteraction, @Nullable ItemStack heldItemTransformedTo) {
-      static InteractionResult.ItemContext NONE = new InteractionResult.ItemContext(false, null);
-      static InteractionResult.ItemContext DEFAULT = new InteractionResult.ItemContext(true, null);
+      static final InteractionResult.ItemContext NONE = new InteractionResult.ItemContext(false, null);
+      static final InteractionResult.ItemContext DEFAULT = new InteractionResult.ItemContext(true, null);
    }
 
    record Pass() implements InteractionResult {

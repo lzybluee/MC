@@ -1,7 +1,10 @@
 package com.mojang.blaze3d.platform;
 
-import com.mojang.blaze3d.TracyFrameCapture;
+import com.mojang.blaze3d.GLFWErrorCapture;
+import com.mojang.blaze3d.GLFWErrorScope;
 import com.mojang.blaze3d.platform.cursor.CursorType;
+import com.mojang.blaze3d.systems.BackendCreationException;
+import com.mojang.blaze3d.systems.GpuBackend;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
@@ -28,7 +31,6 @@ import org.lwjgl.glfw.GLFWWindowCloseCallback;
 import org.lwjgl.glfw.GLFWImage.Buffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
 
 public final class Window implements AutoCloseable {
@@ -54,23 +56,26 @@ public final class Window implements AutoCloseable {
    private int framebufferHeight;
    private int guiScaledWidth;
    private int guiScaledHeight;
+   private boolean isResized;
    private int guiScale;
    private String errorSection = "";
    private boolean dirty;
    private boolean vsync;
    private boolean iconified;
+   private boolean focused = true;
    private boolean minimized;
    private boolean allowCursorChanges;
    private CursorType currentCursor = CursorType.DEFAULT;
+   private final GpuBackend backend;
 
    public Window(
       final WindowEventHandler eventHandler,
-      final ScreenManager screenManager,
       final DisplayData displayData,
       final @Nullable String fullscreenVideoModeString,
-      final String title
-   ) {
-      this.screenManager = screenManager;
+      final String title,
+      final GpuBackend backend
+   ) throws BackendCreationException {
+      this.screenManager = new ScreenManager(Monitor::new);
       this.setBootErrorCallback();
       this.setErrorSection("Pre startup");
       this.eventHandler = eventHandler;
@@ -86,17 +91,11 @@ public final class Window implements AutoCloseable {
       }
 
       this.actuallyFullscreen = this.fullscreen = displayData.isFullscreen();
-      Monitor initialMonitor = screenManager.getMonitor(GLFW.glfwGetPrimaryMonitor());
-      this.windowedWidth = this.width = Math.max(displayData.width(), 1);
-      this.windowedHeight = this.height = Math.max(displayData.height(), 1);
-      GLFW.glfwDefaultWindowHints();
-      GLFW.glfwWindowHint(139265, 196609);
-      GLFW.glfwWindowHint(139275, 221185);
-      GLFW.glfwWindowHint(139266, 3);
-      GLFW.glfwWindowHint(139267, 3);
-      GLFW.glfwWindowHint(139272, 204801);
-      GLFW.glfwWindowHint(139270, 1);
-      this.handle = GLFW.glfwCreateWindow(this.width, this.height, title, this.fullscreen && initialMonitor != null ? initialMonitor.getMonitor() : 0L, 0L);
+      Monitor initialMonitor = this.screenManager.getMonitor(GLFW.glfwGetPrimaryMonitor());
+      this.windowedWidth = this.width = allowedWindowMinSize(displayData.width());
+      this.windowedHeight = this.height = allowedWindowMinSize(displayData.height());
+      this.handle = this.createWindow(backend, this.width, this.height, title, this.fullscreen && initialMonitor != null ? initialMonitor.getMonitor() : 0L);
+      this.backend = backend;
       if (initialMonitor != null) {
          VideoMode mode = initialMonitor.getPreferredVidMode(this.fullscreen ? this.preferredFullscreenVideoMode : Optional.empty());
          this.windowedX = this.x = initialMonitor.getX() + mode.getWidth() / 2 - this.width / 2;
@@ -117,6 +116,29 @@ public final class Window implements AutoCloseable {
       GLFW.glfwSetWindowFocusCallback(this.handle, this::onFocus);
       GLFW.glfwSetCursorEnterCallback(this.handle, this::onEnter);
       GLFW.glfwSetWindowIconifyCallback(this.handle, this::onIconify);
+   }
+
+   public static long createGlfwWindow(final int width, final int height, final String title, final long monitor, final GpuBackend backend) throws BackendCreationException {
+      GLFWErrorCapture glfwErrors = new GLFWErrorCapture();
+
+      long windowHandle;
+      try (GLFWErrorScope var9 = new GLFWErrorScope(glfwErrors)) {
+         backend.setWindowHints();
+         windowHandle = GLFW.glfwCreateWindow(width, height, title, monitor, 0L);
+         if (windowHandle == 0L) {
+            backend.handleWindowCreationErrors(glfwErrors.firstError());
+         }
+      }
+
+      for (GLFWErrorCapture.Error error : glfwErrors) {
+         LOGGER.error("GLFW error collected during GL backend initialization: {}", error);
+      }
+
+      return windowHandle;
+   }
+
+   private long createWindow(final GpuBackend backend, final int width, final int height, final String title, final long initialMonitor) throws BackendCreationException {
+      return createGlfwWindow(width, height, title, initialMonitor, backend);
    }
 
    public static String getPlatform() {
@@ -236,9 +258,7 @@ public final class Window implements AutoCloseable {
 
    private static void bootCrash(final int error, final long description) {
       String message = "GLFW error " + error + ": " + MemoryUtil.memUTF8(description);
-      TinyFileDialogs.tinyfd_messageBox(
-         "Minecraft", message + ".\n\nPlease make sure you have up-to-date drivers (see aka.ms/mcdriver for instructions).", "ok", "error", false
-      );
+      MessageBox.error(message + ".\n\nPlease make sure you have up-to-date drivers (see aka.ms/mcdriver for instructions).");
       throw new Window.WindowInitFailed(message);
    }
 
@@ -260,12 +280,13 @@ public final class Window implements AutoCloseable {
    public void updateVsync(final boolean enableVsync) {
       RenderSystem.assertOnRenderThread();
       this.vsync = enableVsync;
-      GLFW.glfwSwapInterval(enableVsync ? 1 : 0);
+      RenderSystem.getDevice().setVsync(enableVsync);
    }
 
    @Override
    public void close() {
       RenderSystem.assertOnRenderThread();
+      this.screenManager.shutdown();
       Callbacks.glfwFreeCallbacks(this.handle);
       this.defaultErrorCallback.close();
       GLFW.glfwDestroyWindow(this.handle);
@@ -283,11 +304,13 @@ public final class Window implements AutoCloseable {
          int oldHeight = this.getHeight();
          if (newWidth != 0 && newHeight != 0) {
             this.minimized = false;
-            this.framebufferWidth = newWidth;
-            this.framebufferHeight = newHeight;
-            if (this.getWidth() != oldWidth || this.getHeight() != oldHeight) {
+            if (newWidth != oldWidth || newHeight != oldHeight) {
+               this.framebufferWidth = newWidth;
+               this.framebufferHeight = newHeight;
+               this.isResized = true;
+
                try {
-                  this.eventHandler.resizeDisplay();
+                  this.eventHandler.resizeGui();
                } catch (Exception e) {
                   CrashReport report = CrashReport.forThrowable(e, "Window resize");
                   CrashReportCategory windowSizeDetails = report.addCategory("Window Dimensions");
@@ -317,7 +340,7 @@ public final class Window implements AutoCloseable {
 
    private void onFocus(final long handle, final boolean focused) {
       if (handle == this.handle) {
-         this.eventHandler.setWindowActive(focused);
+         this.focused = focused;
       }
    }
 
@@ -331,11 +354,10 @@ public final class Window implements AutoCloseable {
       this.iconified = iconified;
    }
 
-   public void updateDisplay(final @Nullable TracyFrameCapture tracyFrameCapture) {
-      RenderSystem.flipFrame(this, tracyFrameCapture);
+   public void updateFullscreenIfChanged() {
       if (this.fullscreen != this.actuallyFullscreen) {
          this.actuallyFullscreen = this.fullscreen;
-         this.updateFullscreen(this.vsync, tracyFrameCapture);
+         this.updateFullscreen(this.vsync);
       }
    }
 
@@ -355,7 +377,7 @@ public final class Window implements AutoCloseable {
       if (this.fullscreen && this.dirty) {
          this.dirty = false;
          this.setMode();
-         this.eventHandler.resizeDisplay();
+         this.eventHandler.resizeGui();
       }
    }
 
@@ -375,14 +397,15 @@ public final class Window implements AutoCloseable {
             if (!wasFullscreen) {
                this.windowedX = this.x;
                this.windowedY = this.y;
-               this.windowedWidth = this.width;
-               this.windowedHeight = this.height;
+               this.windowedWidth = allowedWindowMinSize(this.width);
+               this.windowedHeight = allowedWindowMinSize(this.height);
             }
 
             this.x = 0;
             this.y = 0;
-            this.width = mode.getWidth();
-            this.height = mode.getHeight();
+            this.width = allowedWindowMinSize(mode.getWidth());
+            this.height = allowedWindowMinSize(mode.getHeight());
+            this.isResized = true;
             GLFW.glfwSetWindowMonitor(this.handle, monitor.getMonitor(), this.x, this.y, this.width, this.height, mode.getRefreshRate());
             if (MacosUtil.IS_MACOS) {
                MacosUtil.clearResizableBit(this);
@@ -391,8 +414,9 @@ public final class Window implements AutoCloseable {
       } else {
          this.x = this.windowedX;
          this.y = this.windowedY;
-         this.width = this.windowedWidth;
-         this.height = this.windowedHeight;
+         this.width = allowedWindowMinSize(this.windowedWidth);
+         this.height = allowedWindowMinSize(this.windowedHeight);
+         this.isResized = true;
          GLFW.glfwSetWindowMonitor(this.handle, 0L, this.x, this.y, this.width, this.height, -1);
       }
    }
@@ -402,20 +426,17 @@ public final class Window implements AutoCloseable {
    }
 
    public void setWindowed(final int width, final int height) {
-      this.windowedWidth = width;
-      this.windowedHeight = height;
+      this.windowedWidth = allowedWindowMinSize(width);
+      this.windowedHeight = allowedWindowMinSize(height);
       this.fullscreen = false;
       this.setMode();
    }
 
-   private void updateFullscreen(final boolean enableVsync, final @Nullable TracyFrameCapture tracyFrameCapture) {
-      RenderSystem.assertOnRenderThread();
-
+   private void updateFullscreen(final boolean enableVsync) {
       try {
          this.setMode();
-         this.eventHandler.resizeDisplay();
+         this.eventHandler.resizeGui();
          this.updateVsync(enableVsync);
-         this.updateDisplay(tracyFrameCapture);
       } catch (Exception e) {
          LOGGER.error("Couldn't toggle fullscreen", e);
       }
@@ -464,6 +485,10 @@ public final class Window implements AutoCloseable {
 
    public boolean isIconified() {
       return this.iconified;
+   }
+
+   public boolean isFocused() {
+      return this.focused;
    }
 
    public int getWidth() {
@@ -525,6 +550,14 @@ public final class Window implements AutoCloseable {
       }
    }
 
+   public boolean isResized() {
+      return this.isResized;
+   }
+
+   public void resetIsResized() {
+      this.isResized = false;
+   }
+
    public boolean isMinimized() {
       return this.minimized;
    }
@@ -545,8 +578,16 @@ public final class Window implements AutoCloseable {
       return Math.max(2.5F, this.getWidth() / 1920.0F * 2.5F);
    }
 
+   public GpuBackend backend() {
+      return this.backend;
+   }
+
+   private static int allowedWindowMinSize(final int size) {
+      return Math.max(size, 1);
+   }
+
    public static class WindowInitFailed extends SilentInitException {
-      private WindowInitFailed(final String message) {
+      public WindowInitFailed(final String message) {
          super(message);
       }
    }

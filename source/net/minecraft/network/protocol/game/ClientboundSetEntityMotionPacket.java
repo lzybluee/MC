@@ -1,36 +1,24 @@
 package net.minecraft.network.protocol.game;
 
-import net.minecraft.network.FriendlyByteBuf;
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
-public class ClientboundSetEntityMotionPacket implements Packet<ClientGamePacketListener> {
-   public static final StreamCodec<FriendlyByteBuf, ClientboundSetEntityMotionPacket> STREAM_CODEC = Packet.codec(
-      ClientboundSetEntityMotionPacket::write, ClientboundSetEntityMotionPacket::new
+public record ClientboundSetEntityMotionPacket(int id, Vec3 movement) implements Packet<ClientGamePacketListener> {
+   public static final StreamCodec<ByteBuf, ClientboundSetEntityMotionPacket> STREAM_CODEC = StreamCodec.composite(
+      ByteBufCodecs.VAR_INT,
+      ClientboundSetEntityMotionPacket::id,
+      Vec3.LP_STREAM_CODEC,
+      ClientboundSetEntityMotionPacket::movement,
+      ClientboundSetEntityMotionPacket::new
    );
-   private final int id;
-   private final Vec3 movement;
 
    public ClientboundSetEntityMotionPacket(final Entity entity) {
       this(entity.getId(), entity.getDeltaMovement());
-   }
-
-   public ClientboundSetEntityMotionPacket(final int id, final Vec3 movement) {
-      this.id = id;
-      this.movement = movement;
-   }
-
-   private ClientboundSetEntityMotionPacket(final FriendlyByteBuf input) {
-      this.id = input.readVarInt();
-      this.movement = input.readLpVec3();
-   }
-
-   private void write(final FriendlyByteBuf output) {
-      output.writeVarInt(this.id);
-      output.writeLpVec3(this.movement);
    }
 
    @Override
@@ -40,13 +28,5 @@ public class ClientboundSetEntityMotionPacket implements Packet<ClientGamePacket
 
    public void handle(final ClientGamePacketListener listener) {
       listener.handleSetEntityMotion(this);
-   }
-
-   public int getId() {
-      return this.id;
-   }
-
-   public Vec3 getMovement() {
-      return this.movement;
    }
 }

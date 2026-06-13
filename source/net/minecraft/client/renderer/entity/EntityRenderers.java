@@ -9,6 +9,7 @@ import net.minecraft.client.entity.ClientAvatarEntity;
 import net.minecraft.client.model.animal.squid.SquidModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
@@ -96,7 +97,12 @@ public class EntityRenderers {
       register(EntityType.DARK_OAK_BOAT, context -> new BoatRenderer(context, ModelLayers.DARK_OAK_BOAT));
       register(EntityType.DARK_OAK_CHEST_BOAT, context -> new BoatRenderer(context, ModelLayers.DARK_OAK_CHEST_BOAT));
       register(EntityType.DOLPHIN, DolphinRenderer::new);
-      register(EntityType.DONKEY, context -> new DonkeyRenderer<>(context, DonkeyRenderer.Type.DONKEY));
+      register(
+         EntityType.DONKEY,
+         context -> new DonkeyRenderer<>(
+            context, EquipmentClientInfo.LayerType.DONKEY_SADDLE, ModelLayers.DONKEY_SADDLE, DonkeyRenderer.Type.DONKEY, DonkeyRenderer.Type.DONKEY_BABY
+         )
+      );
       register(EntityType.DRAGON_FIREBALL, DragonFireballRenderer::new);
       register(EntityType.DROWNED, DrownedRenderer::new);
       register(EntityType.EGG, ThrownItemRenderer::new);
@@ -153,7 +159,12 @@ public class EntityRenderers {
       register(EntityType.MARKER, NoopRenderer::new);
       register(EntityType.MINECART, context -> new MinecartRenderer(context, ModelLayers.MINECART));
       register(EntityType.MOOSHROOM, MushroomCowRenderer::new);
-      register(EntityType.MULE, context -> new DonkeyRenderer<>(context, DonkeyRenderer.Type.MULE));
+      register(
+         EntityType.MULE,
+         context -> new DonkeyRenderer<>(
+            context, EquipmentClientInfo.LayerType.MULE_SADDLE, ModelLayers.MULE_SADDLE, DonkeyRenderer.Type.MULE, DonkeyRenderer.Type.MULE_BABY
+         )
+      );
       register(EntityType.NAUTILUS, NautilusRenderer::new);
       register(EntityType.OAK_BOAT, context -> new BoatRenderer(context, ModelLayers.OAK_BOAT));
       register(EntityType.OAK_CHEST_BOAT, context -> new BoatRenderer(context, ModelLayers.OAK_CHEST_BOAT));
@@ -188,7 +199,16 @@ public class EntityRenderers {
       register(EntityType.SHULKER_BULLET, ShulkerBulletRenderer::new);
       register(EntityType.SILVERFISH, SilverfishRenderer::new);
       register(EntityType.SKELETON, SkeletonRenderer::new);
-      register(EntityType.SKELETON_HORSE, context -> new UndeadHorseRenderer(context, UndeadHorseRenderer.Type.SKELETON));
+      register(
+         EntityType.SKELETON_HORSE,
+         context -> new UndeadHorseRenderer(
+            context,
+            EquipmentClientInfo.LayerType.SKELETON_HORSE_SADDLE,
+            ModelLayers.SKELETON_HORSE_SADDLE,
+            UndeadHorseRenderer.Type.SKELETON,
+            UndeadHorseRenderer.Type.SKELETON_BABY
+         )
+      );
       register(EntityType.SLIME, SlimeRenderer::new);
       register(EntityType.SMALL_FIREBALL, context -> new ThrownItemRenderer<>(context, 0.75F, true));
       register(EntityType.SNIFFER, SnifferRenderer::new);
@@ -229,7 +249,16 @@ public class EntityRenderers {
       register(EntityType.WOLF, WolfRenderer::new);
       register(EntityType.ZOGLIN, ZoglinRenderer::new);
       register(EntityType.ZOMBIE, ZombieRenderer::new);
-      register(EntityType.ZOMBIE_HORSE, context -> new UndeadHorseRenderer(context, UndeadHorseRenderer.Type.ZOMBIE));
+      register(
+         EntityType.ZOMBIE_HORSE,
+         context -> new UndeadHorseRenderer(
+            context,
+            EquipmentClientInfo.LayerType.ZOMBIE_HORSE_SADDLE,
+            ModelLayers.ZOMBIE_HORSE_SADDLE,
+            UndeadHorseRenderer.Type.ZOMBIE,
+            UndeadHorseRenderer.Type.ZOMBIE_BABY
+         )
+      );
       register(EntityType.ZOMBIE_NAUTILUS, ZombieNautilusRenderer::new);
       register(EntityType.ZOMBIE_VILLAGER, ZombieVillagerRenderer::new);
       register(

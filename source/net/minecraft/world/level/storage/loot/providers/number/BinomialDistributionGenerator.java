@@ -1,15 +1,14 @@
 package net.minecraft.world.level.storage.loot.providers.number;
 
-import com.google.common.collect.Sets;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Set;
 import net.minecraft.util.RandomSource;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public record BinomialDistributionGenerator(NumberProvider n, NumberProvider p) implements NumberProvider {
-   public static final MapCodec<BinomialDistributionGenerator> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<BinomialDistributionGenerator> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             NumberProviders.CODEC.fieldOf("n").forGetter(BinomialDistributionGenerator::n),
             NumberProviders.CODEC.fieldOf("p").forGetter(BinomialDistributionGenerator::p)
@@ -18,8 +17,8 @@ public record BinomialDistributionGenerator(NumberProvider n, NumberProvider p) 
    );
 
    @Override
-   public LootNumberProviderType getType() {
-      return NumberProviders.BINOMIAL;
+   public MapCodec<BinomialDistributionGenerator> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -48,7 +47,9 @@ public record BinomialDistributionGenerator(NumberProvider n, NumberProvider p) 
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return Sets.union(this.n.getReferencedContextParams(), this.p.getReferencedContextParams());
+   public void validate(final ValidationContext context) {
+      NumberProvider.super.validate(context);
+      Validatable.validate(context, "n", this.n);
+      Validatable.validate(context, "p", this.p);
    }
 }

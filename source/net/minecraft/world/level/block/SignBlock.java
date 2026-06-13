@@ -102,7 +102,8 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
          if (level instanceof ServerLevel serverLevel) {
             if (hasApplicatorToUse && !sign.isWaxed() && !this.otherPlayerIsEditingSign(player, sign)) {
                boolean isFrontText = sign.isFacingFrontText(player);
-               if (signApplicator.canApplyToSign(sign.getText(isFrontText), player) && signApplicator.tryApplyToSign(serverLevel, sign, isFrontText, player)) {
+               if (signApplicator.canApplyToSign(sign.getText(isFrontText), itemStack, player)
+                  && signApplicator.tryApplyToSign(serverLevel, sign, isFrontText, itemStack, player)) {
                   sign.executeClickCommandsIfPresent(serverLevel, player, pos, isFrontText);
                   player.awardStat(Stats.ITEM_USED.get(itemStack.getItem()));
                   serverLevel.gameEvent(GameEvent.BLOCK_CHANGE, sign.getBlockPos(), GameEvent.Context.of(player, sign.getBlockState()));
@@ -172,14 +173,7 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
    }
 
    public static WoodType getWoodType(final Block block) {
-      WoodType type;
-      if (block instanceof SignBlock) {
-         type = ((SignBlock)block).type();
-      } else {
-         type = WoodType.OAK;
-      }
-
-      return type;
+      return block instanceof SignBlock signBlock ? signBlock.type() : WoodType.OAK;
    }
 
    public void openTextEdit(final Player player, final SignBlockEntity sign, final boolean isFrontText) {

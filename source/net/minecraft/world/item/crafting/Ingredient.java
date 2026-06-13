@@ -17,6 +17,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.ItemLike;
@@ -27,7 +28,7 @@ public final class Ingredient implements Predicate<ItemStack>, StackedContents.I
    public static final StreamCodec<RegistryFriendlyByteBuf, Optional<Ingredient>> OPTIONAL_CONTENTS_STREAM_CODEC = ByteBufCodecs.holderSet(Registries.ITEM)
       .map(
          ingredient -> ingredient.size() == 0 ? Optional.empty() : Optional.of(new Ingredient((HolderSet<Item>)ingredient)),
-         ingredient -> ingredient.<HolderSet.Direct<Item>>map(i -> i.values).orElse(HolderSet.direct())
+         ingredient -> ingredient.<HolderSet<Item>>map(i -> i.values).orElse(HolderSet.empty())
       );
    public static final Codec<HolderSet<Item>> NON_AIR_HOLDER_SET_CODEC = HolderSetCodec.create(Registries.ITEM, Item.CODEC, false);
    public static final Codec<Ingredient> CODEC = ExtraCodecs.nonEmptyHolderSet(NON_AIR_HOLDER_SET_CODEC).xmap(Ingredient::new, i -> i.values);
@@ -100,8 +101,8 @@ public final class Ingredient implements Predicate<ItemStack>, StackedContents.I
 
    private static SlotDisplay displayForSingleItem(final Holder<Item> item) {
       SlotDisplay inputDisplay = new SlotDisplay.ItemSlotDisplay(item);
-      ItemStack remainderStack = item.value().getCraftingRemainder();
-      if (!remainderStack.isEmpty()) {
+      ItemStackTemplate remainderStack = item.value().getCraftingRemainder();
+      if (remainderStack != null) {
          SlotDisplay remainderDisplay = new SlotDisplay.ItemStackSlotDisplay(remainderStack);
          return new SlotDisplay.WithRemainder(inputDisplay, remainderDisplay);
       } else {

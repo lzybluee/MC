@@ -213,7 +213,7 @@ public class ConduitBlockEntity extends BlockEntity {
       List<LivingEntity> candidates = level.getEntitiesOfClass(
          LivingEntity.class, getDestroyRangeAABB(pos), input -> input instanceof Enemy && input.isInWaterOrRain()
       );
-      return candidates.isEmpty() ? null : EntityReference.of(Util.getRandom(candidates, level.random));
+      return candidates.isEmpty() ? null : EntityReference.of(Util.getRandom(candidates, level.getRandom()));
    }
 
    private static AABB getDestroyRangeAABB(final BlockPos worldPosition) {
@@ -223,7 +223,7 @@ public class ConduitBlockEntity extends BlockEntity {
    private static void animationTick(
       final Level level, final BlockPos worldPosition, final List<BlockPos> effectBlocks, final @Nullable Entity destroyTarget, final int tickCount
    ) {
-      RandomSource random = level.random;
+      RandomSource random = level.getRandom();
       double hh = Mth.sin((tickCount + 35) * 0.1F) / 2.0F + 0.5F;
       hh = (hh * hh + hh) * 0.3F;
       Vec3 particleEnd = new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 1.5 + hh, worldPosition.getZ() + 0.5);

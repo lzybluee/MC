@@ -19,18 +19,14 @@ import org.jspecify.annotations.Nullable;
 public class SpearAttack extends Behavior<PathfinderMob> {
    public static final int MIN_REPOSITION_DISTANCE = 6;
    public static final int MAX_REPOSITION_DISTANCE = 7;
-   double speedModifierWhenCharging;
-   double speedModifierWhenRepositioning;
-   float approachDistanceSq;
-   float targetInRangeRadiusSq;
+   private final double speedModifierWhenCharging;
+   private final double speedModifierWhenRepositioning;
+   private final float targetInRangeRadiusSq;
 
-   public SpearAttack(
-      final double speedModifierWhenCharging, final double speedModifierWhenRepositioning, final float approachDistance, final float targetInRangeRadius
-   ) {
+   public SpearAttack(final double speedModifierWhenCharging, final double speedModifierWhenRepositioning, final float targetInRangeRadius) {
       super(Map.of(MemoryModuleType.SPEAR_STATUS, MemoryStatus.VALUE_PRESENT));
       this.speedModifierWhenCharging = speedModifierWhenCharging;
       this.speedModifierWhenRepositioning = speedModifierWhenRepositioning;
-      this.approachDistanceSq = approachDistance * approachDistance;
       this.targetInRangeRadiusSq = targetInRangeRadius * targetInRangeRadius;
    }
 

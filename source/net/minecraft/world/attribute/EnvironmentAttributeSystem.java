@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.clock.ClockManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeManager;
@@ -62,10 +62,10 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
    private static void addDefaultLayers(final EnvironmentAttributeSystem.Builder builder, final Level level) {
       RegistryAccess registries = level.registryAccess();
       BiomeManager biomeManager = level.getBiomeManager();
-      LongSupplier dayTimeGetter = level::getDayTime;
+      ClockManager clockManager = level.clockManager();
       addDimensionLayer(builder, level.dimensionType());
       addBiomeLayer(builder, registries.lookupOrThrow(Registries.BIOME), biomeManager);
-      level.dimensionType().timelines().forEach(timeline -> builder.addTimelineLayer((Holder<Timeline>)timeline, dayTimeGetter));
+      level.dimensionType().timelines().forEach(timeline -> builder.addTimelineLayer((Holder<Timeline>)timeline, clockManager));
       if (level.canHaveWeather()) {
          WeatherAttributes.addBuiltinLayers(builder, WeatherAttributes.WeatherAccess.from(level));
       }
@@ -184,18 +184,18 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
          return this;
       }
 
-      public EnvironmentAttributeSystem.Builder addTimelineLayer(final Holder<Timeline> timeline, final LongSupplier dayTimeGetter) {
+      public EnvironmentAttributeSystem.Builder addTimelineLayer(final Holder<Timeline> timeline, final ClockManager clockManager) {
          for (EnvironmentAttribute<?> attribute : timeline.value().attributes()) {
-            this.addTimelineLayerForAttribute(timeline, attribute, dayTimeGetter);
+            this.addTimelineLayerForAttribute(timeline, attribute, clockManager);
          }
 
          return this;
       }
 
       private <Value> void addTimelineLayerForAttribute(
-         final Holder<Timeline> timeline, final EnvironmentAttribute<Value> attribute, final LongSupplier dayTimeGetter
+         final Holder<Timeline> timeline, final EnvironmentAttribute<Value> attribute, final ClockManager clockManager
       ) {
-         this.addTimeBasedLayer(attribute, timeline.value().createTrackSampler(attribute, dayTimeGetter));
+         this.addTimeBasedLayer(attribute, timeline.value().createTrackSampler(attribute, clockManager));
       }
 
       public EnvironmentAttributeSystem build() {
@@ -247,9 +247,9 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
 
          for (EnvironmentAttributeLayer<Value> layer : this.layers) {
             result = (Value)(switch (layer) {
-               case EnvironmentAttributeLayer.Constant<Value> constantLayer -> (Object)constantLayer.applyConstant(result);
-               case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> (Object)timeBasedLayer.applyTimeBased(result, this.cacheTickId);
-               case EnvironmentAttributeLayer.Positional<Value> positionalLayer -> (Object)positionalLayer.applyPositional(
+               case EnvironmentAttributeLayer.Constant<Value> constantLayer -> constantLayer.applyConstant(result);
+               case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> timeBasedLayer.applyTimeBased(result, this.cacheTickId);
+               case EnvironmentAttributeLayer.Positional<Value> positionalLayer -> positionalLayer.applyPositional(
                   result, Objects.requireNonNull(pos), biomeInterpolator
                );
                default -> throw new MatchException(null, null);
@@ -264,9 +264,9 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
 
          for (EnvironmentAttributeLayer<Value> layer : this.layers) {
             result = (Value)(switch (layer) {
-               case EnvironmentAttributeLayer.Constant<Value> constantLayer -> (Object)constantLayer.applyConstant(result);
-               case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> (Object)timeBasedLayer.applyTimeBased(result, this.cacheTickId);
-               case EnvironmentAttributeLayer.Positional<Value> ignored -> (Object)result;
+               case EnvironmentAttributeLayer.Constant<Value> constantLayer -> constantLayer.applyConstant(result);
+               case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> timeBasedLayer.applyTimeBased(result, this.cacheTickId);
+               case EnvironmentAttributeLayer.Positional<Value> ignored -> result;
                default -> throw new MatchException(null, null);
             });
          }

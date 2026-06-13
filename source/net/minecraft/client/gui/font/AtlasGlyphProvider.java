@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class AtlasGlyphProvider {
    private static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
@@ -73,7 +73,7 @@ public class AtlasGlyphProvider {
    ) implements PlainTextRenderable {
       @Override
       public void renderSprite(
-         final Matrix4f pose,
+         final Matrix4fc pose,
          final VertexConsumer buffer,
          final int packedLightCoords,
          final float offsetX,

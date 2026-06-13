@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.color.ColorLerper;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -33,13 +33,13 @@ public class NowPlayingToast implements Toast {
       this.minecraft = Minecraft.getInstance();
    }
 
-   public static void renderToast(final GuiGraphics graphics, final Font font) {
+   public static void extractToast(final GuiGraphicsExtractor graphics, final Font font) {
       String currentSong = getCurrentSongName();
       if (currentSong != null) {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, NOW_PLAYING_BACKGROUND_SPRITE, 0, 0, getWidth(currentSong, font), 30);
          int notesOffset = 7;
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, MUSIC_NOTES_SPRITE, 7, 7, 16, 16, musicNoteColor);
-         graphics.drawString(font, getNowPlayingString(currentSong), 30, 15 - 9 / 2, TEXT_COLOR);
+         graphics.text(font, getNowPlayingString(currentSong), 30, 15 - 9 / 2, TEXT_COLOR);
       }
    }
 
@@ -77,8 +77,8 @@ public class NowPlayingToast implements Toast {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final Font font, final long fullyVisibleForMs) {
-      renderToast(graphics, font);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs) {
+      extractToast(graphics, font);
    }
 
    @Override

@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 
 public record CollectionPredicate<T, P extends Predicate<T>>(
    Optional<CollectionContentsPredicate<T, P>> contains, Optional<CollectionCountsPredicate<T, P>> counts, Optional<MinMaxBounds.Ints> size
-) implements Predicate<Iterable<T>> {
+) implements Predicate<Iterable<? extends T>> {
    public static <T, P extends Predicate<T>> Codec<CollectionPredicate<T, P>> codec(final Codec<P> elementCodec) {
       return RecordCodecBuilder.create(
          i -> i.group(
@@ -20,7 +20,7 @@ public record CollectionPredicate<T, P extends Predicate<T>>(
       );
    }
 
-   public boolean test(final Iterable<T> value) {
+   public boolean test(final Iterable<? extends T> value) {
       if (this.contains.isPresent() && !this.contains.get().test(value)) {
          return false;
       } else {

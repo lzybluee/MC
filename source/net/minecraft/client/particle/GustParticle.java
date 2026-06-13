@@ -22,7 +22,7 @@ public class GustParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
+   public int getLightCoords(final float a) {
       return 15728880;
    }
 

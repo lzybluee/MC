@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 
 public class KilledTrigger extends SimpleCriterionTrigger<KilledTrigger.TriggerInstance> {
    @Override
@@ -21,13 +23,12 @@ public class KilledTrigger extends SimpleCriterionTrigger<KilledTrigger.TriggerI
       this.trigger(player, t -> t.matches(player, entityContext, killingBlow));
    }
 
-   public record TriggerInstance(
-      Optional<ContextAwarePredicate> player, Optional<ContextAwarePredicate> entityPredicate, Optional<DamageSourcePredicate> killingBlow
-   ) implements SimpleCriterionTrigger.SimpleInstance {
+   public record TriggerInstance(Optional<ContextAwarePredicate> player, Optional<ContextAwarePredicate> entity, Optional<DamageSourcePredicate> killingBlow)
+      implements SimpleCriterionTrigger.SimpleInstance {
       public static final Codec<KilledTrigger.TriggerInstance> CODEC = RecordCodecBuilder.create(
          i -> i.group(
                EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player").forGetter(KilledTrigger.TriggerInstance::player),
-               EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("entity").forGetter(KilledTrigger.TriggerInstance::entityPredicate),
+               EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("entity").forGetter(KilledTrigger.TriggerInstance::entity),
                DamageSourcePredicate.CODEC.optionalFieldOf("killing_blow").forGetter(KilledTrigger.TriggerInstance::killingBlow)
             )
             .apply(i, KilledTrigger.TriggerInstance::new)
@@ -125,13 +126,13 @@ public class KilledTrigger extends SimpleCriterionTrigger<KilledTrigger.TriggerI
       public boolean matches(final ServerPlayer player, final LootContext entity, final DamageSource killingBlow) {
          return this.killingBlow.isPresent() && !this.killingBlow.get().matches(player, killingBlow)
             ? false
-            : this.entityPredicate.isEmpty() || this.entityPredicate.get().matches(entity);
+            : this.entity.isEmpty() || this.entity.get().matches(entity);
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         validator.validateEntity(this.entityPredicate, "entity");
+         Validatable.validate(validator.entityContext(), "entity", this.entity);
       }
    }
 }

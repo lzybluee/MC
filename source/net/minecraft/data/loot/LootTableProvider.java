@@ -27,9 +27,9 @@ import net.minecraft.util.Util;
 import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.RandomSequence;
 import net.minecraft.world.level.levelgen.RandomSupport;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.ValidationContext;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.slf4j.Logger;
 
 public class LootTableProvider implements DataProvider {
@@ -73,20 +73,13 @@ public class LootTableProvider implements DataProvider {
       tables.freeze();
       ProblemReporter.Collector problems = new ProblemReporter.Collector();
       HolderGetter.Provider validationProvider = new RegistryAccess.ImmutableRegistryAccess(List.of(tables)).freeze();
-      ValidationContext validationContext = new ValidationContext(problems, LootContextParamSets.ALL_PARAMS, validationProvider);
+      ValidationContextSource validationContext = new ValidationContextSource(problems, validationProvider);
 
       for (ResourceKey<LootTable> missingTable : Sets.difference(this.requiredTables, tables.registryKeySet())) {
          problems.report(new LootTableProvider.MissingTableProblem(missingTable));
       }
 
-      tables.listElements()
-         .forEach(
-            tableHolder -> tableHolder.value()
-               .validate(
-                  validationContext.setContextKeySet(tableHolder.value().getParamSet())
-                     .enterElement(new ProblemReporter.RootElementPathElement(tableHolder.key()), tableHolder.key())
-               )
-         );
+      LootDataType.TABLE.runValidation(validationContext, tables);
       if (!problems.isEmpty()) {
          problems.forEach((id, problem) -> LOGGER.warn("Found validation problem in {}: {}", id, problem.description()));
          throw new IllegalStateException("Failed to validate loot tables, see logs");

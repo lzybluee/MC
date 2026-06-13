@@ -4,7 +4,7 @@ import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.SelectableEntry;
@@ -49,7 +49,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
 
    @Override
    protected int scrollBarX() {
-      return this.getRight() - 6;
+      return this.getRight() - this.scrollbarWidth();
    }
 
    @Override
@@ -76,7 +76,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
    public abstract class Entry extends ObjectSelectionList.Entry<TransferableSelectionList.Entry> {
       @Override
       public int getWidth() {
-         return super.getWidth() - (TransferableSelectionList.this.scrollbarVisible() ? 6 : 0);
+         return super.getWidth() - (TransferableSelectionList.this.scrollable() ? TransferableSelectionList.this.scrollbarWidth() : 0);
       }
 
       public abstract String getPackId();
@@ -92,8 +92,8 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
-         graphics.drawCenteredString(this.font, this.text, this.getX() + this.getWidth() / 2, this.getContentYMiddle() - 9 / 2, -1);
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         graphics.centeredText(this.font, this.text, this.getX() + this.getWidth() / 2, this.getContentYMiddle() - 9 / 2, -1);
       }
 
       @Override
@@ -133,7 +133,7 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          PackCompatibility compatibility = this.pack.getCompatibility();
          if (!compatibility.isCompatible()) {
             int x0 = this.getContentX() - 1;
@@ -212,12 +212,12 @@ public class TransferableSelectionList extends ObjectSelectionList<TransferableS
             }
          }
 
-         this.nameWidget.setMaxWidth(157 - (TransferableSelectionList.this.scrollbarVisible() ? 6 : 0));
+         this.nameWidget.setMaxWidth(157 - (TransferableSelectionList.this.scrollable() ? 6 : 0));
          this.nameWidget.setPosition(this.getContentX() + 32 + 2, this.getContentY() + 1);
-         this.nameWidget.render(graphics, mouseX, mouseY, a);
-         this.descriptionWidget.setMaxWidth(157 - (TransferableSelectionList.this.scrollbarVisible() ? 6 : 0));
+         this.nameWidget.extractRenderState(graphics, mouseX, mouseY, a);
+         this.descriptionWidget.setMaxWidth(157 - (TransferableSelectionList.this.scrollable() ? 6 : 0));
          this.descriptionWidget.setPosition(this.getContentX() + 32 + 2, this.getContentY() + 12);
-         this.descriptionWidget.render(graphics, mouseX, mouseY, a);
+         this.descriptionWidget.extractRenderState(graphics, mouseX, mouseY, a);
       }
 
       @Override

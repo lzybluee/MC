@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import org.jspecify.annotations.Nullable;
 
 public class BlockFamilies {
    private static final Map<Block, BlockFamily> MAP = Maps.newHashMap();
@@ -176,22 +177,26 @@ public class BlockFamilies {
       .wall(Blocks.MUD_BRICK_WALL)
       .stairs(Blocks.MUD_BRICK_STAIRS)
       .slab(Blocks.MUD_BRICK_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily ANDESITE = familyBuilder(Blocks.ANDESITE)
       .wall(Blocks.ANDESITE_WALL)
       .stairs(Blocks.ANDESITE_STAIRS)
       .slab(Blocks.ANDESITE_SLAB)
       .polished(Blocks.POLISHED_ANDESITE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_ANDESITE = familyBuilder(Blocks.POLISHED_ANDESITE)
       .stairs(Blocks.POLISHED_ANDESITE_STAIRS)
       .slab(Blocks.POLISHED_ANDESITE_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily BLACKSTONE = familyBuilder(Blocks.BLACKSTONE)
       .wall(Blocks.BLACKSTONE_WALL)
       .stairs(Blocks.BLACKSTONE_STAIRS)
       .slab(Blocks.BLACKSTONE_SLAB)
       .polished(Blocks.POLISHED_BLACKSTONE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_BLACKSTONE = familyBuilder(Blocks.POLISHED_BLACKSTONE)
       .wall(Blocks.POLISHED_BLACKSTONE_WALL)
@@ -199,29 +204,35 @@ public class BlockFamilies {
       .button(Blocks.POLISHED_BLACKSTONE_BUTTON)
       .stairs(Blocks.POLISHED_BLACKSTONE_STAIRS)
       .slab(Blocks.POLISHED_BLACKSTONE_SLAB)
-      .polished(Blocks.POLISHED_BLACKSTONE_BRICKS)
+      .bricks(Blocks.POLISHED_BLACKSTONE_BRICKS)
       .chiseled(Blocks.CHISELED_POLISHED_BLACKSTONE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_BLACKSTONE_BRICKS = familyBuilder(Blocks.POLISHED_BLACKSTONE_BRICKS)
       .wall(Blocks.POLISHED_BLACKSTONE_BRICK_WALL)
       .stairs(Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS)
       .slab(Blocks.POLISHED_BLACKSTONE_BRICK_SLAB)
       .cracked(Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily BRICKS = familyBuilder(Blocks.BRICKS)
       .wall(Blocks.BRICK_WALL)
       .stairs(Blocks.BRICK_STAIRS)
       .slab(Blocks.BRICK_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
+   public static final BlockFamily END_STONE = familyBuilder(Blocks.END_STONE).bricks(Blocks.END_STONE_BRICKS).generateStonecutterRecipe().getFamily();
    public static final BlockFamily END_STONE_BRICKS = familyBuilder(Blocks.END_STONE_BRICKS)
       .wall(Blocks.END_STONE_BRICK_WALL)
       .stairs(Blocks.END_STONE_BRICK_STAIRS)
       .slab(Blocks.END_STONE_BRICK_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily MOSSY_STONE_BRICKS = familyBuilder(Blocks.MOSSY_STONE_BRICKS)
       .wall(Blocks.MOSSY_STONE_BRICK_WALL)
       .stairs(Blocks.MOSSY_STONE_BRICK_STAIRS)
       .slab(Blocks.MOSSY_STONE_BRICK_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily COPPER_BLOCK = familyBuilder(Blocks.COPPER_BLOCK).cut(Blocks.CUT_COPPER).dontGenerateModel().getFamily();
    public static final BlockFamily CUT_COPPER = familyBuilder(Blocks.CUT_COPPER)
@@ -229,6 +240,7 @@ public class BlockFamilies {
       .stairs(Blocks.CUT_COPPER_STAIRS)
       .chiseled(Blocks.CHISELED_COPPER)
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily WAXED_COPPER_BLOCK = familyBuilder(Blocks.WAXED_COPPER_BLOCK)
       .cut(Blocks.WAXED_CUT_COPPER)
@@ -240,6 +252,7 @@ public class BlockFamilies {
       .stairs(Blocks.WAXED_CUT_COPPER_STAIRS)
       .recipeGroupPrefix("waxed_cut_copper")
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily EXPOSED_COPPER = familyBuilder(Blocks.EXPOSED_COPPER).cut(Blocks.EXPOSED_CUT_COPPER).dontGenerateModel().getFamily();
    public static final BlockFamily EXPOSED_CUT_COPPER = familyBuilder(Blocks.EXPOSED_CUT_COPPER)
@@ -247,6 +260,7 @@ public class BlockFamilies {
       .stairs(Blocks.EXPOSED_CUT_COPPER_STAIRS)
       .chiseled(Blocks.EXPOSED_CHISELED_COPPER)
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily WAXED_EXPOSED_COPPER = familyBuilder(Blocks.WAXED_EXPOSED_COPPER)
       .cut(Blocks.WAXED_EXPOSED_CUT_COPPER)
@@ -258,6 +272,7 @@ public class BlockFamilies {
       .stairs(Blocks.WAXED_EXPOSED_CUT_COPPER_STAIRS)
       .recipeGroupPrefix("waxed_exposed_cut_copper")
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily WEATHERED_COPPER = familyBuilder(Blocks.WEATHERED_COPPER).cut(Blocks.WEATHERED_CUT_COPPER).dontGenerateModel().getFamily();
    public static final BlockFamily WEATHERED_CUT_COPPER = familyBuilder(Blocks.WEATHERED_CUT_COPPER)
@@ -265,6 +280,7 @@ public class BlockFamilies {
       .stairs(Blocks.WEATHERED_CUT_COPPER_STAIRS)
       .chiseled(Blocks.WEATHERED_CHISELED_COPPER)
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily WAXED_WEATHERED_COPPER = familyBuilder(Blocks.WAXED_WEATHERED_COPPER)
       .cut(Blocks.WAXED_WEATHERED_CUT_COPPER)
@@ -276,6 +292,7 @@ public class BlockFamilies {
       .stairs(Blocks.WAXED_WEATHERED_CUT_COPPER_STAIRS)
       .recipeGroupPrefix("waxed_weathered_cut_copper")
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily OXIDIZED_COPPER = familyBuilder(Blocks.OXIDIZED_COPPER).cut(Blocks.OXIDIZED_CUT_COPPER).dontGenerateModel().getFamily();
    public static final BlockFamily OXIDIZED_CUT_COPPER = familyBuilder(Blocks.OXIDIZED_CUT_COPPER)
@@ -283,6 +300,7 @@ public class BlockFamilies {
       .stairs(Blocks.OXIDIZED_CUT_COPPER_STAIRS)
       .chiseled(Blocks.OXIDIZED_CHISELED_COPPER)
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily WAXED_OXIDIZED_COPPER = familyBuilder(Blocks.WAXED_OXIDIZED_COPPER)
       .cut(Blocks.WAXED_OXIDIZED_CUT_COPPER)
@@ -294,36 +312,43 @@ public class BlockFamilies {
       .stairs(Blocks.WAXED_OXIDIZED_CUT_COPPER_STAIRS)
       .recipeGroupPrefix("waxed_oxidized_cut_copper")
       .dontGenerateModel()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily COBBLESTONE = familyBuilder(Blocks.COBBLESTONE)
       .wall(Blocks.COBBLESTONE_WALL)
       .stairs(Blocks.COBBLESTONE_STAIRS)
       .slab(Blocks.COBBLESTONE_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily MOSSY_COBBLESTONE = familyBuilder(Blocks.MOSSY_COBBLESTONE)
       .wall(Blocks.MOSSY_COBBLESTONE_WALL)
       .stairs(Blocks.MOSSY_COBBLESTONE_STAIRS)
       .slab(Blocks.MOSSY_COBBLESTONE_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily DIORITE = familyBuilder(Blocks.DIORITE)
       .wall(Blocks.DIORITE_WALL)
       .stairs(Blocks.DIORITE_STAIRS)
       .slab(Blocks.DIORITE_SLAB)
       .polished(Blocks.POLISHED_DIORITE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_DIORITE = familyBuilder(Blocks.POLISHED_DIORITE)
       .stairs(Blocks.POLISHED_DIORITE_STAIRS)
       .slab(Blocks.POLISHED_DIORITE_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily GRANITE = familyBuilder(Blocks.GRANITE)
       .wall(Blocks.GRANITE_WALL)
       .stairs(Blocks.GRANITE_STAIRS)
       .slab(Blocks.GRANITE_SLAB)
       .polished(Blocks.POLISHED_GRANITE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_GRANITE = familyBuilder(Blocks.POLISHED_GRANITE)
       .stairs(Blocks.POLISHED_GRANITE_STAIRS)
       .slab(Blocks.POLISHED_GRANITE_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily TUFF = familyBuilder(Blocks.TUFF)
       .wall(Blocks.TUFF_WALL)
@@ -331,24 +356,28 @@ public class BlockFamilies {
       .slab(Blocks.TUFF_SLAB)
       .chiseled(Blocks.CHISELED_TUFF)
       .polished(Blocks.POLISHED_TUFF)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_TUFF = familyBuilder(Blocks.POLISHED_TUFF)
       .wall(Blocks.POLISHED_TUFF_WALL)
       .stairs(Blocks.POLISHED_TUFF_STAIRS)
       .slab(Blocks.POLISHED_TUFF_SLAB)
-      .polished(Blocks.TUFF_BRICKS)
+      .bricks(Blocks.TUFF_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily TUFF_BRICKS = familyBuilder(Blocks.TUFF_BRICKS)
       .wall(Blocks.TUFF_BRICK_WALL)
       .stairs(Blocks.TUFF_BRICK_STAIRS)
       .slab(Blocks.TUFF_BRICK_SLAB)
       .chiseled(Blocks.CHISELED_TUFF_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily RESIN_BRICKS = familyBuilder(Blocks.RESIN_BRICKS)
       .wall(Blocks.RESIN_BRICK_WALL)
       .stairs(Blocks.RESIN_BRICK_STAIRS)
       .slab(Blocks.RESIN_BRICK_SLAB)
       .chiseled(Blocks.CHISELED_RESIN_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily NETHER_BRICKS = familyBuilder(Blocks.NETHER_BRICKS)
       .fence(Blocks.NETHER_BRICK_FENCE)
@@ -357,39 +386,48 @@ public class BlockFamilies {
       .slab(Blocks.NETHER_BRICK_SLAB)
       .chiseled(Blocks.CHISELED_NETHER_BRICKS)
       .cracked(Blocks.CRACKED_NETHER_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily RED_NETHER_BRICKS = familyBuilder(Blocks.RED_NETHER_BRICKS)
       .slab(Blocks.RED_NETHER_BRICK_SLAB)
       .stairs(Blocks.RED_NETHER_BRICK_STAIRS)
       .wall(Blocks.RED_NETHER_BRICK_WALL)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily PRISMARINE = familyBuilder(Blocks.PRISMARINE)
       .wall(Blocks.PRISMARINE_WALL)
       .stairs(Blocks.PRISMARINE_STAIRS)
       .slab(Blocks.PRISMARINE_SLAB)
-      .getFamily();
-   public static final BlockFamily PURPUR = familyBuilder(Blocks.PURPUR_BLOCK)
-      .stairs(Blocks.PURPUR_STAIRS)
-      .slab(Blocks.PURPUR_SLAB)
-      .dontGenerateRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily PRISMARINE_BRICKS = familyBuilder(Blocks.PRISMARINE_BRICKS)
       .stairs(Blocks.PRISMARINE_BRICK_STAIRS)
       .slab(Blocks.PRISMARINE_BRICK_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily DARK_PRISMARINE = familyBuilder(Blocks.DARK_PRISMARINE)
       .stairs(Blocks.DARK_PRISMARINE_STAIRS)
       .slab(Blocks.DARK_PRISMARINE_SLAB)
+      .generateStonecutterRecipe()
+      .getFamily();
+   public static final BlockFamily PURPUR = familyBuilder(Blocks.PURPUR_BLOCK)
+      .stairs(Blocks.PURPUR_STAIRS)
+      .slab(Blocks.PURPUR_SLAB)
+      .dontGenerateCraftingRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily QUARTZ = familyBuilder(Blocks.QUARTZ_BLOCK)
       .stairs(Blocks.QUARTZ_STAIRS)
       .slab(Blocks.QUARTZ_SLAB)
       .chiseled(Blocks.CHISELED_QUARTZ_BLOCK)
-      .dontGenerateRecipe()
+      .bricks(Blocks.QUARTZ_BRICKS)
+      .dontGenerateCraftingRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily SMOOTH_QUARTZ = familyBuilder(Blocks.SMOOTH_QUARTZ)
       .stairs(Blocks.SMOOTH_QUARTZ_STAIRS)
       .slab(Blocks.SMOOTH_QUARTZ_SLAB)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily SANDSTONE = familyBuilder(Blocks.SANDSTONE)
       .wall(Blocks.SANDSTONE_WALL)
@@ -397,12 +435,14 @@ public class BlockFamilies {
       .slab(Blocks.SANDSTONE_SLAB)
       .chiseled(Blocks.CHISELED_SANDSTONE)
       .cut(Blocks.CUT_SANDSTONE)
-      .dontGenerateRecipe()
+      .dontGenerateCraftingRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
-   public static final BlockFamily CUT_SANDSTONE = familyBuilder(Blocks.CUT_SANDSTONE).slab(Blocks.CUT_SANDSTONE_SLAB).getFamily();
+   public static final BlockFamily CUT_SANDSTONE = familyBuilder(Blocks.CUT_SANDSTONE).slab(Blocks.CUT_SANDSTONE_SLAB).generateStonecutterRecipe().getFamily();
    public static final BlockFamily SMOOTH_SANDSTONE = familyBuilder(Blocks.SMOOTH_SANDSTONE)
       .slab(Blocks.SMOOTH_SANDSTONE_SLAB)
       .stairs(Blocks.SMOOTH_SANDSTONE_STAIRS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily RED_SANDSTONE = familyBuilder(Blocks.RED_SANDSTONE)
       .wall(Blocks.RED_SANDSTONE_WALL)
@@ -410,18 +450,26 @@ public class BlockFamilies {
       .slab(Blocks.RED_SANDSTONE_SLAB)
       .chiseled(Blocks.CHISELED_RED_SANDSTONE)
       .cut(Blocks.CUT_RED_SANDSTONE)
-      .dontGenerateRecipe()
+      .dontGenerateCraftingRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
-   public static final BlockFamily CUT_RED_SANDSTONE = familyBuilder(Blocks.CUT_RED_SANDSTONE).slab(Blocks.CUT_RED_SANDSTONE_SLAB).getFamily();
+   public static final BlockFamily CUT_RED_SANDSTONE = familyBuilder(Blocks.CUT_RED_SANDSTONE)
+      .slab(Blocks.CUT_RED_SANDSTONE_SLAB)
+      .generateStonecutterRecipe()
+      .getFamily();
    public static final BlockFamily SMOOTH_RED_SANDSTONE = familyBuilder(Blocks.SMOOTH_RED_SANDSTONE)
       .slab(Blocks.SMOOTH_RED_SANDSTONE_SLAB)
       .stairs(Blocks.SMOOTH_RED_SANDSTONE_STAIRS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily STONE = familyBuilder(Blocks.STONE)
       .slab(Blocks.STONE_SLAB)
       .pressurePlate(Blocks.STONE_PRESSURE_PLATE)
       .button(Blocks.STONE_BUTTON)
       .stairs(Blocks.STONE_STAIRS)
+      .bricks(Blocks.STONE_BRICKS)
+      .cobbled(Blocks.COBBLESTONE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily STONE_BRICK = familyBuilder(Blocks.STONE_BRICKS)
       .wall(Blocks.STONE_BRICK_WALL)
@@ -429,32 +477,39 @@ public class BlockFamilies {
       .slab(Blocks.STONE_BRICK_SLAB)
       .chiseled(Blocks.CHISELED_STONE_BRICKS)
       .cracked(Blocks.CRACKED_STONE_BRICKS)
-      .dontGenerateRecipe()
+      .dontGenerateCraftingRecipe()
+      .generateStonecutterRecipe()
       .getFamily();
-   public static final BlockFamily DEEPSLATE = familyBuilder(Blocks.DEEPSLATE).getFamily();
+   public static final BlockFamily DEEPSLATE = familyBuilder(Blocks.DEEPSLATE).cobbled(Blocks.COBBLED_DEEPSLATE).generateStonecutterRecipe().getFamily();
    public static final BlockFamily COBBLED_DEEPSLATE = familyBuilder(Blocks.COBBLED_DEEPSLATE)
       .slab(Blocks.COBBLED_DEEPSLATE_SLAB)
       .stairs(Blocks.COBBLED_DEEPSLATE_STAIRS)
       .wall(Blocks.COBBLED_DEEPSLATE_WALL)
       .chiseled(Blocks.CHISELED_DEEPSLATE)
       .polished(Blocks.POLISHED_DEEPSLATE)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily POLISHED_DEEPSLATE = familyBuilder(Blocks.POLISHED_DEEPSLATE)
       .slab(Blocks.POLISHED_DEEPSLATE_SLAB)
       .stairs(Blocks.POLISHED_DEEPSLATE_STAIRS)
       .wall(Blocks.POLISHED_DEEPSLATE_WALL)
+      .bricks(Blocks.DEEPSLATE_BRICKS)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily DEEPSLATE_BRICKS = familyBuilder(Blocks.DEEPSLATE_BRICKS)
       .slab(Blocks.DEEPSLATE_BRICK_SLAB)
       .stairs(Blocks.DEEPSLATE_BRICK_STAIRS)
       .wall(Blocks.DEEPSLATE_BRICK_WALL)
       .cracked(Blocks.CRACKED_DEEPSLATE_BRICKS)
+      .tiles(Blocks.DEEPSLATE_TILES)
+      .generateStonecutterRecipe()
       .getFamily();
    public static final BlockFamily DEEPSLATE_TILES = familyBuilder(Blocks.DEEPSLATE_TILES)
       .slab(Blocks.DEEPSLATE_TILE_SLAB)
       .stairs(Blocks.DEEPSLATE_TILE_STAIRS)
       .wall(Blocks.DEEPSLATE_TILE_WALL)
       .cracked(Blocks.CRACKED_DEEPSLATE_TILES)
+      .generateStonecutterRecipe()
       .getFamily();
 
    private static BlockFamily.Builder familyBuilder(final Block base) {
@@ -469,5 +524,9 @@ public class BlockFamilies {
 
    public static Stream<BlockFamily> getAllFamilies() {
       return MAP.values().stream();
+   }
+
+   public static @Nullable BlockFamily getFamily(final Block base) {
+      return MAP.get(base);
    }
 }

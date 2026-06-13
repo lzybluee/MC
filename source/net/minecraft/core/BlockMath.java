@@ -13,7 +13,7 @@ public class BlockMath {
    private static final Map<Direction, Transformation> VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL = Maps.newEnumMap(
       Map.of(
          Direction.SOUTH,
-         Transformation.identity(),
+         Transformation.IDENTITY,
          Direction.EAST,
          new Transformation(null, new Quaternionf().rotateY((float) (Math.PI / 2)), null, null),
          Direction.WEST,

@@ -112,7 +112,7 @@ public class RaidCommand {
       if (type != null && type.getString().equals("local")) {
          ServerLevel level = source.getLevel();
          Vec3 pos = source.getPosition().add(5.0, 0.0, 0.0);
-         level.playSeededSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN, SoundSource.NEUTRAL, 2.0F, 1.0F, level.random.nextLong());
+         level.playSeededSound(null, pos.x, pos.y, pos.z, SoundEvents.RAID_HORN, SoundSource.NEUTRAL, 2.0F, 1.0F, level.getRandom().nextLong());
       }
 
       return 1;

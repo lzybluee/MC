@@ -22,9 +22,9 @@ public class DebugEntrySimplePerformanceImpactors implements DebugScreenEntry {
       displayer.addLine(
          String.format(
             Locale.ROOT,
-            "%s%s B: %d",
-            options.improvedTransparency().get() ? "improved-transparency" : "",
-            options.cloudStatus().get() == CloudStatus.OFF ? "" : (options.cloudStatus().get() == CloudStatus.FAST ? " fast-clouds" : " fancy-clouds"),
+            "%s%sB: %d",
+            options.improvedTransparency().get() ? "improved-transparency " : "",
+            options.cloudStatus().get() == CloudStatus.OFF ? "" : (options.cloudStatus().get() == CloudStatus.FAST ? "fast-clouds " : "fancy-clouds "),
             options.biomeBlendRadius().get()
          )
       );

@@ -8,26 +8,26 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.display.FurnaceRecipeDisplay;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 
 public abstract class AbstractCookingRecipe extends SingleItemRecipe {
-   private final CookingBookCategory category;
+   protected final AbstractCookingRecipe.CookingBookInfo bookInfo;
    private final float experience;
    private final int cookingTime;
 
    public AbstractCookingRecipe(
-      final String group,
-      final CookingBookCategory category,
+      final Recipe.CommonInfo commonInfo,
+      final AbstractCookingRecipe.CookingBookInfo bookInfo,
       final Ingredient ingredient,
-      final ItemStack result,
+      final ItemStackTemplate result,
       final float experience,
       final int cookingTime
    ) {
-      super(group, ingredient, result);
-      this.category = category;
+      super(commonInfo, ingredient, result);
+      this.bookInfo = bookInfo;
       this.experience = experience;
       this.cookingTime = cookingTime;
    }
@@ -47,7 +47,12 @@ public abstract class AbstractCookingRecipe extends SingleItemRecipe {
    }
 
    public CookingBookCategory category() {
-      return this.category;
+      return this.bookInfo.category;
+   }
+
+   @Override
+   public String group() {
+      return this.bookInfo.group;
    }
 
    protected abstract Item furnaceIcon();
@@ -66,52 +71,56 @@ public abstract class AbstractCookingRecipe extends SingleItemRecipe {
       );
    }
 
-   @FunctionalInterface
-   public interface Factory<T extends AbstractCookingRecipe> {
-      T create(String group, CookingBookCategory category, Ingredient ingredient, ItemStack result, float experience, int cookingTime);
+   public static <T extends AbstractCookingRecipe> MapCodec<T> cookingMapCodec(final AbstractCookingRecipe.Factory<T> factory, final int defaultCookingTime) {
+      return RecordCodecBuilder.mapCodec(
+         i -> i.group(
+               Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+               AbstractCookingRecipe.CookingBookInfo.MAP_CODEC.forGetter(o -> o.bookInfo),
+               Ingredient.CODEC.fieldOf("ingredient").forGetter(SingleItemRecipe::input),
+               ItemStackTemplate.CODEC.fieldOf("result").forGetter(SingleItemRecipe::result),
+               Codec.FLOAT.fieldOf("experience").orElse(0.0F).forGetter(AbstractCookingRecipe::experience),
+               Codec.INT.fieldOf("cookingtime").orElse(defaultCookingTime).forGetter(AbstractCookingRecipe::cookingTime)
+            )
+            .apply(i, factory::create)
+      );
    }
 
-   public static class Serializer<T extends AbstractCookingRecipe> implements RecipeSerializer<T> {
-      private final MapCodec<T> codec;
-      private final StreamCodec<RegistryFriendlyByteBuf, T> streamCodec;
+   public static <T extends AbstractCookingRecipe> StreamCodec<RegistryFriendlyByteBuf, T> cookingStreamCodec(final AbstractCookingRecipe.Factory<T> factory) {
+      return StreamCodec.composite(
+         Recipe.CommonInfo.STREAM_CODEC,
+         o -> o.commonInfo,
+         AbstractCookingRecipe.CookingBookInfo.STREAM_CODEC,
+         o -> o.bookInfo,
+         Ingredient.CONTENTS_STREAM_CODEC,
+         SingleItemRecipe::input,
+         ItemStackTemplate.STREAM_CODEC,
+         SingleItemRecipe::result,
+         ByteBufCodecs.FLOAT,
+         AbstractCookingRecipe::experience,
+         ByteBufCodecs.INT,
+         AbstractCookingRecipe::cookingTime,
+         factory::create
+      );
+   }
 
-      public Serializer(final AbstractCookingRecipe.Factory<T> factory, final int defaultCookingTime) {
-         this.codec = RecordCodecBuilder.mapCodec(
-            r -> r.group(
-                  Codec.STRING.optionalFieldOf("group", "").forGetter(SingleItemRecipe::group),
-                  CookingBookCategory.CODEC.fieldOf("category").orElse(CookingBookCategory.MISC).forGetter(AbstractCookingRecipe::category),
-                  Ingredient.CODEC.fieldOf("ingredient").forGetter(SingleItemRecipe::input),
-                  ItemStack.STRICT_SINGLE_ITEM_CODEC.fieldOf("result").forGetter(SingleItemRecipe::result),
-                  Codec.FLOAT.fieldOf("experience").orElse(0.0F).forGetter(AbstractCookingRecipe::experience),
-                  Codec.INT.fieldOf("cookingtime").orElse(defaultCookingTime).forGetter(AbstractCookingRecipe::cookingTime)
-               )
-               .apply(r, factory::create)
-         );
-         this.streamCodec = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8,
-            SingleItemRecipe::group,
-            CookingBookCategory.STREAM_CODEC,
-            AbstractCookingRecipe::category,
-            Ingredient.CONTENTS_STREAM_CODEC,
-            SingleItemRecipe::input,
-            ItemStack.STREAM_CODEC,
-            SingleItemRecipe::result,
-            ByteBufCodecs.FLOAT,
-            AbstractCookingRecipe::experience,
-            ByteBufCodecs.INT,
-            AbstractCookingRecipe::cookingTime,
-            factory::create
-         );
-      }
+   public record CookingBookInfo(CookingBookCategory category, String group) implements Recipe.BookInfo<CookingBookCategory> {
+      public static final MapCodec<AbstractCookingRecipe.CookingBookInfo> MAP_CODEC = Recipe.BookInfo.mapCodec(
+         CookingBookCategory.CODEC, CookingBookCategory.MISC, AbstractCookingRecipe.CookingBookInfo::new
+      );
+      public static final StreamCodec<RegistryFriendlyByteBuf, AbstractCookingRecipe.CookingBookInfo> STREAM_CODEC = Recipe.BookInfo.streamCodec(
+         CookingBookCategory.STREAM_CODEC, AbstractCookingRecipe.CookingBookInfo::new
+      );
+   }
 
-      @Override
-      public MapCodec<T> codec() {
-         return this.codec;
-      }
-
-      @Override
-      public StreamCodec<RegistryFriendlyByteBuf, T> streamCodec() {
-         return this.streamCodec;
-      }
+   @FunctionalInterface
+   public interface Factory<T extends AbstractCookingRecipe> {
+      T create(
+         Recipe.CommonInfo commonInfo,
+         AbstractCookingRecipe.CookingBookInfo cbookInfotegory,
+         Ingredient ingredient,
+         ItemStackTemplate result,
+         float experience,
+         int cookingTime
+      );
    }
 }

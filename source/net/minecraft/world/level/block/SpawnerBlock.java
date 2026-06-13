@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -39,7 +40,8 @@ public class SpawnerBlock extends BaseEntityBlock {
    protected void spawnAfterBreak(final BlockState state, final ServerLevel level, final BlockPos pos, final ItemStack tool, final boolean dropExperience) {
       super.spawnAfterBreak(state, level, pos, tool, dropExperience);
       if (dropExperience) {
-         int magicCount = 15 + level.random.nextInt(15) + level.random.nextInt(15);
+         RandomSource random = level.getRandom();
+         int magicCount = 15 + random.nextInt(15) + random.nextInt(15);
          this.popExperience(level, pos, magicCount);
       }
    }

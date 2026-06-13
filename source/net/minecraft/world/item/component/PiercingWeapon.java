@@ -18,6 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.EntityHitResult;
 
@@ -73,7 +74,8 @@ public record PiercingWeapon(boolean dealsKnockback, boolean dismounts, Optional
 
    public void attack(final LivingEntity attacker, final EquipmentSlot hand) {
       float damage = (float)attacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
-      AttackRange attackRange = attacker.entityAttackRange();
+      ItemStack weaponItem = attacker.getItemBySlot(hand);
+      AttackRange attackRange = attacker.getAttackRangeWith(weaponItem);
       boolean hitSomething = false;
 
       for (EntityHitResult hitResult : (Collection)ProjectileUtil.getHitEntitiesAlong(
@@ -84,7 +86,7 @@ public record PiercingWeapon(boolean dealsKnockback, boolean dismounts, Optional
       }
 
       attacker.onAttack();
-      attacker.lungeForwardMaybe();
+      attacker.postPiercingAttack();
       if (hitSomething) {
          this.makeHitSound(attacker);
       }

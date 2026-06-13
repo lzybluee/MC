@@ -2,7 +2,6 @@ package net.minecraft.world.item;
 
 import java.util.Optional;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -30,7 +29,7 @@ public class InstrumentItem extends Item {
    @Override
    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
       ItemStack itemStack = player.getItemInHand(hand);
-      Optional<? extends Holder<Instrument>> instrumentHolder = this.getInstrument(itemStack, player.registryAccess());
+      Optional<? extends Holder<Instrument>> instrumentHolder = getInstrument(itemStack);
       if (instrumentHolder.isPresent()) {
          Instrument instrument = instrumentHolder.get().value();
          player.startUsingItem(hand);
@@ -45,13 +44,13 @@ public class InstrumentItem extends Item {
 
    @Override
    public int getUseDuration(final ItemStack itemStack, final LivingEntity user) {
-      Optional<Holder<Instrument>> instrument = this.getInstrument(itemStack, user.registryAccess());
+      Optional<Holder<Instrument>> instrument = getInstrument(itemStack);
       return instrument.<Integer>map(instrumentHolder -> Mth.floor(instrumentHolder.value().useDuration() * 20.0F)).orElse(0);
    }
 
-   private Optional<Holder<Instrument>> getInstrument(final ItemStack itemStack, final HolderLookup.Provider registries) {
+   private static Optional<Holder<Instrument>> getInstrument(final ItemStack itemStack) {
       InstrumentComponent instrument = itemStack.get(DataComponents.INSTRUMENT);
-      return instrument != null ? instrument.unwrap(registries) : Optional.empty();
+      return instrument != null ? Optional.of(instrument.instrument()) : Optional.empty();
    }
 
    @Override

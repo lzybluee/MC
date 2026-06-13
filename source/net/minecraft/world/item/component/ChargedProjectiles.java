@@ -13,30 +13,26 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.TooltipFlag;
 
-public final class ChargedProjectiles implements TooltipProvider {
+public record ChargedProjectiles(List<ItemStackTemplate> items) implements TooltipProvider {
    public static final ChargedProjectiles EMPTY = new ChargedProjectiles(List.of());
-   public static final Codec<ChargedProjectiles> CODEC = ItemStack.CODEC.listOf().xmap(ChargedProjectiles::new, projectiles -> projectiles.items);
-   public static final StreamCodec<RegistryFriendlyByteBuf, ChargedProjectiles> STREAM_CODEC = ItemStack.STREAM_CODEC
+   public static final Codec<ChargedProjectiles> CODEC = ItemStackTemplate.CODEC.listOf().xmap(ChargedProjectiles::new, projectiles -> projectiles.items);
+   public static final StreamCodec<RegistryFriendlyByteBuf, ChargedProjectiles> STREAM_CODEC = ItemStackTemplate.STREAM_CODEC
       .apply(ByteBufCodecs.list())
       .map(ChargedProjectiles::new, projectiles -> projectiles.items);
-   private final List<ItemStack> items;
 
-   private ChargedProjectiles(final List<ItemStack> items) {
-      this.items = items;
+   public static ChargedProjectiles of(final ItemStackTemplate stack) {
+      return new ChargedProjectiles(List.of(stack));
    }
 
-   public static ChargedProjectiles of(final ItemStack itemStack) {
-      return new ChargedProjectiles(List.of(itemStack.copy()));
-   }
-
-   public static ChargedProjectiles of(final List<ItemStack> items) {
-      return new ChargedProjectiles(List.copyOf(Lists.transform(items, ItemStack::copy)));
+   public static ChargedProjectiles ofNonEmpty(final List<ItemStack> items) {
+      return new ChargedProjectiles(List.copyOf(Lists.transform(items, ItemStackTemplate::fromNonEmptyStack)));
    }
 
    public boolean contains(final Item item) {
-      for (ItemStack projectile : this.items) {
+      for (ItemStackTemplate projectile : this.items) {
          if (projectile.is(item)) {
             return true;
          }
@@ -45,8 +41,8 @@ public final class ChargedProjectiles implements TooltipProvider {
       return false;
    }
 
-   public List<ItemStack> getItems() {
-      return Lists.transform(this.items, ItemStack::copy);
+   public List<ItemStack> itemCopies() {
+      return Lists.transform(this.items, ItemStackTemplate::create);
    }
 
    public boolean isEmpty() {
@@ -54,26 +50,12 @@ public final class ChargedProjectiles implements TooltipProvider {
    }
 
    @Override
-   public boolean equals(final Object obj) {
-      return this == obj ? true : obj instanceof ChargedProjectiles projectiles && ItemStack.listMatches(this.items, projectiles.items);
-   }
-
-   @Override
-   public int hashCode() {
-      return ItemStack.hashStackList(this.items);
-   }
-
-   @Override
-   public String toString() {
-      return "ChargedProjectiles[items=" + this.items + "]";
-   }
-
-   @Override
    public void addToTooltip(final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components) {
       ItemStack current = null;
       int count = 0;
 
-      for (ItemStack projectile : this.items) {
+      for (ItemStackTemplate projectileTemplate : this.items) {
+         ItemStack projectile = projectileTemplate.create();
          if (current == null) {
             current = projectile;
             count = 1;

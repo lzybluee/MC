@@ -3,13 +3,12 @@ package net.minecraft.client.renderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.CustomFeatureRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
@@ -17,12 +16,12 @@ import net.minecraft.client.renderer.feature.ModelPartFeatureRenderer;
 import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -34,9 +33,9 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
    private final NameTagFeatureRenderer.Storage nameTagSubmits = new NameTagFeatureRenderer.Storage();
    private final List<SubmitNodeStorage.TextSubmit> textSubmits = new ArrayList<>();
    private final List<SubmitNodeStorage.LeashSubmit> leashSubmits = new ArrayList<>();
-   private final List<SubmitNodeStorage.BlockSubmit> blockSubmits = new ArrayList<>();
    private final List<SubmitNodeStorage.MovingBlockSubmit> movingBlockSubmits = new ArrayList<>();
    private final List<SubmitNodeStorage.BlockModelSubmit> blockModelSubmits = new ArrayList<>();
+   private final List<SubmitNodeStorage.BreakingBlockModelSubmit> breakingBlockModelSubmits = new ArrayList<>();
    private final List<SubmitNodeStorage.ItemSubmit> itemSubmits = new ArrayList<>();
    private final List<SubmitNodeCollector.ParticleGroupRenderer> particleGroupRenderers = new ArrayList<>();
    private final ModelFeatureRenderer.Storage modelSubmits = new ModelFeatureRenderer.Storage();
@@ -150,16 +149,6 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
    }
 
    @Override
-   public void submitBlock(final PoseStack poseStack, final BlockState state, final int lightCoords, final int overlayCoords, final int outlineColor) {
-      this.wasUsed = true;
-      this.blockSubmits.add(new SubmitNodeStorage.BlockSubmit(poseStack.last().copy(), state, lightCoords, overlayCoords, outlineColor));
-      Minecraft.getInstance()
-         .getModelManager()
-         .specialBlockModelRenderer()
-         .renderByBlock(state.getBlock(), ItemDisplayContext.NONE, poseStack, this.submitNodeStorage, lightCoords, overlayCoords, outlineColor);
-   }
-
-   @Override
    public void submitMovingBlock(final PoseStack poseStack, final MovingBlockRenderState movingBlockRenderState) {
       this.wasUsed = true;
       this.movingBlockSubmits.add(new SubmitNodeStorage.MovingBlockSubmit(new Matrix4f(poseStack.last().pose()), movingBlockRenderState));
@@ -169,17 +158,21 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
    public void submitBlockModel(
       final PoseStack poseStack,
       final RenderType renderType,
-      final BlockStateModel model,
-      final float r,
-      final float g,
-      final float b,
+      final List<BlockStateModelPart> modelParts,
+      final int[] tintLayers,
       final int lightCoords,
       final int overlayCoords,
       final int outlineColor
    ) {
       this.wasUsed = true;
       this.blockModelSubmits
-         .add(new SubmitNodeStorage.BlockModelSubmit(poseStack.last().copy(), renderType, model, r, g, b, lightCoords, overlayCoords, outlineColor));
+         .add(new SubmitNodeStorage.BlockModelSubmit(poseStack.last().copy(), renderType, modelParts, tintLayers, lightCoords, overlayCoords, outlineColor));
+   }
+
+   @Override
+   public void submitBreakingBlockModel(final PoseStack poseStack, final BlockStateModel model, final long seed, final int progress) {
+      this.wasUsed = true;
+      this.breakingBlockModelSubmits.add(new SubmitNodeStorage.BreakingBlockModelSubmit(poseStack.last().copy(), model, seed, progress));
    }
 
    @Override
@@ -191,16 +184,11 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
       final int outlineColor,
       final int[] tintLayers,
       final List<BakedQuad> quads,
-      final RenderType renderType,
       final ItemStackRenderState.FoilType foilType
    ) {
       this.wasUsed = true;
       this.itemSubmits
-         .add(
-            new SubmitNodeStorage.ItemSubmit(
-               poseStack.last().copy(), displayContext, lightCoords, overlayCoords, outlineColor, tintLayers, quads, renderType, foilType
-            )
-         );
+         .add(new SubmitNodeStorage.ItemSubmit(poseStack.last().copy(), displayContext, lightCoords, overlayCoords, outlineColor, tintLayers, quads, foilType));
    }
 
    @Override
@@ -237,16 +225,16 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
       return this.leashSubmits;
    }
 
-   public List<SubmitNodeStorage.BlockSubmit> getBlockSubmits() {
-      return this.blockSubmits;
-   }
-
    public List<SubmitNodeStorage.MovingBlockSubmit> getMovingBlockSubmits() {
       return this.movingBlockSubmits;
    }
 
    public List<SubmitNodeStorage.BlockModelSubmit> getBlockModelSubmits() {
       return this.blockModelSubmits;
+   }
+
+   public List<SubmitNodeStorage.BreakingBlockModelSubmit> getBreakingBlockModelSubmits() {
+      return this.breakingBlockModelSubmits;
    }
 
    public ModelPartFeatureRenderer.Storage getModelPartSubmits() {
@@ -279,9 +267,9 @@ public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
       this.nameTagSubmits.clear();
       this.textSubmits.clear();
       this.leashSubmits.clear();
-      this.blockSubmits.clear();
       this.movingBlockSubmits.clear();
       this.blockModelSubmits.clear();
+      this.breakingBlockModelSubmits.clear();
       this.itemSubmits.clear();
       this.particleGroupRenderers.clear();
       this.modelSubmits.clear();

@@ -22,7 +22,7 @@ public class ChunkTaskPriorityQueue {
    protected void resortChunkTasks(final int oldPriority, final ChunkPos pos, final int newPriority) {
       if (oldPriority < PRIORITY_LEVEL_COUNT) {
          Long2ObjectLinkedOpenHashMap<List<Runnable>> oldQueue = this.queuesPerPriority.get(oldPriority);
-         List<Runnable> oldTasks = (List<Runnable>)oldQueue.remove(pos.toLong());
+         List<Runnable> oldTasks = (List<Runnable>)oldQueue.remove(pos.pack());
          if (oldPriority == this.topPriorityQueueIndex) {
             while (this.hasWork() && this.queuesPerPriority.get(this.topPriorityQueueIndex).isEmpty()) {
                this.topPriorityQueueIndex++;
@@ -30,7 +30,7 @@ public class ChunkTaskPriorityQueue {
          }
 
          if (oldTasks != null && !oldTasks.isEmpty()) {
-            ((List)this.queuesPerPriority.get(newPriority).computeIfAbsent(pos.toLong(), k -> Lists.newArrayList())).addAll(oldTasks);
+            ((List)this.queuesPerPriority.get(newPriority).computeIfAbsent(pos.pack(), k -> Lists.newArrayList())).addAll(oldTasks);
             this.topPriorityQueueIndex = Math.min(this.topPriorityQueueIndex, newPriority);
          }
       }

@@ -18,35 +18,27 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.CustomSpawner;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.storage.ServerLevelData;
+import net.minecraft.world.level.saveddata.WanderingTraderData;
+import net.minecraft.world.level.storage.SavedDataStorage;
 import org.jspecify.annotations.Nullable;
 
 public class WanderingTraderSpawner implements CustomSpawner {
    private static final int DEFAULT_TICK_DELAY = 1200;
    public static final int DEFAULT_SPAWN_DELAY = 24000;
-   private static final int MIN_SPAWN_CHANCE = 25;
+   public static final int MIN_SPAWN_CHANCE = 25;
    private static final int MAX_SPAWN_CHANCE = 75;
    private static final int SPAWN_CHANCE_INCREASE = 25;
    private static final int SPAWN_ONE_IN_X_CHANCE = 10;
    private static final int NUMBER_OF_SPAWN_ATTEMPTS = 10;
    private final RandomSource random = RandomSource.create();
-   private final ServerLevelData serverLevelData;
+   private final SavedDataStorage savedDataStorage;
    private int tickDelay;
-   private int spawnDelay;
-   private int spawnChance;
+   private @Nullable WanderingTraderData traderData;
 
-   public WanderingTraderSpawner(final ServerLevelData serverLevelData) {
-      this.serverLevelData = serverLevelData;
+   public WanderingTraderSpawner(final SavedDataStorage savedDataStorage) {
+      this.savedDataStorage = savedDataStorage;
       this.tickDelay = 1200;
-      this.spawnDelay = serverLevelData.getWanderingTraderSpawnDelay();
-      this.spawnChance = serverLevelData.getWanderingTraderSpawnChance();
-      if (this.spawnDelay == 0 && this.spawnChance == 0) {
-         this.spawnDelay = 24000;
-         serverLevelData.setWanderingTraderSpawnDelay(this.spawnDelay);
-         this.spawnChance = 25;
-         serverLevelData.setWanderingTraderSpawnChance(this.spawnChance);
-      }
+      this.traderData = null;
    }
 
    @Override
@@ -54,21 +46,30 @@ public class WanderingTraderSpawner implements CustomSpawner {
       if (level.getGameRules().get(GameRules.SPAWN_WANDERING_TRADERS)) {
          if (--this.tickDelay <= 0) {
             this.tickDelay = 1200;
-            this.spawnDelay -= 1200;
-            this.serverLevelData.setWanderingTraderSpawnDelay(this.spawnDelay);
-            if (this.spawnDelay <= 0) {
-               this.spawnDelay = 24000;
-               int chanceToSpawn = this.spawnChance;
-               this.spawnChance = Mth.clamp(this.spawnChance + 25, 25, 75);
-               this.serverLevelData.setWanderingTraderSpawnChance(this.spawnChance);
+            WanderingTraderData data = this.getTraderData();
+            int spawnDelay = data.spawnDelay() - 1200;
+            data.setSpawnDelay(spawnDelay);
+            if (spawnDelay <= 0) {
+               data.setSpawnDelay(24000);
+               int chanceToSpawn = data.spawnChance();
+               int newSpawnChance = Mth.clamp(chanceToSpawn + 25, 25, 75);
+               data.setSpawnChance(newSpawnChance);
                if (this.random.nextInt(100) <= chanceToSpawn) {
                   if (this.spawn(level)) {
-                     this.spawnChance = 25;
+                     data.setSpawnChance(25);
                   }
                }
             }
          }
       }
+   }
+
+   private WanderingTraderData getTraderData() {
+      if (this.traderData == null) {
+         this.traderData = this.savedDataStorage.computeIfAbsent(WanderingTraderData.TYPE);
+      }
+
+      return this.traderData;
    }
 
    private boolean spawn(final ServerLevel level) {
@@ -98,7 +99,6 @@ public class WanderingTraderSpawner implements CustomSpawner {
                this.tryToSpawnLlamaFor(level, trader, 4);
             }
 
-            this.serverLevelData.setWanderingTraderId(trader.getUUID());
             trader.setDespawnDelay(48000);
             trader.setWanderTarget(referencePos);
             trader.setHomeTo(referencePos, 16);
@@ -126,7 +126,7 @@ public class WanderingTraderSpawner implements CustomSpawner {
       for (int i = 0; i < 10; i++) {
          int xPosition = referencePosition.getX() + this.random.nextInt(radius * 2) - radius;
          int zPosition = referencePosition.getZ() + this.random.nextInt(radius * 2) - radius;
-         int yPosition = level.getHeight(Heightmap.Types.WORLD_SURFACE, xPosition, zPosition);
+         int yPosition = level.getHeight(SpawnPlacements.getHeightmapType(EntityType.WANDERING_TRADER), xPosition, zPosition);
          BlockPos spawnPos = new BlockPos(xPosition, yPosition, zPosition);
          if (wanderingTraderSpawnType.isSpawnPositionOk(level, spawnPos, EntityType.WANDERING_TRADER)) {
             spawnPosition = spawnPos;

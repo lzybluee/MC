@@ -4,21 +4,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.animal.cow.CowModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.MushroomCowRenderState;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.world.level.block.state.BlockState;
 
 public class MushroomCowMushroomLayer extends RenderLayer<MushroomCowRenderState, CowModel> {
-   private final BlockRenderDispatcher blockRenderer;
-
-   public MushroomCowMushroomLayer(final RenderLayerParent<MushroomCowRenderState, CowModel> renderer, final BlockRenderDispatcher blockRenderer) {
+   public MushroomCowMushroomLayer(final RenderLayerParent<MushroomCowRenderState, CowModel> renderer) {
       super(renderer);
-      this.blockRenderer = blockRenderer;
    }
 
    public void submit(
@@ -29,19 +22,17 @@ public class MushroomCowMushroomLayer extends RenderLayer<MushroomCowRenderState
       final float yRot,
       final float xRot
    ) {
-      if (!state.isBaby) {
+      if (!state.isBaby && !state.mushroomModel.isEmpty()) {
          boolean appearsGlowingWithInvisibility = state.appearsGlowing() && state.isInvisible;
          if (!state.isInvisible || appearsGlowingWithInvisibility) {
-            BlockState mushroomBlockState = state.variant.getBlockState();
             int overlayCoords = LivingEntityRenderer.getOverlayCoords(state, 0.0F);
-            BlockStateModel model = this.blockRenderer.getBlockModel(mushroomBlockState);
             poseStack.pushPose();
             poseStack.translate(0.2F, -0.35F, 0.5F);
             poseStack.mulPose(Axis.YP.rotationDegrees(-48.0F));
             poseStack.scale(-1.0F, -1.0F, 1.0F);
             poseStack.translate(-0.5F, -0.5F, -0.5F);
             this.submitMushroomBlock(
-               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, mushroomBlockState, overlayCoords, model
+               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, state.mushroomModel, overlayCoords
             );
             poseStack.popPose();
             poseStack.pushPose();
@@ -52,7 +43,7 @@ public class MushroomCowMushroomLayer extends RenderLayer<MushroomCowRenderState
             poseStack.scale(-1.0F, -1.0F, 1.0F);
             poseStack.translate(-0.5F, -0.5F, -0.5F);
             this.submitMushroomBlock(
-               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, mushroomBlockState, overlayCoords, model
+               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, state.mushroomModel, overlayCoords
             );
             poseStack.popPose();
             poseStack.pushPose();
@@ -62,7 +53,7 @@ public class MushroomCowMushroomLayer extends RenderLayer<MushroomCowRenderState
             poseStack.scale(-1.0F, -1.0F, 1.0F);
             poseStack.translate(-0.5F, -0.5F, -0.5F);
             this.submitMushroomBlock(
-               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, mushroomBlockState, overlayCoords, model
+               poseStack, submitNodeCollector, lightCoords, appearsGlowingWithInvisibility, state.outlineColor, state.mushroomModel, overlayCoords
             );
             poseStack.popPose();
          }
@@ -75,16 +66,13 @@ public class MushroomCowMushroomLayer extends RenderLayer<MushroomCowRenderState
       final int lightCoords,
       final boolean appearsGlowingWithInvisibility,
       final int outlineColor,
-      final BlockState mushroomBlockState,
-      final int overlayCoords,
-      final BlockStateModel model
+      final BlockModelRenderState mushroomModel,
+      final int overlayCoords
    ) {
       if (appearsGlowingWithInvisibility) {
-         submitNodeCollector.submitBlockModel(
-            poseStack, RenderTypes.outline(TextureAtlas.LOCATION_BLOCKS), model, 0.0F, 0.0F, 0.0F, lightCoords, overlayCoords, outlineColor
-         );
+         mushroomModel.submitOnlyOutline(poseStack, submitNodeCollector, lightCoords, overlayCoords, outlineColor);
       } else {
-         submitNodeCollector.submitBlock(poseStack, mushroomBlockState, lightCoords, overlayCoords, outlineColor);
+         mushroomModel.submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, outlineColor);
       }
    }
 }

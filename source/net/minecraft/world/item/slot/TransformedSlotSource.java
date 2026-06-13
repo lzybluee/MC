@@ -4,8 +4,8 @@ import com.mojang.datafixers.Products.P1;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public abstract class TransformedSlotSource implements SlotSource {
@@ -32,6 +32,6 @@ public abstract class TransformedSlotSource implements SlotSource {
    @Override
    public void validate(final ValidationContext context) {
       SlotSource.super.validate(context);
-      this.slotSource.validate(context.forChild(new ProblemReporter.FieldPathElement("slot_source")));
+      Validatable.validate(context, "slot_source", this.slotSource);
    }
 }

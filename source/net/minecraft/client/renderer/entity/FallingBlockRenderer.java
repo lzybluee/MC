@@ -1,10 +1,11 @@
 package net.minecraft.client.renderer.entity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.FallingBlockRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.block.RenderShape;
@@ -43,7 +44,10 @@ public class FallingBlockRenderer extends EntityRenderer<FallingBlockEntity, Fal
       state.movingBlockRenderState.randomSeedPos = entity.getStartPos();
       state.movingBlockRenderState.blockPos = pos;
       state.movingBlockRenderState.blockState = entity.getBlockState();
-      state.movingBlockRenderState.biome = entity.level().getBiome(pos);
-      state.movingBlockRenderState.level = entity.level();
+      if (entity.level() instanceof ClientLevel clientLevel) {
+         state.movingBlockRenderState.biome = clientLevel.getBiome(pos);
+         state.movingBlockRenderState.cardinalLighting = clientLevel.cardinalLighting();
+         state.movingBlockRenderState.lightEngine = clientLevel.getLightEngine();
+      }
    }
 }

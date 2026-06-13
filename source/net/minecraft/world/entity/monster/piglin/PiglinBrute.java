@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.monster.piglin;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -20,7 +19,6 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.ItemStack;
@@ -35,31 +33,12 @@ public class PiglinBrute extends AbstractPiglin {
    private static final float MOVEMENT_SPEED_WHEN_FIGHTING = 0.35F;
    private static final int ATTACK_DAMAGE = 7;
    private static final double TARGETING_RANGE = 12.0;
-   protected static final ImmutableList<SensorType<? extends Sensor<? super PiglinBrute>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_BRUTE_SPECIFIC_SENSOR
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.DOORS_TO_CLOSE,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS,
-      MemoryModuleType.NEARBY_ADULT_PIGLINS,
-      MemoryModuleType.HURT_BY,
-      MemoryModuleType.HURT_BY_ENTITY,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      new MemoryModuleType[]{
-         MemoryModuleType.ATTACK_TARGET,
-         MemoryModuleType.ATTACK_COOLING_DOWN,
-         MemoryModuleType.INTERACTION_TARGET,
-         MemoryModuleType.PATH,
-         MemoryModuleType.ANGRY_AT,
-         MemoryModuleType.NEAREST_VISIBLE_NEMESIS,
-         MemoryModuleType.HOME
-      }
+   public static final Brain.Provider<PiglinBrute> BRAIN_PROVIDER = Brain.provider(
+      List.of(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS),
+      List.of(
+         SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_BRUTE_SPECIFIC_SENSOR
+      ),
+      PiglinBruteAi::getActivities
    );
 
    public PiglinBrute(final EntityType<? extends PiglinBrute> type, final Level level) {
@@ -90,18 +69,13 @@ public class PiglinBrute extends AbstractPiglin {
    }
 
    @Override
-   protected Brain.Provider<PiglinBrute> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return PiglinBruteAi.makeBrain(this, this.brainProvider().makeBrain(input));
+   protected Brain<PiglinBrute> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<PiglinBrute> getBrain() {
-      return (Brain<PiglinBrute>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override

@@ -79,11 +79,15 @@ public class InfestedBlock extends Block {
       return map.computeIfAbsent(oldState, k -> {
          BlockState newState = newStateSupplier.get();
 
-         for (Property property : k.getProperties()) {
-            newState = newState.hasProperty(property) ? newState.setValue(property, k.getValue(property)) : newState;
+         for (Property<?> property : k.getProperties()) {
+            newState = copyProperty(property, k, newState);
          }
 
          return newState;
       });
+   }
+
+   private static <T extends Comparable<T>> BlockState copyProperty(final Property<T> property, final BlockState source, final BlockState target) {
+      return target.hasProperty(property) ? target.setValue(property, source.getValue(property)) : target;
    }
 }

@@ -48,6 +48,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.OutgoingChatMessage;
 import net.minecraft.network.chat.RemoteChatSession;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundShowDialogPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
@@ -1216,7 +1217,7 @@ public class ServerPlayer extends Player {
             CriteriaTriggers.SLEPT_IN_BED.trigger(this);
          });
          if (!this.level().canSleepThroughNights()) {
-            this.displayClientMessage(Component.translatable("sleep.not_possible"), true);
+            this.sendOverlayMessage(Component.translatable("sleep.not_possible"));
          }
 
          this.level().updateSleepingPlayerList();
@@ -1288,9 +1289,8 @@ public class ServerPlayer extends Player {
    @Override
    public void onExplosionHit(final @Nullable Entity explosionCausedBy) {
       super.onExplosionHit(explosionCausedBy);
-      this.currentImpulseImpactPos = this.position();
       this.currentExplosionCause = explosionCausedBy;
-      this.setIgnoreFallDamageFromCurrentImpulse(explosionCausedBy != null && explosionCausedBy.getType() == EntityType.WIND_CHARGE);
+      this.setIgnoreFallDamageFromCurrentImpulse(explosionCausedBy != null && explosionCausedBy.is(EntityType.WIND_CHARGE), this.position());
    }
 
    @Override
@@ -1329,7 +1329,7 @@ public class ServerPlayer extends Player {
       AbstractContainerMenu menu = provider.createMenu(this.containerCounter, this.getInventory(), this);
       if (menu == null) {
          if (this.isSpectator()) {
-            this.displayClientMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED), true);
+            this.sendOverlayMessage(Component.translatable("container.spectatorCantOpen").withStyle(ChatFormatting.RED));
          }
 
          return OptionalInt.empty();
@@ -1382,7 +1382,7 @@ public class ServerPlayer extends Player {
    @Override
    public void openItemGui(final ItemStack itemStack, final InteractionHand hand) {
       if (itemStack.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
-         if (WrittenBookContent.resolveForItem(itemStack, this.createCommandSourceStack(), this)) {
+         if (WrittenBookContent.resolveForItem(itemStack, ResolutionContext.create(this.createCommandSourceStack()), this.registryAccess())) {
             this.containerMenu.broadcastChanges();
          }
 
@@ -1561,11 +1561,6 @@ public class ServerPlayer extends Player {
 
    public void resetSentInfo() {
       this.lastSentHealth = -1.0E8F;
-   }
-
-   @Override
-   public void displayClientMessage(final Component component, final boolean overlayMessage) {
-      this.sendSystemMessage(component, overlayMessage);
    }
 
    @Override
@@ -1783,8 +1778,22 @@ public class ServerPlayer extends Player {
       );
    }
 
+   @Override
    public void sendSystemMessage(final Component message) {
       this.sendSystemMessage(message, false);
+   }
+
+   @Override
+   public void sendOverlayMessage(final Component message) {
+      this.sendSystemMessage(message, true);
+   }
+
+   public void sendBuildLimitMessage(final boolean isTooHigh, final int limit) {
+      this.sendOverlayMessage(Component.translatable(isTooHigh ? "build.tooHigh" : "build.tooLow", limit).withStyle(ChatFormatting.RED));
+   }
+
+   public void sendSpawnProtectionMessage(final BlockPos pos) {
+      this.sendOverlayMessage(Component.translatable("build.spawn_protection", pos.toShortString()).withStyle(ChatFormatting.RED));
    }
 
    public void sendSystemMessage(final Component message, final boolean overlay) {
@@ -1925,15 +1934,6 @@ public class ServerPlayer extends Player {
    protected void processPortalCooldown() {
       if (!this.isChangingDimension) {
          super.processPortalCooldown();
-      }
-   }
-
-   @Override
-   public void attack(final Entity entity) {
-      if (this.isSpectator()) {
-         this.setCamera(entity);
-      } else {
-         super.attack(entity);
       }
    }
 

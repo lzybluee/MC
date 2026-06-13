@@ -65,6 +65,20 @@ public class TextureUtil {
       CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
       Runnable onCopyComplete = () -> {
          try (GpuBuffer.MappedView read = commandEncoder.mapBuffer(buffer, true, false)) {
+            ByteBuffer data = read.data();
+
+            IntUnaryOperator decodeTexel = switch (texture.getFormat()) {
+               case RED8 -> byteOffset -> {
+                  int luminance = Byte.toUnsignedInt(data.get(byteOffset));
+                  return ARGB.color(luminance, luminance, luminance);
+               };
+               case RED8I -> byteOffset -> {
+                  int luminance = data.get(byteOffset) + 128;
+                  return ARGB.color(luminance, luminance, luminance);
+               };
+               case RGBA8 -> byteOffset -> data.getInt(byteOffset);
+               case DEPTH32 -> byteOffset -> ARGB.gray(data.getFloat(byteOffset));
+            };
             int offsetx = 0;
 
             for (int ix = 0; ix <= maxMipLevel; ix++) {
@@ -74,7 +88,7 @@ public class TextureUtil {
                try (NativeImage image = new NativeImage(mipWidth, mipHeight, false)) {
                   for (int y = 0; y < mipHeight; y++) {
                      for (int x = 0; x < mipWidth; x++) {
-                        int argb = read.data().getInt(offsetx + (x + y * mipWidth) * texture.getFormat().pixelSize());
+                        int argb = decodeTexel.applyAsInt(offsetx + (x + y * mipWidth) * texture.getFormat().pixelSize());
                         image.setPixelABGR(x, y, pixelModifier.applyAsInt(argb));
                      }
                   }

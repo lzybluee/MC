@@ -3,12 +3,13 @@ package net.minecraft.client.gui.components;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import org.jspecify.annotations.Nullable;
@@ -19,6 +20,7 @@ public class Checkbox extends AbstractButton {
    private static final Identifier CHECKBOX_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("widget/checkbox_highlighted");
    private static final Identifier CHECKBOX_SPRITE = Identifier.withDefaultNamespace("widget/checkbox");
    private static final int SPACING = 4;
+   private static final int ROWS = 2;
    private static final int BOX_PADDING = 8;
    private boolean selected;
    private final Checkbox.OnValueChange onValueChange;
@@ -60,6 +62,10 @@ public class Checkbox extends AbstractButton {
       return getBoxSize(font) + 4 + font.width(message);
    }
 
+   private boolean overflowsRowLimit(final Font font) {
+      return font.getSplitter().splitLines(this.textWidget.getMessage(), this.width, Style.EMPTY).size() > 2;
+   }
+
    public static Checkbox.Builder builder(final Component message, final Font font) {
       return new Checkbox.Builder(message, font);
    }
@@ -97,7 +103,7 @@ public class Checkbox extends AbstractButton {
    }
 
    @Override
-   public void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       Minecraft minecraft = Minecraft.getInstance();
       Font font = minecraft.font;
       Identifier sprite;
@@ -112,7 +118,7 @@ public class Checkbox extends AbstractButton {
       int textX = this.getX() + boxSize + 4;
       int textY = this.getY() + boxSize / 2 - this.textWidget.getHeight() / 2;
       this.textWidget.setPosition(textX, textY);
-      this.textWidget.visitLines(graphics.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.notClickable(this.isHovered())));
+      this.textWidget.visitLines(graphics.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.notClickable(this.isHovered())));
    }
 
    public static class Builder {
@@ -171,7 +177,10 @@ public class Checkbox extends AbstractButton {
             this.onValueChange.onValueChange(checkbox, value);
          };
          Checkbox box = new Checkbox(this.x, this.y, this.maxWidth, this.message, this.font, this.selected, onChange);
-         box.setTooltip(this.tooltip);
+         if (box.overflowsRowLimit(this.font)) {
+            box.setTooltip(this.tooltip);
+         }
+
          return box;
       }
    }

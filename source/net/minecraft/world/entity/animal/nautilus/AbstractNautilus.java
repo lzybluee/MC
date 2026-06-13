@@ -2,7 +2,6 @@ package net.minecraft.world.entity.animal.nautilus;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -43,7 +42,6 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.AbstractMountInventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
@@ -390,9 +388,9 @@ public abstract class AbstractNautilus extends TamableAnimal implements PlayerRi
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       this.setPersistenceRequired();
-      return super.interact(player, hand);
+      return super.interact(player, hand, location);
    }
 
    @Override
@@ -415,10 +413,7 @@ public abstract class AbstractNautilus extends TamableAnimal implements PlayerRi
          }
 
          if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
-            FoodProperties foodProperties = itemStack.get(DataComponents.FOOD);
-            this.heal(foodProperties != null ? 2 * foodProperties.nutrition() : 1.0F);
-            this.usePlayerItem(player, hand, itemStack);
-            this.playEatingSound();
+            this.feed(player, hand, itemStack, 2.0F, 1.0F);
             return InteractionResult.SUCCESS;
          }
 
@@ -532,5 +527,10 @@ public abstract class AbstractNautilus extends TamableAnimal implements PlayerRi
 
    protected boolean isAggravated() {
       return this.getBrain().hasMemoryValue(MemoryModuleType.ANGRY_AT) || this.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET);
+   }
+
+   @Override
+   public boolean requiresCustomPersistence() {
+      return super.requiresCustomPersistence() || this.isTame();
    }
 }

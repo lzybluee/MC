@@ -10,15 +10,15 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class ApplyExplosionDecay extends LootItemConditionalFunction {
-   public static final MapCodec<ApplyExplosionDecay> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).apply(i, ApplyExplosionDecay::new));
+   public static final MapCodec<ApplyExplosionDecay> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).apply(i, ApplyExplosionDecay::new));
 
    private ApplyExplosionDecay(final List<LootItemCondition> predicates) {
       super(predicates);
    }
 
    @Override
-   public LootItemFunctionType<ApplyExplosionDecay> getType() {
-      return LootItemFunctions.EXPLOSION_DECAY;
+   public MapCodec<ApplyExplosionDecay> codec() {
+      return MAP_CODEC;
    }
 
    @Override

@@ -7,6 +7,7 @@ import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -18,7 +19,7 @@ public record EnchantmentsByCost(HolderSet<Enchantment> enchantments, IntProvide
    public static final MapCodec<EnchantmentsByCost> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             RegistryCodecs.homogeneousList(Registries.ENCHANTMENT).fieldOf("enchantments").forGetter(EnchantmentsByCost::enchantments),
-            IntProvider.CODEC.fieldOf("cost").forGetter(EnchantmentsByCost::cost)
+            IntProviders.CODEC.fieldOf("cost").forGetter(EnchantmentsByCost::cost)
          )
          .apply(i, EnchantmentsByCost::new)
    );

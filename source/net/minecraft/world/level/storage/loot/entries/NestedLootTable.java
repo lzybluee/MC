@@ -5,7 +5,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
@@ -13,12 +12,13 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class NestedLootTable extends LootPoolSingletonContainer {
-   public static final MapCodec<NestedLootTable> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<NestedLootTable> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(Codec.either(LootTable.KEY_CODEC, LootTable.DIRECT_CODEC).fieldOf("value").forGetter(e -> e.contents))
          .and(singletonFields(i))
          .apply(i, NestedLootTable::new)
@@ -43,8 +43,8 @@ public class NestedLootTable extends LootPoolSingletonContainer {
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.LOOT_TABLE;
+   public MapCodec<NestedLootTable> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -55,30 +55,9 @@ public class NestedLootTable extends LootPoolSingletonContainer {
 
    @Override
    public void validate(final ValidationContext context) {
-      Optional<ResourceKey<LootTable>> name = this.contents.left();
-      if (name.isPresent()) {
-         ResourceKey<LootTable> id = name.get();
-         if (!context.allowsReferences()) {
-            context.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(id));
-            return;
-         }
-
-         if (context.hasVisitedElement(id)) {
-            context.reportProblem(new ValidationContext.RecursiveReferenceProblem(id));
-            return;
-         }
-      }
-
       super.validate(context);
       this.contents
-         .ifLeft(
-            idx -> context.resolver()
-               .get(idx)
-               .ifPresentOrElse(
-                  lootTable -> ((LootTable)lootTable.value()).validate(context.enterElement(new ProblemReporter.ElementReferencePathElement(idx), idx)),
-                  () -> context.reportProblem(new ValidationContext.MissingReferenceProblem(idx))
-               )
-         )
+         .ifLeft(id -> Validatable.validateReference(context, id))
          .ifRight(lootTable -> lootTable.validate(context.forChild(INLINE_LOOT_TABLE_PATH_ELEMENT)));
    }
 

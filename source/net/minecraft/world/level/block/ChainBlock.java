@@ -44,7 +44,7 @@ public class ChainBlock extends RotatedPillarBlock implements SimpleWaterloggedB
    @Override
    public BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
    }
 

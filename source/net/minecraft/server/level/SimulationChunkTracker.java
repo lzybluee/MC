@@ -23,7 +23,7 @@ public class SimulationChunkTracker extends ChunkTracker {
    }
 
    public int getLevel(final ChunkPos node) {
-      return this.getLevel(node.toLong());
+      return this.getLevel(node.pack());
    }
 
    @Override

@@ -230,7 +230,7 @@ public class NetherFortressPieces {
          final ChunkPos chunkPos,
          final BlockPos referencePos
       ) {
-         RandomSource selfRandom = RandomSource.create(this.selfSeed);
+         RandomSource selfRandom = RandomSource.createThreadLocalInstance(this.selfSeed);
 
          for (int x = 0; x <= 4; x++) {
             for (int y = 3; y <= 4; y++) {

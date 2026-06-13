@@ -99,6 +99,7 @@ public abstract class DialogScreen<T extends Dialog> extends Screen {
 
    @Override
    protected void repositionElements() {
+      this.bodyScroll.arrangeElements();
       this.bodyScroll.setMaxHeight(this.layout.getContentHeight());
       this.layout.arrangeElements();
       this.makeSureWarningButtonIsInBounds();

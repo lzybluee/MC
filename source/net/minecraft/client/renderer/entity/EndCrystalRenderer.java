@@ -6,9 +6,7 @@ import net.minecraft.client.model.object.crystal.EndCrystalModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.EndCrystalRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -18,7 +16,6 @@ import net.minecraft.world.phys.Vec3;
 
 public class EndCrystalRenderer extends EntityRenderer<EndCrystal, EndCrystalRenderState> {
    private static final Identifier END_CRYSTAL_LOCATION = Identifier.withDefaultNamespace("textures/entity/end_crystal/end_crystal.png");
-   private static final RenderType RENDER_TYPE = RenderTypes.entityCutoutNoCull(END_CRYSTAL_LOCATION);
    private final EndCrystalModel model;
 
    public EndCrystalRenderer(final EntityRendererProvider.Context context) {
@@ -33,7 +30,9 @@ public class EndCrystalRenderer extends EntityRenderer<EndCrystal, EndCrystalRen
       poseStack.pushPose();
       poseStack.scale(2.0F, 2.0F, 2.0F);
       poseStack.translate(0.0F, -0.5F, 0.0F);
-      submitNodeCollector.submitModel(this.model, state, poseStack, RENDER_TYPE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+      submitNodeCollector.submitModel(
+         this.model, state, poseStack, END_CRYSTAL_LOCATION, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null
+      );
       poseStack.popPose();
       Vec3 beamOffset = state.beamOffset;
       if (beamOffset != null) {

@@ -15,6 +15,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.TimeArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundClearTitlesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
@@ -149,7 +150,8 @@ public class TitleCommand {
       final Function<Component, Packet<?>> factory
    ) throws CommandSyntaxException {
       for (ServerPlayer player : targets) {
-         player.connection.send(factory.apply(ComponentUtils.updateForEntity(source, title, player, 0)));
+         player.connection
+            .send(factory.apply(ComponentUtils.resolve(ResolutionContext.builder().withSource(source).withEntityOverride(player).build(), title)));
       }
 
       if (targets.size() == 1) {

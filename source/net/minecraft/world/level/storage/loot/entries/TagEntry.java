@@ -16,7 +16,7 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class TagEntry extends LootPoolSingletonContainer {
-   public static final MapCodec<TagEntry> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<TagEntry> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(TagKey.codec(Registries.ITEM).fieldOf("name").forGetter(e -> e.tag), Codec.BOOL.fieldOf("expand").forGetter(e -> e.expand))
          .and(singletonFields(i))
          .apply(i, TagEntry::new)
@@ -38,8 +38,8 @@ public class TagEntry extends LootPoolSingletonContainer {
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.TAG;
+   public MapCodec<TagEntry> codec() {
+      return MAP_CODEC;
    }
 
    @Override

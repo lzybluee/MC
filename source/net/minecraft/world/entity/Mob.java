@@ -224,20 +224,32 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
 
    @Override
    public @Nullable LivingEntity getTarget() {
+      return this.asValidTarget(this.target);
+   }
+
+   public @Nullable LivingEntity getTargetUnchecked() {
       return this.target;
    }
 
+   protected @Nullable LivingEntity asValidTarget(final @Nullable LivingEntity target) {
+      if (target instanceof Player player && (player.isCreative() || player.isSpectator())) {
+         return null;
+      } else {
+         return target != null && !this.canAttack(target) ? null : target;
+      }
+   }
+
    protected final @Nullable LivingEntity getTargetFromBrain() {
-      return this.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+      return this.asValidTarget(this.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null));
    }
 
    public void setTarget(final @Nullable LivingEntity target) {
-      this.target = target;
+      this.target = this.asValidTarget(target);
    }
 
    @Override
-   public boolean canAttackType(final EntityType<?> targetType) {
-      return targetType != EntityType.GHAST;
+   public boolean canAttack(final LivingEntity target) {
+      return !target.is(EntityType.GHAST) && super.canAttack(target);
    }
 
    public boolean canUseNonMeleeWeapon(final ItemStack item) {
@@ -437,7 +449,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
    @Override
    public void aiStep() {
       super.aiStep();
-      if (this.getType().is(EntityTypeTags.BURN_IN_DAYLIGHT)) {
+      if (this.is(EntityTypeTags.BURN_IN_DAYLIGHT)) {
          this.burnUndead();
       }
 
@@ -636,7 +648,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
    }
 
    public boolean requiresCustomPersistence() {
-      return this.isPassenger();
+      return this.isPassenger() || this.isLeashed();
    }
 
    @Override
@@ -1081,7 +1093,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       if (!this.isAlive()) {
          return InteractionResult.PASS;
       } else {
@@ -1090,7 +1102,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
             this.gameEvent(GameEvent.ENTITY_INTERACT, player);
             return interactionResult;
          } else {
-            InteractionResult superReaction = super.interact(player, hand);
+            InteractionResult superReaction = super.interact(player, hand, location);
             if (superReaction != InteractionResult.PASS) {
                return superReaction;
             } else {
@@ -1115,10 +1127,10 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
          }
       }
 
-      if (itemStack.getItem() instanceof SpawnEggItem egg) {
-         if (this.level() instanceof ServerLevel) {
-            Optional<Mob> offspring = egg.spawnOffspringFromSpawnEgg(
-               player, this, (EntityType<? extends Mob>)this.getType(), (ServerLevel)this.level(), this.position(), itemStack
+      if (itemStack.getItem() instanceof SpawnEggItem) {
+         if (this.level() instanceof ServerLevel serverLevel) {
+            Optional<Mob> offspring = SpawnEggItem.spawnOffspringFromSpawnEgg(
+               player, this, (EntityType<? extends Mob>)this.getType(), serverLevel, this.position(), itemStack
             );
             offspring.ifPresent(mob -> this.onOffspringSpawnedFromEgg(player, mob));
             if (offspring.isEmpty()) {
@@ -1359,7 +1371,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
          this.playAttackSound();
       }
 
-      this.lungeForwardMaybe();
+      this.postPiercingAttack();
       return wasHurt;
    }
 
@@ -1396,8 +1408,7 @@ public abstract class Mob extends LivingEntity implements Targeting, EquipmentUs
 
    @Override
    public @Nullable ItemStack getPickResult() {
-      SpawnEggItem egg = SpawnEggItem.byId(this.getType());
-      return egg == null ? null : new ItemStack(egg);
+      return SpawnEggItem.byId(this.getType()).map(ItemStack::new).orElse(null);
    }
 
    @Override

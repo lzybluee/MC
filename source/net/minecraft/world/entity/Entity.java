@@ -14,14 +14,16 @@ import it.unimi.dsi.fastutil.floats.FloatArrays;
 import it.unimi.dsi.fastutil.floats.FloatSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import it.unimi.dsi.fastutil.objects.Object2DoubleArrayMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -44,16 +46,19 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.TypedInstance;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.numbers.StyledFormat;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
@@ -63,7 +68,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SyncedDataHolder;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
@@ -99,7 +103,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
-import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -148,15 +151,28 @@ import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
 import net.minecraft.world.waypoints.WaypointTransmitter;
 import org.jetbrains.annotations.Contract;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, SyncedDataHolder, DataComponentGetter, ItemOwner, SlotProvider, DebugValueSource {
+public abstract class Entity
+   implements Nameable,
+   EntityAccess,
+   ScoreHolder,
+   SyncedDataHolder,
+   DataComponentGetter,
+   ItemOwner,
+   SlotProvider,
+   DebugValueSource,
+   TypedInstance<EntityType<?>> {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final String TAG_ID = "id";
    public static final String TAG_UUID = "UUID";
@@ -235,10 +251,9 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    protected final RandomSource random = RandomSource.create();
    public int tickCount;
    private int remainingFireTicks;
+   private final EntityFluidInteraction fluidInteraction = new EntityFluidInteraction(Set.of(FluidTags.WATER, FluidTags.LAVA));
    protected boolean wasTouchingWater;
-   protected Object2DoubleMap<TagKey<Fluid>> fluidHeight = new Object2DoubleArrayMap(2);
    protected boolean wasEyeInWater;
-   private final Set<TagKey<Fluid>> fluidOnEyes = new HashSet<>();
    public int invulnerableTime;
    protected boolean firstTick = true;
    protected final SynchedEntityData entityData;
@@ -352,6 +367,11 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return this.type;
    }
 
+   @Override
+   public Holder<EntityType<?>> typeHolder() {
+      return this.type.builtInRegistryHolder();
+   }
+
    public boolean getRequiresPrecisePosition() {
       return this.requiresPrecisePosition;
    }
@@ -369,7 +389,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       this.id = id;
    }
 
-   public Set<String> getTags() {
+   public Set<String> entityTags() {
       return this.tags;
    }
 
@@ -507,8 +527,8 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
 
       this.wasInPowderSnow = this.isInPowderSnow;
       this.isInPowderSnow = false;
-      this.updateInWaterStateAndDoFluidPushing();
-      this.updateFluidOnEyes();
+      this.wasEyeInWater = this.isEyeInFluid(FluidTags.WATER);
+      this.updateFluidInteraction();
       this.updateSwimming();
       if (this.level() instanceof ServerLevel serverLevel) {
          if (this.remainingFireTicks > 0) {
@@ -833,6 +853,10 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
          this.finalMovementsThisTick.add(new Entity.Movement(this.finalMovementsThisTick.getLast().to, this.position()));
       }
 
+      this.applyEffectsFromBlocks(this.finalMovementsThisTick);
+   }
+
+   protected void applyEffectsFromBlocksForLastMovements() {
       this.applyEffectsFromBlocks(this.finalMovementsThisTick);
    }
 
@@ -1476,7 +1500,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public boolean causeFallDamage(final double fallDistance, final float damageModifier, final DamageSource damageSource) {
-      if (this.type.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
+      if (this.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
          return false;
       }
 
@@ -1541,43 +1565,30 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       }
    }
 
-   protected boolean updateInWaterStateAndDoFluidPushing() {
-      this.fluidHeight.clear();
-      this.updateInWaterStateAndDoWaterCurrentPushing();
-      double lavaFlowScale = this.level.environmentAttributes().getDimensionValue(EnvironmentAttributes.FAST_LAVA) ? 0.007 : 0.0023333333333333335;
-      boolean isInLava = this.updateFluidHeightAndDoFluidPushing(FluidTags.LAVA, lavaFlowScale);
-      return this.isInWater() || isInLava;
-   }
-
-   void updateInWaterStateAndDoWaterCurrentPushing() {
-      if (this.getVehicle() instanceof AbstractBoat boat && !boat.isUnderWater()) {
-         this.wasTouchingWater = false;
-      } else if (this.updateFluidHeightAndDoFluidPushing(FluidTags.WATER, 0.014)) {
+   protected boolean updateFluidInteraction() {
+      this.fluidInteraction.update(this, !this.isPushedByFluid());
+      boolean inWater = this.fluidInteraction.isInFluid(FluidTags.WATER);
+      boolean inLava = this.fluidInteraction.isInFluid(FluidTags.LAVA);
+      if (inWater) {
+         this.resetFallDistance();
          if (!this.wasTouchingWater && !this.firstTick) {
             this.doWaterSplashEffect();
          }
-
-         this.resetFallDistance();
-         this.wasTouchingWater = true;
-      } else {
-         this.wasTouchingWater = false;
       }
-   }
 
-   private void updateFluidOnEyes() {
-      this.wasEyeInWater = this.isEyeInFluid(FluidTags.WATER);
-      this.fluidOnEyes.clear();
-      double eyeY = this.getEyeY();
-      if (!(this.getVehicle() instanceof AbstractBoat boat && !boat.isUnderWater() && boat.getBoundingBox().maxY >= eyeY && boat.getBoundingBox().minY <= eyeY)
-         )
-       {
-         BlockPos pos = BlockPos.containing(this.getX(), eyeY, this.getZ());
-         FluidState fluidState = this.level().getFluidState(pos);
-         double blockFluidHeight = pos.getY() + fluidState.getHeight(this.level(), pos);
-         if (blockFluidHeight > eyeY) {
-            fluidState.getTags().forEach(this.fluidOnEyes::add);
+      this.wasTouchingWater = inWater;
+      if (this.isPushedByFluid()) {
+         if (inWater) {
+            this.fluidInteraction.applyCurrentTo(FluidTags.WATER, this, 0.014);
+         }
+
+         if (inLava) {
+            double lavaFlowScale = this.level.environmentAttributes().getDimensionValue(EnvironmentAttributes.FAST_LAVA) ? 0.007 : 0.0023333333333333335;
+            this.fluidInteraction.applyCurrentTo(FluidTags.LAVA, this, lavaFlowScale);
          }
       }
+
+      return inWater || inLava;
    }
 
    protected void doWaterSplashEffect() {
@@ -1645,11 +1656,11 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public boolean isEyeInFluid(final TagKey<Fluid> type) {
-      return this.fluidOnEyes.contains(type);
+      return this.fluidInteraction.isEyeInFluid(type);
    }
 
    public boolean isInLava() {
-      return !this.firstTick && this.fluidHeight.getDouble(FluidTags.LAVA) > 0.0;
+      return !this.firstTick && this.fluidInteraction.isInFluid(FluidTags.LAVA);
    }
 
    public void moveRelative(final float speed, final Vec3 input) {
@@ -2111,9 +2122,12 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    protected final @Nullable String getEncodeId() {
-      EntityType<?> type = this.getType();
-      Identifier key = EntityType.getKey(type);
-      return !type.canSerialize() ? null : key.toString();
+      if (!this.getType().canSerialize()) {
+         return null;
+      }
+
+      ResourceKey<EntityType<?>> typeId = this.typeHolder().unwrapKey().orElseThrow(() -> new IllegalStateException("Unregistered entity"));
+      return typeId.identifier().toString();
    }
 
    protected abstract void readAdditionalSaveData(ValueInput input);
@@ -2165,7 +2179,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
          );
    }
 
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       if (!this.level().isClientSide()
          && player.isSecondaryUseActive()
          && this instanceof Leashable leashable
@@ -2597,11 +2611,11 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public boolean dismountsUnderwater() {
-      return this.getType().is(EntityTypeTags.DISMOUNTS_UNDERWATER);
+      return this.is(EntityTypeTags.DISMOUNTS_UNDERWATER);
    }
 
    public boolean canControlVehicle() {
-      return !this.getType().is(EntityTypeTags.NON_CONTROLLING_RIDER);
+      return !this.is(EntityTypeTags.NON_CONTROLLING_RIDER);
    }
 
    public void setShiftKeyDown(final boolean shiftKeyDown) {
@@ -2709,11 +2723,11 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       this.setSharedFlag(5, invisible);
    }
 
-   protected boolean getSharedFlag(final int flag) {
+   protected boolean getSharedFlag(@Entity.Flags final int flag) {
       return (this.entityData.get(DATA_SHARED_FLAGS_ID) & 1 << flag) != 0;
    }
 
-   protected void setSharedFlag(final int flag, final boolean value) {
+   protected void setSharedFlag(@Entity.Flags final int flag, final boolean value) {
       byte currentValue = this.entityData.get(DATA_SHARED_FLAGS_ID);
       if (value) {
          this.entityData.set(DATA_SHARED_FLAGS_ID, (byte)(currentValue | 1 << flag));
@@ -2787,12 +2801,14 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
 
    protected static void sendBubbleColumnParticles(final Level level, final BlockPos pos) {
       if (level instanceof ServerLevel serverLevel) {
+         RandomSource random = level.getRandom();
+
          for (int i = 0; i < 2; i++) {
             serverLevel.sendParticles(
-               ParticleTypes.SPLASH, pos.getX() + level.random.nextDouble(), pos.getY() + 1, pos.getZ() + level.random.nextDouble(), 1, 0.0, 0.0, 0.0, 1.0
+               ParticleTypes.SPLASH, pos.getX() + random.nextDouble(), pos.getY() + 1, pos.getZ() + random.nextDouble(), 1, 0.0, 0.0, 0.0, 1.0
             );
             serverLevel.sendParticles(
-               ParticleTypes.BUBBLE, pos.getX() + level.random.nextDouble(), pos.getY() + 1, pos.getZ() + level.random.nextDouble(), 1, 0.0, 0.01, 0.0, 0.2
+               ParticleTypes.BUBBLE, pos.getX() + random.nextDouble(), pos.getY() + 1, pos.getZ() + random.nextDouble(), 1, 0.0, 0.01, 0.0, 0.2
             );
          }
       }
@@ -2940,7 +2956,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return this.isRemoved()
          || this.invulnerable && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) && !source.isCreativePlayer()
          || source.is(DamageTypeTags.IS_FIRE) && this.fireImmune()
-         || source.is(DamageTypeTags.IS_FALL) && this.getType().is(EntityTypeTags.FALL_DAMAGE_IMMUNE);
+         || source.is(DamageTypeTags.IS_FALL) && this.is(EntityTypeTags.FALL_DAMAGE_IMMUNE);
    }
 
    public boolean isInvulnerable() {
@@ -3099,7 +3115,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
 
    public void placePortalTicket(final BlockPos ticketPosition) {
       if (this.level() instanceof ServerLevel serverLevel) {
-         serverLevel.getChunkSource().addTicketWithRadius(TicketType.PORTAL, new ChunkPos(ticketPosition), 3);
+         serverLevel.getChunkSource().addTicketWithRadius(TicketType.PORTAL, ChunkPos.containing(ticketPosition), 3);
       }
    }
 
@@ -3153,7 +3169,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public void fillCrashReportCategory(final CrashReportCategory category) {
-      category.setDetail("Entity Type", () -> EntityType.getKey(this.getType()) + " (" + this.getClass().getCanonicalName() + ")");
+      category.setDetail("Entity Type", () -> this.typeHolder().getRegisteredName() + " (" + this.getClass().getCanonicalName() + ")");
       category.setDetail("Entity ID", this.id);
       category.setDetail("Entity Name", () -> this.getPlainTextName());
       category.setDetail("Entity's Exact location", String.format(Locale.ROOT, "%.2f, %.2f, %.2f", this.getX(), this.getY(), this.getZ()));
@@ -3229,6 +3245,18 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return this.entityData.get(DATA_CUSTOM_NAME_VISIBLE);
    }
 
+   public @Nullable Component belowNameDisplay() {
+      Scoreboard scoreboard = this.level().getScoreboard();
+      Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
+      if (objective != null) {
+         ReadOnlyScoreInfo score = scoreboard.getPlayerScoreInfo(this, objective);
+         Component formattedValue = ReadOnlyScoreInfo.safeFormatValue(score, objective.numberFormatOrDefault(StyledFormat.NO_STYLE));
+         return Component.empty().append(formattedValue).append(CommonComponents.SPACE).append(objective.getDisplayName());
+      } else {
+         return null;
+      }
+   }
+
    public boolean teleportTo(
       final ServerLevel level,
       final double x,
@@ -3256,10 +3284,10 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
 
    private void teleportPassengers() {
       this.getSelfAndPassengers().forEach(entity -> {
-         UnmodifiableIterator var1 = entity.passengers.iterator();
+         Iterator i$ = entity.passengers.iterator();
 
-         while (var1.hasNext()) {
-            Entity passenger = (Entity)var1.next();
+         while (i$.hasNext()) {
+            Entity passenger = (Entity)i$.next();
             entity.positionRider(passenger, Entity::snapTo);
          }
       });
@@ -3374,10 +3402,6 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return null;
    }
 
-   public InteractionResult interactAt(final Player player, final Vec3 location, final InteractionHand hand) {
-      return InteractionResult.PASS;
-   }
-
    public boolean ignoreExplosion(final Explosion explosion) {
       return false;
    }
@@ -3410,7 +3434,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public ProjectileDeflection deflection(final Projectile projectile) {
-      return this.getType().is(EntityTypeTags.DEFLECTS_PROJECTILES) ? ProjectileDeflection.REVERSE : ProjectileDeflection.NONE;
+      return this.is(EntityTypeTags.DEFLECTS_PROJECTILES) ? ProjectileDeflection.REVERSE : ProjectileDeflection.NONE;
    }
 
    public @Nullable LivingEntity getControllingPassenger() {
@@ -3580,73 +3604,6 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return Mth.lerp(partial, this.yRotO, this.yRot);
    }
 
-   public boolean updateFluidHeightAndDoFluidPushing(final TagKey<Fluid> type, final double flowScale) {
-      if (this.touchingUnloadedChunk()) {
-         return false;
-      }
-
-      AABB box = this.getBoundingBox().deflate(0.001);
-      int x0 = Mth.floor(box.minX);
-      int x1 = Mth.ceil(box.maxX);
-      int y0 = Mth.floor(box.minY);
-      int y1 = Mth.ceil(box.maxY);
-      int z0 = Mth.floor(box.minZ);
-      int z1 = Mth.ceil(box.maxZ);
-      double fluidHeight = 0.0;
-      boolean pushedByFluid = this.isPushedByFluid();
-      boolean inFluid = false;
-      Vec3 current = Vec3.ZERO;
-      int numberOfCurrents = 0;
-      BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-      for (int x = x0; x < x1; x++) {
-         for (int y = y0; y < y1; y++) {
-            for (int z = z0; z < z1; z++) {
-               pos.set(x, y, z);
-               FluidState fluidState = this.level().getFluidState(pos);
-               if (fluidState.is(type)) {
-                  double blockFluidHeight = y + fluidState.getHeight(this.level(), pos);
-                  if (blockFluidHeight >= box.minY) {
-                     inFluid = true;
-                     fluidHeight = Math.max(blockFluidHeight - box.minY, fluidHeight);
-                     if (pushedByFluid) {
-                        Vec3 flow = fluidState.getFlow(this.level(), pos);
-                        if (fluidHeight < 0.4) {
-                           flow = flow.scale(fluidHeight);
-                        }
-
-                        current = current.add(flow);
-                        numberOfCurrents++;
-                     }
-                  }
-               }
-            }
-         }
-      }
-
-      if (current.length() > 0.0) {
-         if (numberOfCurrents > 0) {
-            current = current.scale(1.0 / numberOfCurrents);
-         }
-
-         if (!(this instanceof Player)) {
-            current = current.normalize();
-         }
-
-         Vec3 oldMovement = this.getDeltaMovement();
-         current = current.scale(flowScale);
-         double min = 0.003;
-         if (Math.abs(oldMovement.x) < 0.003 && Math.abs(oldMovement.z) < 0.003 && current.length() < 0.0045000000000000005) {
-            current = current.normalize().scale(0.0045000000000000005);
-         }
-
-         this.setDeltaMovement(this.getDeltaMovement().add(current));
-      }
-
-      this.fluidHeight.put(type, fluidHeight);
-      return inFluid;
-   }
-
    public boolean touchingUnloadedChunk() {
       AABB box = this.getBoundingBox().inflate(1.0);
       int x0 = Mth.floor(box.minX);
@@ -3657,7 +3614,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public double getFluidHeight(final TagKey<Fluid> type) {
-      return this.fluidHeight.getDouble(type);
+      return this.fluidInteraction.getFluidHeight(type);
    }
 
    public double getFluidJumpThreshold() {
@@ -3758,6 +3715,10 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       return this.position.y + this.getBbHeight() * progress;
    }
 
+   public double getRandomY(final double spread) {
+      return this.getY((2.0 * this.random.nextDouble() - 1.0) * spread);
+   }
+
    public double getRandomY() {
       return this.getY(this.random.nextDouble());
    }
@@ -3791,8 +3752,8 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
          if (fx != this.blockPosition.getX() || fy != this.blockPosition.getY() || fz != this.blockPosition.getZ()) {
             this.blockPosition = new BlockPos(fx, fy, fz);
             this.inBlockState = null;
-            if (SectionPos.blockToSectionCoord(fx) != this.chunkPosition.x || SectionPos.blockToSectionCoord(fz) != this.chunkPosition.z) {
-               this.chunkPosition = new ChunkPos(this.blockPosition);
+            if (SectionPos.blockToSectionCoord(fx) != this.chunkPosition.x() || SectionPos.blockToSectionCoord(fz) != this.chunkPosition.z()) {
+               this.chunkPosition = ChunkPos.containing(this.blockPosition);
             }
          }
 
@@ -3851,7 +3812,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    }
 
    public boolean canFreeze() {
-      return !this.getType().is(EntityTypeTags.FREEZE_IMMUNE_ENTITY_TYPES);
+      return !this.is(EntityTypeTags.FREEZE_IMMUNE_ENTITY_TYPES);
    }
 
    public boolean isFreezing() {
@@ -4017,7 +3978,7 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
       if (type == DataComponents.CUSTOM_NAME) {
          return castComponentValue((DataComponentType<T>)type, this.getCustomName());
       } else {
-         return type == DataComponents.CUSTOM_DATA ? castComponentValue((DataComponentType<T>)type, this.customData) : null;
+         return type == DataComponents.CUSTOM_DATA ? castComponentValue((DataComponentType<T>)type, this.customData) : this.typeHolder().components().get(type);
       }
    }
 
@@ -4055,11 +4016,31 @@ public abstract class Entity implements Nameable, EntityAccess, ScoreHolder, Syn
    public void registerDebugValues(final ServerLevel level, final DebugValueSource.Registration registration) {
    }
 
+   public @Nullable AABB getFluidInteractionBox() {
+      double margin = 0.001;
+      AABB box = this.getBoundingBox().deflate(0.001);
+      Entity vehicle = this.getVehicle();
+      if (vehicle != null) {
+         box = vehicle.modifyPassengerFluidInteractionBox(box);
+      }
+
+      return box;
+   }
+
+   protected @Nullable AABB modifyPassengerFluidInteractionBox(final AABB passengerBox) {
+      return passengerBox;
+   }
+
    private record EntityPathElement(Entity entity) implements ProblemReporter.PathElement {
       @Override
       public String get() {
          return this.entity.toString();
       }
+   }
+
+   @Retention(RetentionPolicy.CLASS)
+   @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
+   public @interface Flags {
    }
 
    @FunctionalInterface

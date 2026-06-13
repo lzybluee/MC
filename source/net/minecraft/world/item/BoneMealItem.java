@@ -41,9 +41,10 @@ public class BoneMealItem extends Item {
          if (!level.isClientSide()) {
             boneMealStack.causeUseVibration(context.getPlayer(), GameEvent.ITEM_INTERACT_FINISH);
             level.levelEvent(1505, pos, 15);
+            return InteractionResult.SUCCESS_SERVER;
+         } else {
+            return InteractionResult.PASS;
          }
-
-         return InteractionResult.SUCCESS;
       } else {
          BlockState clickedState = level.getBlockState(pos);
          boolean solidBlockFace = clickedState.isFaceSturdy(level, pos, context.getClickedFace());
@@ -64,8 +65,8 @@ public class BoneMealItem extends Item {
       BlockState state = level.getBlockState(pos);
       if (state.getBlock() instanceof BonemealableBlock block && block.isValidBonemealTarget(level, pos, state)) {
          if (level instanceof ServerLevel) {
-            if (block.isBonemealSuccess(level, level.random, pos, state)) {
-               block.performBonemeal((ServerLevel)level, level.random, pos, state);
+            if (block.isBonemealSuccess(level, level.getRandom(), pos, state)) {
+               block.performBonemeal((ServerLevel)level, level.getRandom(), pos, state);
             }
 
             itemStack.shrink(1);
@@ -78,7 +79,7 @@ public class BoneMealItem extends Item {
    }
 
    public static boolean growWaterPlant(final ItemStack itemStack, final Level level, final BlockPos pos, final @Nullable Direction clickedFace) {
-      if (level.getBlockState(pos).is(Blocks.WATER) && level.getFluidState(pos).getAmount() == 8) {
+      if (level.getBlockState(pos).is(Blocks.WATER) && level.getFluidState(pos).isFull()) {
          if (!(level instanceof ServerLevel)) {
             return true;
          }
@@ -101,7 +102,7 @@ public class BoneMealItem extends Item {
             if (testBiome.is(BiomeTags.PRODUCES_CORALS_FROM_BONEMEAL)) {
                if (j == 0 && clickedFace != null && clickedFace.getAxis().isHorizontal()) {
                   stateToGrow = BuiltInRegistries.BLOCK
-                     .getRandomElementOf(BlockTags.WALL_CORALS, level.random)
+                     .getRandomElementOf(BlockTags.WALL_CORALS, level.getRandom())
                      .map(h -> h.value().defaultBlockState())
                      .orElse(stateToGrow);
                   if (stateToGrow.hasProperty(BaseCoralWallFanBlock.FACING)) {
@@ -109,7 +110,7 @@ public class BoneMealItem extends Item {
                   }
                } else if (random.nextInt(4) == 0) {
                   stateToGrow = BuiltInRegistries.BLOCK
-                     .getRandomElementOf(BlockTags.UNDERWATER_BONEMEALS, level.random)
+                     .getRandomElementOf(BlockTags.UNDERWATER_BONEMEALS, level.getRandom())
                      .map(h -> h.value().defaultBlockState())
                      .orElse(stateToGrow);
                }
@@ -123,7 +124,7 @@ public class BoneMealItem extends Item {
 
             if (stateToGrow.canSurvive(level, testPos)) {
                BlockState testState = level.getBlockState(testPos);
-               if (testState.is(Blocks.WATER) && level.getFluidState(testPos).getAmount() == 8) {
+               if (testState.is(Blocks.WATER) && level.getFluidState(testPos).isFull()) {
                   level.setBlock(testPos, stateToGrow, 3);
                } else if (testState.is(Blocks.SEAGRASS)
                   && ((BonemealableBlock)Blocks.SEAGRASS).isValidBonemealTarget(level, testPos, testState)

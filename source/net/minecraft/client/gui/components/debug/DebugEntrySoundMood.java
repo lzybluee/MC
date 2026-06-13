@@ -17,7 +17,8 @@ public class DebugEntrySoundMood implements DebugScreenEntry {
       Minecraft minecraft = Minecraft.getInstance();
       if (minecraft.player != null) {
          displayer.addLine(
-            minecraft.getSoundManager().getDebugString() + String.format(Locale.ROOT, " (Mood %d%%)", Math.round(minecraft.player.getCurrentMood() * 100.0F))
+            minecraft.getSoundManager().getChannelDebugString()
+               + String.format(Locale.ROOT, " (Mood %d%%)", Math.round(minecraft.player.getCurrentMood() * 100.0F))
          );
       }
    }

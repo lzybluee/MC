@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import net.minecraft.core.component.DataComponentLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -164,6 +165,8 @@ public interface Registry<T> extends IdMap<T>, Keyable, HolderLookup.RegistryLoo
    }
 
    Registry.PendingTags<T> prepareTagReload(TagLoader.LoadResult<T> tags);
+
+   DataComponentLookup<T> componentLookup();
 
    interface PendingTags<T> {
       ResourceKey<? extends Registry<? extends T>> key();

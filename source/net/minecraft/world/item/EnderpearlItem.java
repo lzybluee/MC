@@ -12,7 +12,7 @@ import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnder
 import net.minecraft.world.level.Level;
 
 public class EnderpearlItem extends Item {
-   public static float PROJECTILE_SHOOT_POWER = 1.5F;
+   public static final float PROJECTILE_SHOOT_POWER = 1.5F;
 
    public EnderpearlItem(final Item.Properties properties) {
       super(properties);
@@ -32,7 +32,7 @@ public class EnderpearlItem extends Item {
          0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F)
       );
       if (level instanceof ServerLevel serverLevel) {
-         Projectile.spawnProjectileFromRotation(ThrownEnderpearl::new, serverLevel, itemStack, player, 0.0F, PROJECTILE_SHOOT_POWER, 1.0F);
+         Projectile.spawnProjectileFromRotation(ThrownEnderpearl::new, serverLevel, itemStack, player, 0.0F, 1.5F, 1.0F);
       }
 
       player.awardStat(Stats.ITEM_USED.get(this));

@@ -15,6 +15,7 @@ import net.minecraft.resources.Identifier;
 
 public class SheepWoolLayer extends RenderLayer<SheepRenderState, SheepModel> {
    private static final Identifier SHEEP_WOOL_LOCATION = Identifier.withDefaultNamespace("textures/entity/sheep/sheep_wool.png");
+   private static final Identifier BABY_SHEEP_WOOL_LOCATION = Identifier.withDefaultNamespace("textures/entity/sheep/sheep_wool_baby.png");
    private final EntityModel<SheepRenderState> adultModel;
    private final EntityModel<SheepRenderState> babyModel;
 
@@ -34,13 +35,14 @@ public class SheepWoolLayer extends RenderLayer<SheepRenderState, SheepModel> {
    ) {
       if (!state.isSheared) {
          EntityModel<SheepRenderState> model = state.isBaby ? this.babyModel : this.adultModel;
+         Identifier location = state.isBaby ? BABY_SHEEP_WOOL_LOCATION : SHEEP_WOOL_LOCATION;
          if (state.isInvisible) {
             if (state.appearsGlowing()) {
                submitNodeCollector.submitModel(
                   model,
                   state,
                   poseStack,
-                  RenderTypes.outline(SHEEP_WOOL_LOCATION),
+                  RenderTypes.outline(location),
                   lightCoords,
                   LivingEntityRenderer.getOverlayCoords(state, 0.0F),
                   -16777216,
@@ -50,7 +52,7 @@ public class SheepWoolLayer extends RenderLayer<SheepRenderState, SheepModel> {
                );
             }
          } else {
-            coloredCutoutModelCopyLayerRender(model, SHEEP_WOOL_LOCATION, poseStack, submitNodeCollector, lightCoords, state, state.getWoolColor(), 0);
+            coloredCutoutModelCopyLayerRender(model, location, poseStack, submitNodeCollector, lightCoords, state, state.getWoolColor(), state.isBaby ? 1 : 0);
          }
       }
    }

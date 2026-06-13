@@ -64,7 +64,7 @@ public class HangingMossBlock extends Block implements BonemealableBlock {
    private boolean canStayAtPosition(final BlockGetter level, final BlockPos pos) {
       BlockPos neighbourPos = pos.relative(Direction.UP);
       BlockState blockState = level.getBlockState(neighbourPos);
-      return MultifaceBlock.canAttachTo(level, Direction.UP, neighbourPos, blockState) || blockState.is(Blocks.PALE_HANGING_MOSS);
+      return MultifaceBlock.canAttachTo(level, Direction.UP, neighbourPos, blockState) || blockState.is(this);
    }
 
    @Override
@@ -99,7 +99,8 @@ public class HangingMossBlock extends Block implements BonemealableBlock {
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return this.canGrowInto(level.getBlockState(this.getTip(level, pos).below()));
+      BlockPos growPos = this.getTip(level, pos).below();
+      return this.canGrowInto(level.getBlockState(growPos)) && level.isInsideBuildHeight(growPos);
    }
 
    private boolean canGrowInto(final BlockState state) {

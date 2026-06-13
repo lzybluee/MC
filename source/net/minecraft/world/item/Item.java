@@ -15,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
+import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -67,7 +68,6 @@ import net.minecraft.world.item.component.DamageResistant;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.KineticWeapon;
 import net.minecraft.world.item.component.PiercingWeapon;
-import net.minecraft.world.item.component.ProvidesTrimMaterial;
 import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.component.TooltipDisplay;
@@ -100,6 +100,11 @@ public class Item implements ItemLike, FeatureElement {
       .holderByNameCodec()
       .validate(item -> item.is(Items.AIR.builtInRegistryHolder()) ? DataResult.error(() -> "Item must not be minecraft:air") : DataResult.success(item));
    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<Item>> STREAM_CODEC = ByteBufCodecs.holderRegistry(Registries.ITEM);
+   public static final Codec<Holder<Item>> CODEC_WITH_BOUND_COMPONENTS = CODEC.validate(
+      item -> !item.areComponentsBound()
+         ? DataResult.error(() -> "Item " + item.getRegisteredName() + " does not have components yet")
+         : DataResult.success(item)
+   );
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final Map<Block, Item> BY_BLOCK = Maps.newHashMap();
    public static final Identifier BASE_ATTACK_DAMAGE_ID = Identifier.withDefaultNamespace("base_attack_damage");
@@ -109,8 +114,7 @@ public class Item implements ItemLike, FeatureElement {
    public static final int MAX_BAR_WIDTH = 13;
    protected static final int APPROXIMATELY_INFINITE_USE_DURATION = 72000;
    private final Holder.Reference<Item> builtInRegistryHolder = BuiltInRegistries.ITEM.createIntrusiveHolder(this);
-   private final DataComponentMap components;
-   private final @Nullable Item craftingRemainingItem;
+   private final @Nullable ItemStackTemplate craftingRemainingItem;
    protected final String descriptionId;
    private final FeatureFlagSet requiredFeatures;
 
@@ -129,7 +133,10 @@ public class Item implements ItemLike, FeatureElement {
 
    public Item(final Item.Properties properties) {
       this.descriptionId = properties.effectiveDescriptionId();
-      this.components = properties.buildAndValidateComponents(Component.translatable(this.descriptionId), properties.effectiveModel());
+      DataComponentInitializers.Initializer<Item> componentInitializer = properties.finalizeInitializer(
+         Component.translatable(this.descriptionId), properties.effectiveModel()
+      );
+      BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.add(properties.itemIdOrThrow(), componentInitializer);
       this.craftingRemainingItem = properties.craftingRemainingItem;
       this.requiredFeatures = properties.requiredFeatures;
       if (SharedConstants.IS_RUNNING_IN_IDE) {
@@ -146,11 +153,11 @@ public class Item implements ItemLike, FeatureElement {
    }
 
    public DataComponentMap components() {
-      return this.components;
+      return this.builtInRegistryHolder.components();
    }
 
    public int getDefaultMaxStackSize() {
-      return this.components.getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
+      return this.components().getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
    }
 
    public void onUseTick(final Level level, final LivingEntity livingEntity, final ItemStack itemStack, final int ticksRemaining) {
@@ -274,8 +281,8 @@ public class Item implements ItemLike, FeatureElement {
       return BuiltInRegistries.ITEM.wrapAsHolder(this).getRegisteredName();
    }
 
-   public final ItemStack getCraftingRemainder() {
-      return this.craftingRemainingItem == null ? ItemStack.EMPTY : new ItemStack(this.craftingRemainingItem);
+   public final @Nullable ItemStackTemplate getCraftingRemainder() {
+      return this.craftingRemainingItem;
    }
 
    public void inventoryTick(final ItemStack itemStack, final ServerLevel level, final Entity owner, final @Nullable EquipmentSlot slot) {
@@ -331,10 +338,6 @@ public class Item implements ItemLike, FeatureElement {
       return this.descriptionId;
    }
 
-   public final Component getName() {
-      return this.components.getOrDefault(DataComponents.ITEM_NAME, CommonComponents.EMPTY);
-   }
-
    public Component getName(final ItemStack itemStack) {
       return itemStack.getComponents().getOrDefault(DataComponents.ITEM_NAME, CommonComponents.EMPTY);
    }
@@ -362,7 +365,7 @@ public class Item implements ItemLike, FeatureElement {
    }
 
    @Override
-   public FeatureFlagSet requiredFeatures() {
+   public final FeatureFlagSet requiredFeatures() {
       return this.requiredFeatures;
    }
 
@@ -373,8 +376,8 @@ public class Item implements ItemLike, FeatureElement {
    public static class Properties {
       private static final DependantName<Item, String> BLOCK_DESCRIPTION_ID = id -> Util.makeDescriptionId("block", id.identifier());
       private static final DependantName<Item, String> ITEM_DESCRIPTION_ID = id -> Util.makeDescriptionId("item", id.identifier());
-      private final DataComponentMap.Builder components = DataComponentMap.builder().addAll(DataComponents.COMMON_ITEM_COMPONENTS);
-      private @Nullable Item craftingRemainingItem;
+      private DataComponentInitializers.Initializer<Item> componentInitializer = (builder, context, id) -> builder.addAll(DataComponents.COMMON_ITEM_COMPONENTS);
+      private @Nullable ItemStackTemplate craftingRemainingItem;
       private FeatureFlagSet requiredFeatures = FeatureFlags.VANILLA_SET;
       private @Nullable ResourceKey<Item> id;
       private DependantName<Item, String> descriptionId = ITEM_DESCRIPTION_ID;
@@ -389,7 +392,7 @@ public class Item implements ItemLike, FeatureElement {
       }
 
       public Item.Properties usingConvertsTo(final Item item) {
-         return this.component(DataComponents.USE_REMAINDER, new UseRemainder(new ItemStack(item)));
+         return this.component(DataComponents.USE_REMAINDER, new UseRemainder(new ItemStackTemplate(item)));
       }
 
       public Item.Properties useCooldown(final float seconds) {
@@ -408,6 +411,10 @@ public class Item implements ItemLike, FeatureElement {
       }
 
       public Item.Properties craftRemainder(final Item craftingRemainingItem) {
+         return this.craftRemainder(new ItemStackTemplate(craftingRemainingItem));
+      }
+
+      public Item.Properties craftRemainder(final ItemStackTemplate craftingRemainingItem) {
          this.craftingRemainingItem = craftingRemainingItem;
          return this;
       }
@@ -417,11 +424,11 @@ public class Item implements ItemLike, FeatureElement {
       }
 
       public Item.Properties fireResistant() {
-         return this.component(DataComponents.DAMAGE_RESISTANT, new DamageResistant(DamageTypeTags.IS_FIRE));
+         return this.delayedComponent(DataComponents.DAMAGE_RESISTANT, context -> new DamageResistant(context.getOrThrow(DamageTypeTags.IS_FIRE)));
       }
 
       public Item.Properties jukeboxPlayable(final ResourceKey<JukeboxSong> song) {
-         return this.component(DataComponents.JUKEBOX_PLAYABLE, new JukeboxPlayable(new EitherHolder<>(song)));
+         return this.delayedComponent(DataComponents.JUKEBOX_PLAYABLE, context -> new JukeboxPlayable(context.getOrThrow(song)));
       }
 
       public Item.Properties enchantable(final int value) {
@@ -490,7 +497,7 @@ public class Item implements ItemLike, FeatureElement {
          return this.durability(material.durability())
             .repairable(material.repairItems())
             .enchantable(material.enchantmentValue())
-            .component(DataComponents.DAMAGE_TYPE, new EitherHolder<>(DamageTypes.SPEAR))
+            .delayedHolderComponent(DataComponents.DAMAGE_TYPE, DamageTypes.SPEAR)
             .component(
                DataComponents.KINETIC_WEAPON,
                new KineticWeapon(
@@ -536,7 +543,7 @@ public class Item implements ItemLike, FeatureElement {
       }
 
       public Item.Properties spawnEgg(final EntityType<?> type) {
-         return this.component(DataComponents.ENTITY_DATA, TypedEntityData.of(type, new CompoundTag()));
+         return this.component(DataComponents.ENTITY_DATA, TypedEntityData.of(type, new CompoundTag())).requiredFeatures(type.requiredFeatures());
       }
 
       public Item.Properties humanoidArmor(final ArmorMaterial material, final ArmorType type) {
@@ -601,11 +608,20 @@ public class Item implements ItemLike, FeatureElement {
       }
 
       public Item.Properties trimMaterial(final ResourceKey<TrimMaterial> material) {
-         return this.component(DataComponents.PROVIDES_TRIM_MATERIAL, new ProvidesTrimMaterial(material));
+         return this.delayedHolderComponent(DataComponents.PROVIDES_TRIM_MATERIAL, material);
       }
 
       public Item.Properties requiredFeatures(final FeatureFlag... flags) {
          this.requiredFeatures = FeatureFlags.REGISTRY.subset(flags);
+         return this;
+      }
+
+      public Item.Properties requiredFeatures(final FeatureFlagSet flags) {
+         if (!FeatureFlags.REGISTRY.isSubset(flags)) {
+            throw new IllegalArgumentException("Mismatched flag sets");
+         }
+
+         this.requiredFeatures = flags;
          return this;
       }
 
@@ -629,16 +645,30 @@ public class Item implements ItemLike, FeatureElement {
          return this;
       }
 
+      private ResourceKey<Item> itemIdOrThrow() {
+         return Objects.requireNonNull(this.id, "Item id not set");
+      }
+
       protected String effectiveDescriptionId() {
-         return this.descriptionId.get(Objects.requireNonNull(this.id, "Item id not set"));
+         return this.descriptionId.get(this.itemIdOrThrow());
       }
 
       public Identifier effectiveModel() {
-         return this.model.get(Objects.requireNonNull(this.id, "Item id not set"));
+         return this.model.get(this.itemIdOrThrow());
       }
 
       public <T> Item.Properties component(final DataComponentType<T> type, final T value) {
-         this.components.set(type, value);
+         this.componentInitializer = this.componentInitializer.add(type, value);
+         return this;
+      }
+
+      public <T> Item.Properties delayedComponent(final DataComponentType<T> type, final DataComponentInitializers.SingleComponentInitializer<T> initializer) {
+         this.componentInitializer = this.componentInitializer.andThen(initializer.asInitializer(type));
+         return this;
+      }
+
+      public <T> Item.Properties delayedHolderComponent(final DataComponentType<Holder<T>> type, final ResourceKey<T> valueKey) {
+         this.componentInitializer = this.componentInitializer.andThen((components, context, key) -> components.set(type, context.getOrThrow(valueKey)));
          return this;
       }
 
@@ -646,13 +676,13 @@ public class Item implements ItemLike, FeatureElement {
          return this.component(DataComponents.ATTRIBUTE_MODIFIERS, attributes);
       }
 
-      private DataComponentMap buildAndValidateComponents(final Component name, final Identifier model) {
-         DataComponentMap components = this.components.set(DataComponents.ITEM_NAME, name).set(DataComponents.ITEM_MODEL, model).build();
-         if (components.has(DataComponents.DAMAGE) && components.getOrDefault(DataComponents.MAX_STACK_SIZE, 1) > 1) {
-            throw new IllegalStateException("Item cannot have both durability and be stackable");
-         } else {
-            return components;
-         }
+      private DataComponentInitializers.Initializer<Item> finalizeInitializer(final Component name, final Identifier model) {
+         return this.componentInitializer
+            .andThen((components, context, key) -> components.set(DataComponents.ITEM_NAME, name).set(DataComponents.ITEM_MODEL, model).addValidator(c -> {
+               if (c.has(DataComponents.DAMAGE) && c.getOrDefault(DataComponents.MAX_STACK_SIZE, 1) > 1) {
+                  throw new IllegalStateException("Item cannot have both durability and be stackable");
+               }
+            }));
       }
    }
 

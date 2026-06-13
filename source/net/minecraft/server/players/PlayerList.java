@@ -55,7 +55,6 @@ import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.network.protocol.game.ClientboundSetSimulationDistancePacket;
-import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateMobEffectPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
@@ -276,10 +275,10 @@ public abstract class PlayerList {
    }
 
    public Optional<CompoundTag> loadPlayerData(final NameAndId nameAndId) {
-      CompoundTag singleplayerTag = this.server.getWorldData().getLoadedPlayerTag();
-      if (this.server.isSingleplayerOwner(nameAndId) && singleplayerTag != null) {
+      UUID lastSingleplayerOwnerUUID = this.server.getWorldData().getSinglePlayerUUID();
+      if (this.server.isSingleplayerOwner(nameAndId) && lastSingleplayerOwnerUUID != null) {
          LOGGER.debug("loading single player");
-         return Optional.of(singleplayerTag);
+         return this.playerIo.load(new NameAndId(lastSingleplayerOwnerUUID, "<singleplayer owner>"));
       } else {
          return this.playerIo.load(nameAndId);
       }
@@ -398,7 +397,7 @@ public abstract class PlayerList {
          player.copyRespawnPosition(serverPlayer);
       }
 
-      for (String tag : serverPlayer.getTags()) {
+      for (String tag : serverPlayer.entityTags()) {
          player.addTag(tag);
       }
 
@@ -646,7 +645,7 @@ public abstract class PlayerList {
    public void sendLevelInfo(final ServerPlayer player, final ServerLevel level) {
       WorldBorder worldBorder = level.getWorldBorder();
       player.connection.send(new ClientboundInitializeBorderPacket(worldBorder));
-      player.connection.send(new ClientboundSetTimePacket(level.getGameTime(), level.getDayTime(), level.getGameRules().get(GameRules.ADVANCE_TIME)));
+      player.connection.send(this.server.clockManager().createFullSyncPacket());
       player.connection.send(new ClientboundSetDefaultSpawnPositionPacket(level.getRespawnData()));
       if (level.isRaining()) {
          player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0F));
@@ -698,10 +697,6 @@ public abstract class PlayerList {
 
    public MinecraftServer getServer() {
       return this.server;
-   }
-
-   public @Nullable CompoundTag getSingleplayerData() {
-      return null;
    }
 
    public void setAllowCommandsForAllPlayers(final boolean allowCommands) {

@@ -33,8 +33,6 @@ public class ClientMetricsSamplersProvider implements MetricsSamplerProvider {
       SectionRenderDispatcher sectionRenderDispatcher = this.levelRenderer.getSectionRenderDispatcher();
       if (sectionRenderDispatcher != null) {
          this.samplers
-            .add(MetricSampler.create("toUpload", MetricCategory.CHUNK_RENDERING_DISPATCHING, sectionRenderDispatcher, SectionRenderDispatcher::getToUpload));
-         this.samplers
             .add(
                MetricSampler.create(
                   "freeBufferCount", MetricCategory.CHUNK_RENDERING_DISPATCHING, sectionRenderDispatcher, SectionRenderDispatcher::getFreeBufferCount

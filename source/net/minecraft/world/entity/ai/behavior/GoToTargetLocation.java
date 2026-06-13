@@ -8,7 +8,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 public class GoToTargetLocation {
    private static BlockPos getNearbyPos(final Mob body, final BlockPos pos) {
-      RandomSource random = body.level().random;
+      RandomSource random = body.level().getRandom();
       return pos.offset(getRandomOffset(random), 0, getRandomOffset(random));
    }
 

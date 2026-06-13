@@ -15,7 +15,6 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentContents;
@@ -23,9 +22,9 @@ import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.Nullable;
 
 public class TranslatableContents implements ComponentContents {
@@ -191,13 +190,13 @@ public class TranslatableContents implements ComponentContents {
    }
 
    @Override
-   public MutableComponent resolve(final @Nullable CommandSourceStack source, final @Nullable Entity entity, final int recursionDepth) throws CommandSyntaxException {
+   public MutableComponent resolve(final ResolutionContext context, final int recursionDepth) throws CommandSyntaxException {
       Object[] argsCopy = new Object[this.args.length];
 
       for (int i = 0; i < argsCopy.length; i++) {
          Object param = this.args[i];
          if (param instanceof Component component) {
-            argsCopy[i] = ComponentUtils.updateForEntity(source, component, entity, recursionDepth);
+            argsCopy[i] = ComponentUtils.resolve(context, component, recursionDepth);
          } else {
             argsCopy[i] = param;
          }

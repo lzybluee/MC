@@ -3,7 +3,6 @@ package net.minecraft.world.level.block.state;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -14,11 +13,10 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
-import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
+import net.minecraft.core.TypedInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.DependantName;
@@ -304,7 +302,7 @@ public abstract class BlockBehaviour implements FeatureElement {
       return Shapes.empty();
    }
 
-   protected int getLightBlock(final BlockState state) {
+   protected int getLightDampening(final BlockState state) {
       if (state.isSolidRender()) {
          return 15;
       } else {
@@ -422,7 +420,7 @@ public abstract class BlockBehaviour implements FeatureElement {
       return this.properties.destroyTime;
    }
 
-   public abstract static class BlockStateBase extends StateHolder<Block, BlockState> {
+   public abstract static class BlockStateBase extends StateHolder<Block, BlockState> implements TypedInstance<Block> {
       private static final Direction[] DIRECTIONS = Direction.values();
       private static final VoxelShape[] EMPTY_OCCLUSION_SHAPES = Util.make(new VoxelShape[DIRECTIONS.length], s -> Arrays.fill(s, Shapes.empty()));
       private static final VoxelShape[] FULL_BLOCK_OCCLUSION_SHAPES = Util.make(new VoxelShape[DIRECTIONS.length], s -> Arrays.fill(s, Shapes.block()));
@@ -442,7 +440,7 @@ public abstract class BlockBehaviour implements FeatureElement {
       private final BlockBehaviour.StatePredicate isRedstoneConductor;
       private final BlockBehaviour.StatePredicate isSuffocating;
       private final BlockBehaviour.StatePredicate isViewBlocking;
-      private final BlockBehaviour.StatePredicate hasPostProcess;
+      private final BlockBehaviour.PostProcess postProcess;
       private final BlockBehaviour.StatePredicate emissiveRendering;
       private final BlockBehaviour.@Nullable OffsetFunction offsetFunction;
       private final boolean spawnTerrainParticles;
@@ -455,10 +453,10 @@ public abstract class BlockBehaviour implements FeatureElement {
       private VoxelShape occlusionShape;
       private VoxelShape[] occlusionShapesByFace;
       private boolean propagatesSkylightDown;
-      private int lightBlock;
+      private int lightDampening;
 
-      protected BlockStateBase(final Block owner, final Reference2ObjectArrayMap<Property<?>, Comparable<?>> values, final MapCodec<BlockState> propertiesCodec) {
-         super(owner, values, propertiesCodec);
+      protected BlockStateBase(final Block owner, final Property<?>[] propertyKeys, final Comparable<?>[] propertyValues) {
+         super(owner, propertyKeys, propertyValues);
          BlockBehaviour.Properties properties = owner.properties;
          this.lightEmission = properties.lightEmission.applyAsInt(this.asState());
          this.useShapeForLightOcclusion = owner.useShapeForLightOcclusion(this.asState());
@@ -473,7 +471,7 @@ public abstract class BlockBehaviour implements FeatureElement {
          this.isRedstoneConductor = properties.isRedstoneConductor;
          this.isSuffocating = properties.isSuffocating;
          this.isViewBlocking = properties.isViewBlocking;
-         this.hasPostProcess = properties.hasPostProcess;
+         this.postProcess = properties.postProcess;
          this.emissiveRendering = properties.emissiveRendering;
          this.offsetFunction = properties.offsetFunction;
          this.spawnTerrainParticles = properties.spawnTerrainParticles;
@@ -526,15 +524,16 @@ public abstract class BlockBehaviour implements FeatureElement {
          }
 
          this.propagatesSkylightDown = this.owner.propagatesSkylightDown(this.asState());
-         this.lightBlock = this.owner.getLightBlock(this.asState());
+         this.lightDampening = this.owner.getLightDampening(this.asState());
       }
 
       public Block getBlock() {
          return this.owner;
       }
 
-      public Holder<Block> getBlockHolder() {
-         return this.owner.builtInRegistryHolder();
+      @Override
+      public Holder<Block> typeHolder() {
+         return this.getBlock().builtInRegistryHolder();
       }
 
       @Deprecated
@@ -556,8 +555,8 @@ public abstract class BlockBehaviour implements FeatureElement {
          return this.propagatesSkylightDown;
       }
 
-      public int getLightBlock() {
-         return this.lightBlock;
+      public int getLightDampening() {
+         return this.lightDampening;
       }
 
       public VoxelShape getFaceOcclusionShape(final Direction direction) {
@@ -833,32 +832,16 @@ public abstract class BlockBehaviour implements FeatureElement {
          return this.getBlock().canSurvive(this.asState(), level, pos);
       }
 
-      public boolean hasPostProcess(final BlockGetter level, final BlockPos pos) {
-         return this.hasPostProcess.test(this.asState(), level, pos);
+      public @Nullable BlockPos getPostProcessPos(final BlockGetter level, final BlockPos pos) {
+         return this.postProcess.getPostProcessPos(this.asState(), level, pos);
       }
 
       public @Nullable MenuProvider getMenuProvider(final Level level, final BlockPos pos) {
          return this.getBlock().getMenuProvider(this.asState(), level, pos);
       }
 
-      public boolean is(final TagKey<Block> tag) {
-         return this.getBlock().builtInRegistryHolder().is(tag);
-      }
-
       public boolean is(final TagKey<Block> tag, final Predicate<BlockBehaviour.BlockStateBase> predicate) {
          return this.is(tag) && predicate.test(this);
-      }
-
-      public boolean is(final HolderSet<Block> set) {
-         return set.contains(this.getBlock().builtInRegistryHolder());
-      }
-
-      public boolean is(final Holder<Block> holder) {
-         return this.is(holder.value());
-      }
-
-      public Stream<TagKey<Block>> getTags() {
-         return this.getBlock().builtInRegistryHolder().tags();
       }
 
       public boolean hasBlockEntity() {
@@ -871,14 +854,6 @@ public abstract class BlockBehaviour implements FeatureElement {
 
       public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockEntityType<T> type) {
          return this.getBlock() instanceof EntityBlock ? ((EntityBlock)this.getBlock()).getTicker(level, this.asState(), type) : null;
-      }
-
-      public boolean is(final Block block) {
-         return this.getBlock() == block;
-      }
-
-      public boolean is(final ResourceKey<Block> block) {
-         return this.getBlock().builtInRegistryHolder().is(block);
       }
 
       public FluidState getFluidState() {
@@ -986,6 +961,11 @@ public abstract class BlockBehaviour implements FeatureElement {
       XYZ;
    }
 
+   @FunctionalInterface
+   public interface PostProcess {
+      @Nullable BlockPos getPostProcessPos(BlockState state, BlockGetter level, BlockPos pos);
+   }
+
    public static class Properties {
       public static final Codec<BlockBehaviour.Properties> CODEC = MapCodec.unitCodec(() -> of());
       private Function<BlockState, MapColor> mapColor = state -> MapColor.NONE;
@@ -1020,10 +1000,10 @@ public abstract class BlockBehaviour implements FeatureElement {
             level, pos, Direction.UP
          )
          && state.getLightEmission() < 14;
-      private BlockBehaviour.StatePredicate isRedstoneConductor = (state, level, pos) -> state.isCollisionShapeFullBlock(level, pos);
+      private BlockBehaviour.StatePredicate isRedstoneConductor = BlockBehaviour.BlockStateBase::isCollisionShapeFullBlock;
       private BlockBehaviour.StatePredicate isSuffocating = (state, level, pos) -> state.blocksMotion() && state.isCollisionShapeFullBlock(level, pos);
       private BlockBehaviour.StatePredicate isViewBlocking = this.isSuffocating;
-      private BlockBehaviour.StatePredicate hasPostProcess = (state, level, pos) -> false;
+      private BlockBehaviour.PostProcess postProcess = (state, level, pos) -> null;
       private BlockBehaviour.StatePredicate emissiveRendering = (state, level, pos) -> false;
       private boolean dynamicShape;
       private FeatureFlagSet requiredFeatures = FeatureFlags.VANILLA_SET;
@@ -1042,7 +1022,7 @@ public abstract class BlockBehaviour implements FeatureElement {
          copyTo.jumpFactor = copyFrom.jumpFactor;
          copyTo.isRedstoneConductor = copyFrom.isRedstoneConductor;
          copyTo.isValidSpawn = copyFrom.isValidSpawn;
-         copyTo.hasPostProcess = copyFrom.hasPostProcess;
+         copyTo.postProcess = copyFrom.postProcess;
          copyTo.isSuffocating = copyFrom.isSuffocating;
          copyTo.isViewBlocking = copyFrom.isViewBlocking;
          copyTo.drops = copyFrom.drops;
@@ -1220,8 +1200,8 @@ public abstract class BlockBehaviour implements FeatureElement {
          return this;
       }
 
-      public BlockBehaviour.Properties hasPostProcess(final BlockBehaviour.StatePredicate hasPostProcess) {
-         this.hasPostProcess = hasPostProcess;
+      public BlockBehaviour.Properties postProcess(final BlockBehaviour.PostProcess postProcess) {
+         this.postProcess = postProcess;
          return this;
       }
 

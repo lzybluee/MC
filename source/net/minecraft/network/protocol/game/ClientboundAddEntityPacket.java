@@ -99,7 +99,7 @@ public class ClientboundAddEntityPacket implements Packet<ClientGamePacketListen
       this.x = input.readDouble();
       this.y = input.readDouble();
       this.z = input.readDouble();
-      this.movement = input.readLpVec3();
+      this.movement = Vec3.LP_STREAM_CODEC.decode(input);
       this.xRot = input.readByte();
       this.yRot = input.readByte();
       this.yHeadRot = input.readByte();
@@ -113,7 +113,7 @@ public class ClientboundAddEntityPacket implements Packet<ClientGamePacketListen
       output.writeDouble(this.x);
       output.writeDouble(this.y);
       output.writeDouble(this.z);
-      output.writeLpVec3(this.movement);
+      Vec3.LP_STREAM_CODEC.encode(output, this.movement);
       output.writeByte(this.xRot);
       output.writeByte(this.yRot);
       output.writeByte(this.yHeadRot);

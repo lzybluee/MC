@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -42,7 +43,7 @@ public class TallSeagrassBlock extends DoublePlantBlock implements LiquidBlockCo
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.isFaceSturdy(level, pos, Direction.UP) && !state.is(Blocks.MAGMA_BLOCK);
+      return state.isFaceSturdy(level, pos, Direction.UP) && !state.is(BlockTags.CANNOT_SUPPORT_SEAGRASS);
    }
 
    @Override
@@ -55,7 +56,7 @@ public class TallSeagrassBlock extends DoublePlantBlock implements LiquidBlockCo
       BlockState state = super.getStateForPlacement(context);
       if (state != null) {
          FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos().above());
-         if (fluidState.is(FluidTags.WATER) && fluidState.getAmount() == 8) {
+         if (fluidState.is(FluidTags.WATER) && fluidState.isFull()) {
             return state;
          }
       }
@@ -70,7 +71,7 @@ public class TallSeagrassBlock extends DoublePlantBlock implements LiquidBlockCo
          return belowState.is(this) && belowState.getValue(HALF) == DoubleBlockHalf.LOWER;
       } else {
          FluidState fluidState = level.getFluidState(pos);
-         return super.canSurvive(state, level, pos) && fluidState.is(FluidTags.WATER) && fluidState.getAmount() == 8;
+         return super.canSurvive(state, level, pos) && fluidState.is(FluidTags.WATER) && fluidState.isFull();
       }
    }
 

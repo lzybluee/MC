@@ -168,7 +168,9 @@ public class NoteBlock extends Block {
          soundEvent = instrument.getSoundEvent();
       }
 
-      level.playSeededSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, soundEvent, SoundSource.RECORDS, 3.0F, pitch, level.random.nextLong());
+      level.playSeededSound(
+         null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, soundEvent, SoundSource.RECORDS, 3.0F, pitch, level.getRandom().nextLong()
+      );
       return true;
    }
 

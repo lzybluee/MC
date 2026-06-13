@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.jspecify.annotations.Nullable;
 
 public class BredAnimalsTrigger extends SimpleCriterionTrigger<BredAnimalsTrigger.TriggerInstance> {
@@ -74,11 +76,11 @@ public class BredAnimalsTrigger extends SimpleCriterionTrigger<BredAnimalsTrigge
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         validator.validateEntity(this.parent, "parent");
-         validator.validateEntity(this.partner, "partner");
-         validator.validateEntity(this.child, "child");
+         Validatable.validate(validator.entityContext(), "parent", this.parent);
+         Validatable.validate(validator.entityContext(), "partner", this.partner);
+         Validatable.validate(validator.entityContext(), "child", this.child);
       }
    }
 }

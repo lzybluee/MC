@@ -133,7 +133,7 @@ public class PrepareSpawnTask implements ConfigurationTask {
 
          Vec3 spawnPosition = this.spawnPosition.join();
          if (this.chunkLoadFuture == null) {
-            ChunkPos spawnChunk = new ChunkPos(BlockPos.containing(spawnPosition));
+            ChunkPos spawnChunk = ChunkPos.containing(BlockPos.containing(spawnPosition));
             this.chunkLoadCounter
                .track(
                   this.spawnLevel,
@@ -166,11 +166,11 @@ public class PrepareSpawnTask implements ConfigurationTask {
       }
 
       public void keepAlive() {
-         this.spawnLevel.getChunkSource().addTicketWithRadius(TicketType.PLAYER_SPAWN, new ChunkPos(BlockPos.containing(this.spawnPosition)), 3);
+         this.spawnLevel.getChunkSource().addTicketWithRadius(TicketType.PLAYER_SPAWN, ChunkPos.containing(BlockPos.containing(this.spawnPosition)), 3);
       }
 
       public ServerPlayer spawn(final Connection connection, final CommonListenerCookie cookie) {
-         ChunkPos spawnChunk = new ChunkPos(BlockPos.containing(this.spawnPosition));
+         ChunkPos spawnChunk = ChunkPos.containing(BlockPos.containing(this.spawnPosition));
          this.spawnLevel.waitForEntities(spawnChunk, 3);
          ServerPlayer player = new ServerPlayer(PrepareSpawnTask.this.server, this.spawnLevel, cookie.gameProfile(), cookie.clientInformation());
 

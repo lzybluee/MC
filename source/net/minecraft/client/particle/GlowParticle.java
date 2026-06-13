@@ -2,7 +2,7 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.util.Mth;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 public class GlowParticle extends SingleQuadParticle {
@@ -22,22 +22,12 @@ public class GlowParticle extends SingleQuadParticle {
 
    @Override
    public SingleQuadParticle.Layer getLayer() {
-      return SingleQuadParticle.Layer.TRANSLUCENT;
+      return SingleQuadParticle.Layer.OPAQUE;
    }
 
    @Override
-   public int getLightColor(final float a) {
-      float l = (this.age + a) / this.lifetime;
-      l = Mth.clamp(l, 0.0F, 1.0F);
-      int br = super.getLightColor(a);
-      int br1 = br & 0xFF;
-      int br2 = br >> 16 & 0xFF;
-      br1 += (int)(l * 15.0F * 16.0F);
-      if (br1 > 240) {
-         br1 = 240;
-      }
-
-      return br1 | br2 << 16;
+   public int getLightCoords(final float a) {
+      return LightCoordsUtil.addSmoothBlockEmission(super.getLightCoords(a), (this.age + a) / this.lifetime);
    }
 
    @Override

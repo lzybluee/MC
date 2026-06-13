@@ -8,10 +8,11 @@ import net.minecraft.advancements.criterion.ItemPredicate;
 import net.minecraft.advancements.criterion.SingleComponentItemPredicate;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.component.ItemContainerContents;
 
-public record ContainerPredicate(Optional<CollectionPredicate<ItemStack, ItemPredicate>> items) implements SingleComponentItemPredicate<ItemContainerContents> {
+public record ContainerPredicate(Optional<CollectionPredicate<ItemInstance, ItemPredicate>> items)
+   implements SingleComponentItemPredicate<ItemContainerContents> {
    public static final Codec<ContainerPredicate> CODEC = RecordCodecBuilder.create(
       i -> i.group(CollectionPredicate.codec(ItemPredicate.CODEC).optionalFieldOf("items").forGetter(ContainerPredicate::items))
          .apply(i, ContainerPredicate::new)

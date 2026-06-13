@@ -21,6 +21,7 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.Registry;
 import net.minecraft.core.WritableRegistry;
+import net.minecraft.core.component.DataComponentInitializers;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.component.predicates.DataComponentPredicate;
@@ -60,8 +61,10 @@ import net.minecraft.stats.Stats;
 import net.minecraft.util.Util;
 import net.minecraft.util.debug.DebugSubscription;
 import net.minecraft.util.debug.DebugSubscriptions;
-import net.minecraft.util.valueproviders.FloatProviderType;
-import net.minecraft.util.valueproviders.IntProviderType;
+import net.minecraft.util.valueproviders.FloatProvider;
+import net.minecraft.util.valueproviders.FloatProviders;
+import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.attribute.AttributeType;
 import net.minecraft.world.attribute.AttributeTypes;
 import net.minecraft.world.attribute.EnvironmentAttribute;
@@ -91,6 +94,7 @@ import net.minecraft.world.item.consume_effects.ConsumeEffect;
 import net.minecraft.world.item.crafting.RecipeBookCategories;
 import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeSerializers;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.RecipeDisplays;
@@ -149,16 +153,16 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.saveddata.maps.MapDecorationType;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntries;
-import net.minecraft.world.level.storage.loot.entries.LootPoolEntryType;
-import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
+import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
+import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunctions;
-import net.minecraft.world.level.storage.loot.predicates.LootItemConditionType;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.predicates.LootItemConditions;
-import net.minecraft.world.level.storage.loot.providers.nbt.LootNbtProviderType;
+import net.minecraft.world.level.storage.loot.providers.nbt.NbtProvider;
 import net.minecraft.world.level.storage.loot.providers.nbt.NbtProviders;
-import net.minecraft.world.level.storage.loot.providers.number.LootNumberProviderType;
+import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
-import net.minecraft.world.level.storage.loot.providers.score.LootScoreProviderType;
+import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProvider;
 import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProviders;
 import org.slf4j.Logger;
 
@@ -168,6 +172,7 @@ public class BuiltInRegistries {
    private static final WritableRegistry<WritableRegistry<?>> WRITABLE_REGISTRY = new MappedRegistry<>(
       ResourceKey.createRegistryKey(Registries.ROOT_REGISTRY_NAME), Lifecycle.stable()
    );
+   public static final DataComponentInitializers DATA_COMPONENT_INITIALIZERS = new DataComponentInitializers();
    public static final DefaultedRegistry<GameEvent> GAME_EVENT = registerDefaulted(Registries.GAME_EVENT, "step", GameEvent::bootstrap);
    public static final Registry<SoundEvent> SOUND_EVENT = registerSimple(Registries.SOUND_EVENT, registry -> SoundEvents.ITEM_PICKUP);
    public static final DefaultedRegistry<Fluid> FLUID = registerDefaultedWithIntrusiveHolders(Registries.FLUID, "empty", registry -> Fluids.EMPTY);
@@ -192,9 +197,7 @@ public class BuiltInRegistries {
    public static final Registry<PosRuleTestType<?>> POS_RULE_TEST = registerSimple(Registries.POS_RULE_TEST, registry -> PosRuleTestType.ALWAYS_TRUE_TEST);
    public static final Registry<MenuType<?>> MENU = registerSimple(Registries.MENU, registry -> MenuType.ANVIL);
    public static final Registry<RecipeType<?>> RECIPE_TYPE = registerSimple(Registries.RECIPE_TYPE, registry -> RecipeType.CRAFTING);
-   public static final Registry<RecipeSerializer<?>> RECIPE_SERIALIZER = registerSimple(
-      Registries.RECIPE_SERIALIZER, registry -> RecipeSerializer.SHAPELESS_RECIPE
-   );
+   public static final Registry<RecipeSerializer<?>> RECIPE_SERIALIZER = registerSimple(Registries.RECIPE_SERIALIZER, RecipeSerializers::bootstrap);
    public static final Registry<Attribute> ATTRIBUTE = registerSimple(Registries.ATTRIBUTE, Attributes::bootstrap);
    public static final Registry<PositionSourceType<?>> POSITION_SOURCE_TYPE = registerSimple(
       Registries.POSITION_SOURCE_TYPE, registry -> PositionSourceType.BLOCK
@@ -211,26 +214,28 @@ public class BuiltInRegistries {
    );
    public static final DefaultedRegistry<SensorType<?>> SENSOR_TYPE = registerDefaulted(Registries.SENSOR_TYPE, "dummy", registry -> SensorType.DUMMY);
    public static final Registry<Activity> ACTIVITY = registerSimple(Registries.ACTIVITY, registry -> Activity.IDLE);
-   public static final Registry<LootPoolEntryType> LOOT_POOL_ENTRY_TYPE = registerSimple(Registries.LOOT_POOL_ENTRY_TYPE, registry -> LootPoolEntries.EMPTY);
-   public static final Registry<LootItemFunctionType<?>> LOOT_FUNCTION_TYPE = registerSimple(
-      Registries.LOOT_FUNCTION_TYPE, registry -> LootItemFunctions.SET_COUNT
+   public static final Registry<MapCodec<? extends LootPoolEntryContainer>> LOOT_POOL_ENTRY_TYPE = registerSimple(
+      Registries.LOOT_POOL_ENTRY_TYPE, LootPoolEntries::bootstrap
    );
-   public static final Registry<LootItemConditionType> LOOT_CONDITION_TYPE = registerSimple(
-      Registries.LOOT_CONDITION_TYPE, registry -> LootItemConditions.INVERTED
+   public static final Registry<MapCodec<? extends LootItemFunction>> LOOT_FUNCTION_TYPE = registerSimple(
+      Registries.LOOT_FUNCTION_TYPE, LootItemFunctions::bootstrap
    );
-   public static final Registry<LootNumberProviderType> LOOT_NUMBER_PROVIDER_TYPE = registerSimple(
-      Registries.LOOT_NUMBER_PROVIDER_TYPE, registry -> NumberProviders.CONSTANT
+   public static final Registry<MapCodec<? extends LootItemCondition>> LOOT_CONDITION_TYPE = registerSimple(
+      Registries.LOOT_CONDITION_TYPE, LootItemConditions::bootstrap
    );
-   public static final Registry<LootNbtProviderType> LOOT_NBT_PROVIDER_TYPE = registerSimple(
-      Registries.LOOT_NBT_PROVIDER_TYPE, registry -> NbtProviders.CONTEXT
+   public static final Registry<MapCodec<? extends NumberProvider>> LOOT_NUMBER_PROVIDER_TYPE = registerSimple(
+      Registries.LOOT_NUMBER_PROVIDER_TYPE, NumberProviders::bootstrap
    );
-   public static final Registry<LootScoreProviderType> LOOT_SCORE_PROVIDER_TYPE = registerSimple(
-      Registries.LOOT_SCORE_PROVIDER_TYPE, registry -> ScoreboardNameProviders.CONTEXT
+   public static final Registry<MapCodec<? extends NbtProvider>> LOOT_NBT_PROVIDER_TYPE = registerSimple(
+      Registries.LOOT_NBT_PROVIDER_TYPE, NbtProviders::bootstrap
    );
-   public static final Registry<FloatProviderType<?>> FLOAT_PROVIDER_TYPE = registerSimple(
-      Registries.FLOAT_PROVIDER_TYPE, registry -> FloatProviderType.CONSTANT
+   public static final Registry<MapCodec<? extends ScoreboardNameProvider>> LOOT_SCORE_PROVIDER_TYPE = registerSimple(
+      Registries.LOOT_SCORE_PROVIDER_TYPE, ScoreboardNameProviders::bootstrap
    );
-   public static final Registry<IntProviderType<?>> INT_PROVIDER_TYPE = registerSimple(Registries.INT_PROVIDER_TYPE, registry -> IntProviderType.CONSTANT);
+   public static final Registry<MapCodec<? extends FloatProvider>> FLOAT_PROVIDER_TYPE = registerSimple(
+      Registries.FLOAT_PROVIDER_TYPE, FloatProviders::bootstrap
+   );
+   public static final Registry<MapCodec<? extends IntProvider>> INT_PROVIDER_TYPE = registerSimple(Registries.INT_PROVIDER_TYPE, IntProviders::bootstrap);
    public static final Registry<HeightProviderType<?>> HEIGHT_PROVIDER_TYPE = registerSimple(
       Registries.HEIGHT_PROVIDER_TYPE, registry -> HeightProviderType.CONSTANT
    );
@@ -328,7 +333,7 @@ public class BuiltInRegistries {
    public static final Registry<OutgoingRpcMethod<?, ?>> OUTGOING_RPC_METHOD = registerSimple(
       Registries.OUTGOING_RPC_METHOD, registry -> OutgoingRpcMethods.SERVER_STARTED
    );
-   public static final Registry<MapCodec<? extends TestEnvironmentDefinition>> TEST_ENVIRONMENT_DEFINITION_TYPE = registerSimple(
+   public static final Registry<MapCodec<? extends TestEnvironmentDefinition<?>>> TEST_ENVIRONMENT_DEFINITION_TYPE = registerSimple(
       Registries.TEST_ENVIRONMENT_DEFINITION_TYPE, TestEnvironmentDefinition::bootstrap
    );
    public static final Registry<MapCodec<? extends GameTestInstance>> TEST_INSTANCE_TYPE = registerSimple(

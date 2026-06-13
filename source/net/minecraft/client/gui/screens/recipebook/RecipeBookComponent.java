@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.client.ClientRecipeBook;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
@@ -26,6 +26,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.language.LanguageInfo;
@@ -293,7 +294,7 @@ public abstract class RecipeBookComponent<T extends RecipeBookMenu> implements G
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.isVisible()) {
          if (!this.minecraft.hasControlDown()) {
             this.time += a;
@@ -302,28 +303,28 @@ public abstract class RecipeBookComponent<T extends RecipeBookMenu> implements G
          int xo = this.getXOrigin();
          int yo = this.getYOrigin();
          graphics.blit(RenderPipelines.GUI_TEXTURED, RECIPE_BOOK_LOCATION, xo, yo, 1.0F, 1.0F, 147, 166, 256, 256);
-         this.searchBox.render(graphics, mouseX, mouseY, a);
+         this.searchBox.extractRenderState(graphics, mouseX, mouseY, a);
 
          for (RecipeBookTabButton tabButton : this.tabButtons) {
-            tabButton.render(graphics, mouseX, mouseY, a);
+            tabButton.extractRenderState(graphics, mouseX, mouseY, a);
          }
 
-         this.filterButton.render(graphics, mouseX, mouseY, a);
-         this.recipeBookPage.render(graphics, xo, yo, mouseX, mouseY, a);
+         this.filterButton.extractRenderState(graphics, mouseX, mouseY, a);
+         this.recipeBookPage.extractRenderState(graphics, xo, yo, mouseX, mouseY, a);
       }
    }
 
-   public void renderTooltip(final GuiGraphics graphics, final int mouseX, final int mouseY, final @Nullable Slot hoveredSlot) {
+   public void extractTooltip(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final @Nullable Slot hoveredSlot) {
       if (this.isVisible()) {
-         this.recipeBookPage.renderTooltip(graphics, mouseX, mouseY);
-         this.ghostSlots.renderTooltip(graphics, this.minecraft, mouseX, mouseY, hoveredSlot);
+         this.recipeBookPage.extractTooltip(graphics, mouseX, mouseY);
+         this.ghostSlots.extractTooltip(graphics, this.minecraft, mouseX, mouseY, hoveredSlot);
       }
    }
 
    protected abstract Component getRecipeFilterName();
 
-   public void renderGhostRecipe(final GuiGraphics graphics, final boolean isResultSlotBig) {
-      this.ghostSlots.render(graphics, this.minecraft, isResultSlotBig);
+   public void extractGhostRecipe(final GuiGraphicsExtractor graphics, final boolean isResultSlotBig) {
+      this.ghostSlots.extractRenderState(graphics, this.minecraft, isResultSlotBig);
    }
 
    @Override
@@ -464,6 +465,17 @@ public abstract class RecipeBookComponent<T extends RecipeBookMenu> implements G
          return true;
       } else {
          return GuiEventListener.super.charTyped(event);
+      }
+   }
+
+   @Override
+   public boolean preeditUpdated(final @Nullable PreeditEvent event) {
+      if (this.ignoreTextInput) {
+         return false;
+      } else if (!this.isVisible() || this.minecraft.player.isSpectator()) {
+         return false;
+      } else {
+         return this.searchBox.preeditUpdated(event) ? true : GuiEventListener.super.preeditUpdated(event);
       }
    }
 

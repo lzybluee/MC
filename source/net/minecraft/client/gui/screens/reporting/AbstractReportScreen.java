@@ -7,11 +7,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Optionull;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.Layout;
 import net.minecraft.client.gui.layouts.LinearLayout;
@@ -73,9 +73,7 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
       this.addContent();
       this.createFooter();
       this.onReportChanged();
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -87,10 +85,17 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
 
    protected void createFooter() {
       this.attestation = this.layout
-         .addChild(Checkbox.builder(ATTESTATION_CHECKBOX, this.font).selected(this.reportBuilder.attested()).maxWidth(280).onValueChange((checkbox, value) -> {
-            this.reportBuilder.setAttested(value);
-            this.onReportChanged();
-         }).build());
+         .addChild(
+            Checkbox.builder(ATTESTATION_CHECKBOX, this.font)
+               .selected(this.reportBuilder.attested())
+               .maxWidth(280)
+               .tooltip(Tooltip.create(ATTESTATION_CHECKBOX))
+               .onValueChange((checkbox, value) -> {
+                  this.reportBuilder.setAttested(value);
+                  this.onReportChanged();
+               })
+               .build()
+         );
       LinearLayout buttonsLayout = this.layout.addChild(LinearLayout.horizontal().spacing(8));
       buttonsLayout.addChild(Button.builder(CommonComponents.GUI_BACK, b -> this.onClose()).width(120).build());
       this.sendButton = buttonsLayout.addChild(Button.builder(SEND_REPORT, b -> this.sendReport()).width(120).build());

@@ -82,7 +82,7 @@ public class GrindstoneMenu extends AbstractContainerMenu {
             amount += this.getExperienceFromItem(GrindstoneMenu.this.repairSlots.getItem(1));
             if (amount > 0) {
                int halfAmount = (int)Math.ceil(amount / 2.0);
-               return halfAmount + level.random.nextInt(halfAmount);
+               return halfAmount + level.getRandom().nextInt(halfAmount);
             } else {
                return 0;
             }

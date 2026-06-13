@@ -7,13 +7,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 @Deprecated
 public class CountOnEveryLayerPlacement extends PlacementModifier {
-   public static final MapCodec<CountOnEveryLayerPlacement> CODEC = IntProvider.codec(0, 256)
+   public static final MapCodec<CountOnEveryLayerPlacement> CODEC = IntProviders.codec(0, 256)
       .fieldOf("count")
       .xmap(CountOnEveryLayerPlacement::new, c -> c.count);
    private final IntProvider count;

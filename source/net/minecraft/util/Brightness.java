@@ -11,23 +11,11 @@ public record Brightness(int block, int sky) {
    );
    public static final Brightness FULL_BRIGHT = new Brightness(15, 15);
 
-   public static int pack(final int block, final int sky) {
-      return block << 4 | sky << 20;
-   }
-
    public int pack() {
-      return pack(this.block, this.sky);
-   }
-
-   public static int block(final int packed) {
-      return packed >> 4 & 65535;
-   }
-
-   public static int sky(final int packed) {
-      return packed >> 20 & 65535;
+      return LightCoordsUtil.pack(this.block, this.sky);
    }
 
    public static Brightness unpack(final int packed) {
-      return new Brightness(block(packed), sky(packed));
+      return new Brightness(LightCoordsUtil.block(packed), LightCoordsUtil.sky(packed));
    }
 }

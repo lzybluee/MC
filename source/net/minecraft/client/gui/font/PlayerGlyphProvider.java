@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.Style;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class PlayerGlyphProvider {
    private static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
@@ -65,7 +65,7 @@ public class PlayerGlyphProvider {
    ) implements PlainTextRenderable {
       @Override
       public void renderSprite(
-         final Matrix4f pose,
+         final Matrix4fc pose,
          final VertexConsumer buffer,
          final int packedLightCoords,
          final float offsetX,
@@ -84,7 +84,7 @@ public class PlayerGlyphProvider {
       }
 
       private static void renderQuad(
-         final Matrix4f pose,
+         final Matrix4fc pose,
          final VertexConsumer buffer,
          final int packedLightCoords,
          final float x0,

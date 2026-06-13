@@ -30,9 +30,13 @@ import net.minecraft.util.Util;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -74,13 +78,23 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Rabbit extends Animal {
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.24F, 0.4F).withEyeHeight(0.39F);
    public static final double STROLL_SPEED_MOD = 0.6;
    public static final double BREED_SPEED_MOD = 0.8;
    public static final double FOLLOW_SPEED_MOD = 1.0;
    public static final double FLEE_SPEED_MOD = 2.2;
    public static final double ATTACK_SPEED_MOD = 1.4;
+   private static final double BABY_JUMP_HEIGHT = 0.5;
+   private static final double ADULT_JUMP_HEIGHT = 1.5;
+   private static final int JUMP_DELAY_TICKS = 10;
+   private static final int PANIC_JUMP_DELAY_TICKS = 3;
+   private static final int JUMP_DURATION_IN_TICKS = 15;
    private static final EntityDataAccessor<Integer> DATA_TYPE_ID = SynchedEntityData.defineId(Rabbit.class, EntityDataSerializers.INT);
    private static final int DEFAULT_MORE_CARROT_TICKS = 0;
+   public final AnimationState hopAnimationState = new AnimationState();
+   public final AnimationState idleHeadTiltAnimationState = new AnimationState();
+   private static final int IDLE_MINIMAL_DURATION_TICKS = 180;
+   private int idleAnimationTimeout = this.random.nextInt(40) + 180;
    private static final Identifier KILLER_BUNNY = Identifier.withDefaultNamespace("killer_bunny");
    private static final int DEFAULT_ATTACK_POWER = 3;
    private static final int EVIL_ATTACK_POWER_INCREMENT = 5;
@@ -116,6 +130,11 @@ public class Rabbit extends Animal {
    }
 
    @Override
+   protected EntityDimensions getDefaultDimensions(final Pose pose) {
+      return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+   }
+
+   @Override
    protected float getJumpPower() {
       float baseJumpPower = 0.3F;
       if (this.moveControl.getSpeedModifier() <= 0.6) {
@@ -144,7 +163,7 @@ public class Rabbit extends Animal {
       if (speedModifier > 0.0) {
          double current = this.getDeltaMovement().horizontalDistanceSqr();
          if (current < 0.01) {
-            this.moveRelative(0.1F, new Vec3(0.0, 0.0, 1.0));
+            this.moveRelative(0.1F, new Vec3(0.0, this.isBaby() ? 0.5 : 1.5, 1.0));
          }
       }
 
@@ -172,7 +191,7 @@ public class Rabbit extends Animal {
 
    public void startJumping() {
       this.setJumping(true);
-      this.jumpDuration = 10;
+      this.jumpDuration = 15;
       this.jumpTicks = 0;
    }
 
@@ -249,11 +268,7 @@ public class Rabbit extends Animal {
    }
 
    private void setLandingDelay() {
-      if (this.moveControl.getSpeedModifier() < 2.2) {
-         this.jumpDelayTicks = 10;
-      } else {
-         this.jumpDelayTicks = 1;
-      }
+      this.jumpDelayTicks = this.moveControl.getSpeedModifier() < 2.2 ? 10 : 3;
    }
 
    private void checkLandingDelay() {
@@ -430,7 +445,7 @@ public class Rabbit extends Animal {
    public void handleEntityEvent(final byte id) {
       if (id == 1) {
          this.spawnSprintParticle();
-         this.jumpDuration = 10;
+         this.jumpDuration = 15;
          this.jumpTicks = 0;
       } else {
          super.handleEntityEvent(id);
@@ -440,6 +455,37 @@ public class Rabbit extends Animal {
    @Override
    public Vec3 getLeashOffset() {
       return new Vec3(0.0, 0.6F * this.getEyeHeight(), this.getBbWidth() * 0.4F);
+   }
+
+   private void setupAnimationStates() {
+      if (this.shouldPlayIdleAnimation()) {
+         this.idleAnimationTimeout = this.random.nextInt(40) + 180;
+         this.idleHeadTiltAnimationState.start(this.tickCount);
+      } else if (this.jumpTicks > 0) {
+         this.hopAnimationState.startIfStopped(this.tickCount);
+         this.idleHeadTiltAnimationState.stop();
+      } else {
+         this.idleAnimationTimeout--;
+         this.hopAnimationState.stop();
+      }
+   }
+
+   private boolean shouldPlayIdleAnimation() {
+      return this.idleAnimationTimeout <= 0 && (this.getLeashData() == null || this.getLeashData().leashHolder == null) && !this.isNoAi();
+   }
+
+   @Override
+   public void setLeashData(final Leashable.@Nullable LeashData leashData) {
+      super.setLeashData(leashData);
+      this.idleHeadTiltAnimationState.stop();
+   }
+
+   @Override
+   public void baseTick() {
+      super.baseTick();
+      if (this.level().isClientSide()) {
+         this.setupAnimationStates();
+      }
    }
 
    private static class RabbitAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
@@ -607,9 +653,9 @@ public class Rabbit extends Animal {
       @Override
       protected boolean isValidTarget(final LevelReader level, final BlockPos pos) {
          BlockState state = level.getBlockState(pos);
-         if (state.is(Blocks.FARMLAND) && this.wantsToRaid && !this.canRaid) {
+         if (state.is(BlockTags.SUPPORTS_CROPS) && this.wantsToRaid && !this.canRaid) {
             state = level.getBlockState(pos.above());
-            if (state.getBlock() instanceof CarrotBlock && ((CarrotBlock)state.getBlock()).isMaxAge(state)) {
+            if (state.getBlock() instanceof CarrotBlock carrotBlock && carrotBlock.isMaxAge(state)) {
                this.canRaid = true;
                return true;
             }

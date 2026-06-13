@@ -21,6 +21,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -260,20 +261,20 @@ public class ChunkPalettedStorageFix extends DataFix {
          map.put(15, "black");
       });
       private static final Map<String, Dynamic<?>> BED_BLOCK_MAP = (Map<String, Dynamic<?>>)DataFixUtils.make(Maps.newHashMap(), map -> {
-         ObjectIterator var1 = DYE_COLOR_MAP.int2ObjectEntrySet().iterator();
+         Iterator i$ = DYE_COLOR_MAP.int2ObjectEntrySet().iterator();
 
-         while (var1.hasNext()) {
-            Entry<String> entry = (Entry<String>)var1.next();
+         while (i$.hasNext()) {
+            Entry<String> entry = (Entry<String>)i$.next();
             if (!Objects.equals(entry.getValue(), "red")) {
                addBeds(map, entry.getIntKey(), (String)entry.getValue());
             }
          }
       });
       private static final Map<String, Dynamic<?>> BANNER_BLOCK_MAP = (Map<String, Dynamic<?>>)DataFixUtils.make(Maps.newHashMap(), map -> {
-         ObjectIterator var1 = DYE_COLOR_MAP.int2ObjectEntrySet().iterator();
+         Iterator i$ = DYE_COLOR_MAP.int2ObjectEntrySet().iterator();
 
-         while (var1.hasNext()) {
-            Entry<String> entry = (Entry<String>)var1.next();
+         while (i$.hasNext()) {
+            Entry<String> entry = (Entry<String>)i$.next();
             if (!Objects.equals(entry.getValue(), "white")) {
                addBanners(map, 15 - entry.getIntKey(), (String)entry.getValue());
             }

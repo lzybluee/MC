@@ -13,7 +13,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetFireworksFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetFireworksFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetFireworksFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -49,7 +49,7 @@ public class SetFireworksFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetFireworksFunction> getType() {
-      return LootItemFunctions.SET_FIREWORKS;
+   public MapCodec<SetFireworksFunction> codec() {
+      return MAP_CODEC;
    }
 }

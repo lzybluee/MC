@@ -17,7 +17,7 @@ import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetContainerLootTable extends LootItemConditionalFunction {
-   public static final MapCodec<SetContainerLootTable> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetContainerLootTable> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -42,8 +42,8 @@ public class SetContainerLootTable extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetContainerLootTable> getType() {
-      return LootItemFunctions.SET_LOOT_TABLE;
+   public MapCodec<SetContainerLootTable> codec() {
+      return MAP_CODEC;
    }
 
    @Override

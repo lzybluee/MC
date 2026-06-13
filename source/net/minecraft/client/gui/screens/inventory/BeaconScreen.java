@@ -4,7 +4,7 @@ import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -42,9 +42,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
    private @Nullable Holder<MobEffect> secondary;
 
    public BeaconScreen(final BeaconMenu menu, final Inventory inventory, final Component title) {
-      super(menu, inventory, title);
-      this.imageWidth = 230;
-      this.imageHeight = 219;
+      super(menu, inventory, title, 230, 219);
       menu.addSlotListener(new ContainerListener() {
          @Override
          public void slotChanged(final AbstractContainerMenu container, final int slotIndex, final ItemStack itemStack) {
@@ -117,27 +115,22 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
    }
 
    @Override
-   protected void renderLabels(final GuiGraphics graphics, final int xm, final int ym) {
-      graphics.drawCenteredString(this.font, PRIMARY_EFFECT_LABEL, 62, 10, -2039584);
-      graphics.drawCenteredString(this.font, SECONDARY_EFFECT_LABEL, 169, 10, -2039584);
+   protected void extractLabels(final GuiGraphicsExtractor graphics, final int xm, final int ym) {
+      graphics.centeredText(this.font, PRIMARY_EFFECT_LABEL, 62, 10, -2039584);
+      graphics.centeredText(this.font, SECONDARY_EFFECT_LABEL, 169, 10, -2039584);
    }
 
    @Override
-   protected void renderBg(final GuiGraphics graphics, final float a, final int xm, final int ym) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
       int xo = (this.width - this.imageWidth) / 2;
       int yo = (this.height - this.imageHeight) / 2;
       graphics.blit(RenderPipelines.GUI_TEXTURED, BEACON_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-      graphics.renderItem(new ItemStack(Items.NETHERITE_INGOT), xo + 20, yo + 109);
-      graphics.renderItem(new ItemStack(Items.EMERALD), xo + 41, yo + 109);
-      graphics.renderItem(new ItemStack(Items.DIAMOND), xo + 41 + 22, yo + 109);
-      graphics.renderItem(new ItemStack(Items.GOLD_INGOT), xo + 42 + 44, yo + 109);
-      graphics.renderItem(new ItemStack(Items.IRON_INGOT), xo + 42 + 66, yo + 109);
-   }
-
-   @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
-      this.renderTooltip(graphics, mouseX, mouseY);
+      graphics.item(new ItemStack(Items.NETHERITE_INGOT), xo + 20, yo + 109);
+      graphics.item(new ItemStack(Items.EMERALD), xo + 41, yo + 109);
+      graphics.item(new ItemStack(Items.DIAMOND), xo + 41 + 22, yo + 109);
+      graphics.item(new ItemStack(Items.GOLD_INGOT), xo + 42 + 44, yo + 109);
+      graphics.item(new ItemStack(Items.IRON_INGOT), xo + 42 + 66, yo + 109);
    }
 
    private interface BeaconButton {
@@ -215,7 +208,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
 
       @Override
-      protected void renderIcon(final GuiGraphics graphics) {
+      protected void extractIcon(final GuiGraphicsExtractor graphics) {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, this.getX() + 2, this.getY() + 2, 18, 18);
       }
 
@@ -243,7 +236,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
 
       @Override
-      public void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+      public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
          Identifier sprite;
          if (!this.active) {
             sprite = BeaconScreen.BUTTON_DISABLED_SPRITE;
@@ -256,10 +249,10 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
          }
 
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, this.getX(), this.getY(), this.width, this.height);
-         this.renderIcon(graphics);
+         this.extractIcon(graphics);
       }
 
-      protected abstract void renderIcon(final GuiGraphics graphics);
+      protected abstract void extractIcon(final GuiGraphicsExtractor graphics);
 
       public boolean isSelected() {
          return this.selected;
@@ -285,7 +278,7 @@ public class BeaconScreen extends AbstractContainerScreen<BeaconMenu> {
       }
 
       @Override
-      protected void renderIcon(final GuiGraphics graphics) {
+      protected void extractIcon(final GuiGraphicsExtractor graphics) {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, this.getX() + 2, this.getY() + 2, 18, 18);
       }
    }

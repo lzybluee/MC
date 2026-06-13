@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.core.cauldron.CauldronInteractions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
@@ -28,7 +29,7 @@ public class LayeredCauldronBlock extends AbstractCauldronBlock {
    public static final MapCodec<LayeredCauldronBlock> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Biome.Precipitation.CODEC.fieldOf("precipitation").forGetter(b -> b.precipitationType),
-            CauldronInteraction.CODEC.fieldOf("interactions").forGetter(b -> b.interactions),
+            CauldronInteractions.CODEC.fieldOf("interactions").forGetter(b -> b.interactions),
             propertiesCodec()
          )
          .apply(i, LayeredCauldronBlock::new)
@@ -49,7 +50,7 @@ public class LayeredCauldronBlock extends AbstractCauldronBlock {
    }
 
    public LayeredCauldronBlock(
-      final Biome.Precipitation precipitationType, final CauldronInteraction.InteractionMap interactionMap, final BlockBehaviour.Properties properties
+      final Biome.Precipitation precipitationType, final CauldronInteraction.Dispatcher interactionMap, final BlockBehaviour.Properties properties
    ) {
       super(properties, interactionMap);
       this.precipitationType = precipitationType;

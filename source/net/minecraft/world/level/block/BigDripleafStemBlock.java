@@ -61,7 +61,7 @@ public class BigDripleafStemBlock extends HorizontalDirectionalBlock implements 
       BlockPos belowPos = pos.below();
       BlockState belowState = level.getBlockState(belowPos);
       BlockState aboveState = level.getBlockState(pos.above());
-      return (belowState.is(this) || belowState.is(BlockTags.BIG_DRIPLEAF_PLACEABLE)) && (aboveState.is(this) || aboveState.is(Blocks.BIG_DRIPLEAF));
+      return (belowState.is(this) || belowState.is(BlockTags.SUPPORTS_BIG_DRIPLEAF)) && (aboveState.is(this) || aboveState.is(Blocks.BIG_DRIPLEAF));
    }
 
    protected static boolean place(final LevelAccessor level, final BlockPos pos, final FluidState fluidState, final Direction facing) {
@@ -104,13 +104,7 @@ public class BigDripleafStemBlock extends HorizontalDirectionalBlock implements 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
       Optional<BlockPos> headPos = BlockUtil.getTopConnectedBlock(level, pos, state.getBlock(), Direction.UP, Blocks.BIG_DRIPLEAF);
-      if (headPos.isEmpty()) {
-         return false;
-      }
-
-      BlockPos abovePos = headPos.get().above();
-      BlockState aboveState = level.getBlockState(abovePos);
-      return BigDripleafBlock.canPlaceAt(level, abovePos, aboveState);
+      return headPos.filter(blockPos -> BigDripleafBlock.canPlaceAt(level, blockPos.above())).isPresent();
    }
 
    @Override

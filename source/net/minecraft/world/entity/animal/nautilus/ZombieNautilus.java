@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.animal.nautilus;
 
-import com.mojang.serialization.Dynamic;
-import java.util.Optional;
+import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
@@ -25,9 +24,10 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.item.EitherHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
@@ -35,6 +35,11 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
 
 public class ZombieNautilus extends AbstractNautilus {
+   private static final Brain.Provider<ZombieNautilus> BRAIN_PROVIDER = Brain.provider(
+      List.of(MemoryModuleType.ANGRY_AT, MemoryModuleType.ATTACK_TARGET_COOLDOWN),
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.NAUTILUS_TEMPTATIONS),
+      var0 -> ZombieNautilusAi.getActivities()
+   );
    private static final EntityDataAccessor<Holder<ZombieNautilusVariant>> DATA_VARIANT_ID = SynchedEntityData.defineId(
       ZombieNautilus.class, EntityDataSerializers.ZOMBIE_NAUTILUS_VARIANT
    );
@@ -57,18 +62,13 @@ public class ZombieNautilus extends AbstractNautilus {
    }
 
    @Override
-   protected Brain.Provider<ZombieNautilus> brainProvider() {
-      return ZombieNautilusAi.brainProvider();
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return ZombieNautilusAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<ZombieNautilus> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<ZombieNautilus> getBrain() {
-      return (Brain<ZombieNautilus>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -146,9 +146,7 @@ public class ZombieNautilus extends AbstractNautilus {
 
    @Override
    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
-      return type == DataComponents.ZOMBIE_NAUTILUS_VARIANT
-         ? castComponentValue((DataComponentType<T>)type, new EitherHolder<>(this.getVariant()))
-         : super.get(type);
+      return type == DataComponents.ZOMBIE_NAUTILUS_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
    }
 
    @Override
@@ -160,13 +158,9 @@ public class ZombieNautilus extends AbstractNautilus {
    @Override
    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
       if (type == DataComponents.ZOMBIE_NAUTILUS_VARIANT) {
-         Optional<Holder<ZombieNautilusVariant>> variant = castComponentValue(DataComponents.ZOMBIE_NAUTILUS_VARIANT, value).unwrap(this.registryAccess());
-         if (variant.isPresent()) {
-            this.setVariant(variant.get());
-            return true;
-         } else {
-            return false;
-         }
+         Holder<ZombieNautilusVariant> variant = castComponentValue(DataComponents.ZOMBIE_NAUTILUS_VARIANT, value);
+         this.setVariant(variant);
+         return true;
       } else {
          return super.applyImplicitComponent(type, value);
       }

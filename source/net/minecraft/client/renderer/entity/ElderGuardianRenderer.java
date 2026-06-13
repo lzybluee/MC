@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.state.GuardianRenderState;
 import net.minecraft.resources.Identifier;
 
 public class ElderGuardianRenderer extends GuardianRenderer {
-   public static final Identifier GUARDIAN_ELDER_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian_elder.png");
+   public static final Identifier GUARDIAN_ELDER_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian/guardian_elder.png");
 
    public ElderGuardianRenderer(final EntityRendererProvider.Context context) {
       super(context, 1.2F, ModelLayers.ELDER_GUARDIAN);

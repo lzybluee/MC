@@ -2,6 +2,7 @@ package net.minecraft.world;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -32,15 +33,16 @@ public class Containers {
       double size = EntityType.ITEM.getWidth();
       double centerRange = 1.0 - size;
       double halfSize = size / 2.0;
-      double xo = Math.floor(x) + level.random.nextDouble() * centerRange + halfSize;
-      double yo = Math.floor(y) + level.random.nextDouble() * centerRange;
-      double zo = Math.floor(z) + level.random.nextDouble() * centerRange + halfSize;
+      RandomSource random = level.getRandom();
+      double xo = Math.floor(x) + random.nextDouble() * centerRange + halfSize;
+      double yo = Math.floor(y) + random.nextDouble() * centerRange;
+      double zo = Math.floor(z) + random.nextDouble() * centerRange + halfSize;
 
       while (!itemStack.isEmpty()) {
-         ItemEntity entity = new ItemEntity(level, xo, yo, zo, itemStack.split(level.random.nextInt(21) + 10));
+         ItemEntity entity = new ItemEntity(level, xo, yo, zo, itemStack.split(random.nextInt(21) + 10));
          float pow = 0.05F;
          entity.setDeltaMovement(
-            level.random.triangle(0.0, 0.11485000171139836), level.random.triangle(0.2, 0.11485000171139836), level.random.triangle(0.0, 0.11485000171139836)
+            random.triangle(0.0, 0.11485000171139836), random.triangle(0.2, 0.11485000171139836), random.triangle(0.0, 0.11485000171139836)
          );
          level.addFreshEntity(entity);
       }

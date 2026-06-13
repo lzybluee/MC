@@ -100,6 +100,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
    private static final int FLAG_EATING = 16;
    private static final int FLAG_STANDING = 32;
    private static final int FLAG_OPEN_MOUTH = 64;
+   protected static final float BABY_SCALE = 0.7F;
    public static final int INVENTORY_ROWS = 3;
    private static final int DEFAULT_TEMPER = 0;
    private static final boolean DEFAULT_EATING_HAYSTACK = false;
@@ -131,7 +132,6 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
 
    @Override
    protected void registerGoals() {
-      this.goalSelector.addGoal(1, new AbstractHorse.MountPanicGoal(1.2));
       this.goalSelector.addGoal(1, new RunAroundLikeCrazyGoal(this, 1.2));
       this.goalSelector.addGoal(2, new BreedGoal(this, 1.0, AbstractHorse.class));
       this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.0));
@@ -147,6 +147,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
 
    protected void addBehaviourGoals() {
       this.goalSelector.addGoal(0, new FloatGoal(this));
+      this.goalSelector.addGoal(1, new AbstractHorse.MountPanicGoal(1.2));
       this.goalSelector.addGoal(3, new TemptGoal(this, 1.25, i -> i.is(ItemTags.HORSE_TEMPT_ITEMS), false));
    }
 
@@ -278,7 +279,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
    @Override
    public boolean causeFallDamage(final double fallDistance, final float damageModifier, final DamageSource damageSource) {
       if (fallDistance > 1.0) {
-         this.playSound(SoundEvents.HORSE_LAND, 0.4F, 1.0F);
+         this.playSound(this.isBaby() ? SoundEvents.HORSE_LAND_BABY : SoundEvents.HORSE_LAND, 0.4F, 1.0F);
       }
 
       int dmg = this.calculateFallDamage(fallDistance, damageModifier);
@@ -357,7 +358,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
          } else if (this.isWoodSoundType(soundType)) {
             this.playSound(SoundEvents.HORSE_STEP_WOOD, soundType.getVolume() * 0.15F, soundType.getPitch());
          } else {
-            this.playSound(SoundEvents.HORSE_STEP, soundType.getVolume() * 0.15F, soundType.getPitch());
+            this.playSound(this.isBaby() ? SoundEvents.HORSE_STEP_BABY : SoundEvents.HORSE_STEP, soundType.getVolume() * 0.15F, soundType.getPitch());
          }
       }
    }
@@ -432,7 +433,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
          heal = 1.0F;
          ageUp = 30;
          temper = 3;
-      } else if (itemStack.is(Blocks.HAY_BLOCK.asItem())) {
+      } else if (itemStack.is(Items.HAY_BLOCK)) {
          heal = 20.0F;
          ageUp = 180;
       } else if (itemStack.is(Items.APPLE)) {
@@ -470,7 +471,7 @@ public abstract class AbstractHorse extends Animal implements PlayerRideableJump
          itemUsed = true;
       }
 
-      if (this.isBaby() && ageUp > 0) {
+      if (this.isBaby() && ageUp > 0 && !this.isAgeLocked()) {
          this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
          if (!this.level().isClientSide()) {
             this.ageUp(ageUp);

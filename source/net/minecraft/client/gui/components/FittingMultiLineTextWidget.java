@@ -1,18 +1,16 @@
 package net.minecraft.client.gui.components;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 
 public class FittingMultiLineTextWidget extends AbstractTextAreaWidget {
-   private final Font font;
    private final MultiLineTextWidget multilineWidget;
 
    public FittingMultiLineTextWidget(final int x, final int y, final int width, final int height, final Component message, final Font font) {
-      super(x, y, width, height, message);
-      this.font = font;
+      super(x, y, width, height, message, AbstractScrollArea.defaultSettings(9));
       this.multilineWidget = new MultiLineTextWidget(message, font).setMaxWidth(this.getWidth() - this.totalInnerPadding());
    }
 
@@ -34,24 +32,19 @@ public class FittingMultiLineTextWidget extends AbstractTextAreaWidget {
    }
 
    @Override
-   protected double scrollRate() {
-      return 9.0;
-   }
-
-   @Override
-   protected void renderBackground(final GuiGraphics graphics) {
-      super.renderBackground(graphics);
+   protected void extractBackground(final GuiGraphicsExtractor graphics) {
+      super.extractBackground(graphics);
    }
 
    public boolean showingScrollBar() {
-      return super.scrollbarVisible();
+      return super.scrollable();
    }
 
    @Override
-   protected void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   protected void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       graphics.pose().pushMatrix();
       graphics.pose().translate(this.getInnerLeft(), this.getInnerTop());
-      this.multilineWidget.render(graphics, mouseX, mouseY, a);
+      this.multilineWidget.extractRenderState(graphics, mouseX, mouseY, a);
       graphics.pose().popMatrix();
    }
 

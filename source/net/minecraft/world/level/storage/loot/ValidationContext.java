@@ -40,6 +40,18 @@ public class ValidationContext {
       return new ValidationContext(this.reporter.forChild(subContext), this.contextKeySet, this.resolver, this.visitedElements);
    }
 
+   public ValidationContext forField(final String name) {
+      return this.forChild(new ProblemReporter.FieldPathElement(name));
+   }
+
+   public ValidationContext forIndexedField(final String name, final int index) {
+      return this.forChild(new ProblemReporter.IndexedFieldPathElement(name, index));
+   }
+
+   public ValidationContext forMapField(final String name, final String key) {
+      return this.forChild(new ProblemReporter.MapEntryPathElement(name, key));
+   }
+
    public ValidationContext enterElement(final ProblemReporter.PathElement subContext, final ResourceKey<?> element) {
       Set<ResourceKey<?>> newVisitedElements = ImmutableSet.builder().addAll(this.visitedElements).add(element).build();
       return new ValidationContext(this.reporter.forChild(subContext), this.contextKeySet, this.resolver, newVisitedElements);
@@ -67,10 +79,6 @@ public class ValidationContext {
 
    public boolean allowsReferences() {
       return this.resolver.isPresent();
-   }
-
-   public ValidationContext setContextKeySet(final ContextKeySet contextKeySet) {
-      return new ValidationContext(this.reporter, contextKeySet, this.resolver, this.visitedElements);
    }
 
    public ProblemReporter reporter() {

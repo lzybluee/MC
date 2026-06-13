@@ -23,7 +23,7 @@ public interface SimpleWaterloggedBlock extends BucketPickup, LiquidBlockContain
 
    @Override
    default boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
-      if (!state.getValue(BlockStateProperties.WATERLOGGED) && fluidState.getType() == Fluids.WATER) {
+      if (!state.getValue(BlockStateProperties.WATERLOGGED) && fluidState.is(Fluids.WATER)) {
          if (!level.isClientSide()) {
             level.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, true), 3);
             level.scheduleTick(pos, fluidState.getType(), fluidState.getType().getTickDelay(level));

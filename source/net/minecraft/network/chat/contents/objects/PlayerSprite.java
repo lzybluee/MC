@@ -20,7 +20,7 @@ public record PlayerSprite(ResolvableProfile player, boolean hat) implements Obj
    }
 
    @Override
-   public String description() {
+   public String defaultFallback() {
       return this.player.name().map(name -> "[" + name + " head]").orElse("[unknown player head]");
    }
 

@@ -97,7 +97,7 @@ public class BlockTypes {
       Registry.register(registry, "end_portal_frame", EndPortalFrameBlock.CODEC);
       Registry.register(registry, "end_rod", EndRodBlock.CODEC);
       Registry.register(registry, "eyeblossom", EyeblossomBlock.CODEC);
-      Registry.register(registry, "farm", FarmBlock.CODEC);
+      Registry.register(registry, "farmland", FarmlandBlock.CODEC);
       Registry.register(registry, "bonemealable_feature_placer", BonemealableFeaturePlacerBlock.CODEC);
       Registry.register(registry, "fence", FenceBlock.CODEC);
       Registry.register(registry, "fence_gate", FenceGateBlock.CODEC);
@@ -107,7 +107,7 @@ public class BlockTypes {
       Registry.register(registry, "flower_pot", FlowerPotBlock.CODEC);
       Registry.register(registry, "frogspawn", FrogspawnBlock.CODEC);
       Registry.register(registry, "frosted_ice", FrostedIceBlock.CODEC);
-      Registry.register(registry, "fungus", FungusBlock.CODEC);
+      Registry.register(registry, "nether_fungus", NetherFungusBlock.CODEC);
       Registry.register(registry, "furnace", FurnaceBlock.CODEC);
       Registry.register(registry, "glazed_terracotta", GlazedTerracottaBlock.CODEC);
       Registry.register(registry, "glow_lichen", GlowLichenBlock.CODEC);
@@ -181,7 +181,7 @@ public class BlockTypes {
       Registry.register(registry, "repeater", RepeaterBlock.CODEC);
       Registry.register(registry, "respawn_anchor", RespawnAnchorBlock.CODEC);
       Registry.register(registry, "rooted_dirt", RootedDirtBlock.CODEC);
-      Registry.register(registry, "roots", RootsBlock.CODEC);
+      Registry.register(registry, "nether_roots", NetherRootsBlock.CODEC);
       Registry.register(registry, "rotated_pillar", RotatedPillarBlock.CODEC);
       Registry.register(registry, "sapling", SaplingBlock.CODEC);
       Registry.register(registry, "sand", SandBlock.CODEC);
@@ -204,7 +204,7 @@ public class BlockTypes {
       Registry.register(registry, "smoker", SmokerBlock.CODEC);
       Registry.register(registry, "sniffer_egg", SnifferEggBlock.CODEC);
       Registry.register(registry, "snow_layer", SnowLayerBlock.CODEC);
-      Registry.register(registry, "snowy_dirt", SnowyDirtBlock.CODEC);
+      Registry.register(registry, "snowy_dirt", SnowyBlock.CODEC);
       Registry.register(registry, "soul_fire", SoulFireBlock.CODEC);
       Registry.register(registry, "soul_sand", SoulSandBlock.CODEC);
       Registry.register(registry, "spawner", SpawnerBlock.CODEC);
@@ -251,7 +251,7 @@ public class BlockTypes {
       Registry.register(registry, "wall_skull", WallSkullBlock.CODEC);
       Registry.register(registry, "wall_torch", WallTorchBlock.CODEC);
       Registry.register(registry, "wall", WallBlock.CODEC);
-      Registry.register(registry, "waterlily", WaterlilyBlock.CODEC);
+      Registry.register(registry, "lily_pad", LilyPadBlock.CODEC);
       Registry.register(registry, "waterlogged_transparent", WaterloggedTransparentBlock.CODEC);
       Registry.register(registry, "weathering_copper_bar", WeatheringCopperBarsBlock.CODEC);
       Registry.register(registry, "weathering_copper_bulb", WeatheringCopperBulbBlock.CODEC);

@@ -15,7 +15,7 @@ public class SetEntityLookTarget {
    }
 
    public static OneShot<LivingEntity> create(final EntityType<?> type, final float maxDist) {
-      return create(mob -> type.equals(mob.getType()), maxDist);
+      return create(mob -> mob.is(type), maxDist);
    }
 
    public static OneShot<LivingEntity> create(final float maxDist) {

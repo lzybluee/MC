@@ -43,7 +43,7 @@ public class PaleMossDecorator extends TreeDecorator {
    @Override
    public void place(final TreeDecorator.Context context) {
       RandomSource random = context.random();
-      WorldGenLevel level = (WorldGenLevel)context.level();
+      WorldGenLevel level = context.level();
       List<BlockPos> logs = Util.shuffledCopy(context.logs(), random);
       if (!logs.isEmpty()) {
          BlockPos origin = Collections.min(logs, Comparator.comparingInt(Vec3i::getY));

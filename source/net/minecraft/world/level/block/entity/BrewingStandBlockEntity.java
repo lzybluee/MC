@@ -15,6 +15,7 @@ import net.minecraft.world.inventory.BrewingStandMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionBrewing;
 import net.minecraft.world.level.Level;
@@ -178,12 +179,12 @@ public class BrewingStandBlockEntity extends BaseContainerBlockEntity implements
       }
 
       ingredient.shrink(1);
-      ItemStack remainder = ingredient.getItem().getCraftingRemainder();
-      if (!remainder.isEmpty()) {
+      ItemStackTemplate remainder = ingredient.getItem().getCraftingRemainder();
+      if (remainder != null) {
          if (ingredient.isEmpty()) {
-            ingredient = remainder;
+            ingredient = remainder.create();
          } else {
-            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), remainder);
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), remainder.create());
          }
       }
 

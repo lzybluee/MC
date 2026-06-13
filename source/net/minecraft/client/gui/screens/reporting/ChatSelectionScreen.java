@@ -7,20 +7,20 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.Optionull;
-import net.minecraft.client.GuiMessageTag;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.navigation.ScreenDirection;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.chat.ChatTrustLevel;
+import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.client.multiplayer.chat.report.ChatReport;
 import net.minecraft.client.multiplayer.chat.report.ReportingContext;
@@ -96,15 +96,15 @@ public class ChatSelectionScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       ActiveTextCollector textRenderer = graphics.textRenderer();
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 10, -1);
+      graphics.centeredText(this.font, this.title, this.width / 2, 10, -1);
       AbuseReportLimits reportLimits = this.reportingContext.sender().reportLimits();
       int messageCount = this.report.reportedMessages().size();
       int maxMessageCount = reportLimits.maxReportedMessageCount();
       Component selectedText = Component.translatable("gui.chatSelection.selected", messageCount, maxMessageCount);
-      graphics.drawCenteredString(this.font, selectedText, this.width / 2, 26, -1);
+      graphics.centeredText(this.font, selectedText, this.width / 2, 26, -1);
       int topY = this.chatSelectionList.getFooterTop();
       this.contextInfoLabel.visitLines(TextAlignment.CENTER, this.width / 2, topY, 9, textRenderer);
    }
@@ -178,16 +178,16 @@ public class ChatSelectionScreen extends Screen {
          return Mth.positiveCeilDiv(this.height, 16);
       }
 
-      protected void renderItem(
-         final GuiGraphics graphics, final int mouseX, final int mouseY, final float a, final ChatSelectionScreen.ChatSelectionList.Entry entry
+      protected void extractItem(
+         final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a, final ChatSelectionScreen.ChatSelectionList.Entry entry
       ) {
          if (this.shouldHighlightEntry(entry)) {
             boolean selected = this.getSelected() == entry;
             int outlineColor = this.isFocused() && selected ? -1 : -8355712;
-            this.renderSelection(graphics, entry, outlineColor);
+            this.extractSelection(graphics, entry, outlineColor);
          }
 
-         entry.renderContent(graphics, mouseX, mouseY, this.getHovered() == entry, a);
+         entry.extractContent(graphics, mouseX, mouseY, this.getHovered() == entry, a);
       }
 
       private boolean shouldHighlightEntry(final ChatSelectionScreen.ChatSelectionList.Entry entry) {
@@ -231,13 +231,13 @@ public class ChatSelectionScreen extends Screen {
          }
 
          @Override
-         public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
             int centerY = this.getContentYMiddle();
             int rowRight = this.getContentRight() - 8;
             int textWidth = ChatSelectionScreen.this.font.width(this.text);
             int textLeft = (this.getContentX() + rowRight - textWidth) / 2;
             int textTop = centerY - 9 / 2;
-            graphics.drawString(ChatSelectionScreen.this.font, this.text, textLeft, textTop, -6250336);
+            graphics.text(ChatSelectionScreen.this.font, this.text, textLeft, textTop, -6250336);
          }
 
          @Override
@@ -319,28 +319,28 @@ public class ChatSelectionScreen extends Screen {
          }
 
          @Override
-         public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
             if (this.isSelected() && this.canReport) {
-               this.renderSelectedCheckmark(graphics, this.getContentY(), this.getContentX(), this.getContentHeight());
+               this.extractSelectedCheckmark(graphics, this.getContentY(), this.getContentX(), this.getContentHeight());
             }
 
             int textX = this.getContentX() + this.getTextIndent();
             int textY = this.getContentY() + 1 + (this.getContentHeight() - 9) / 2;
-            graphics.drawString(
-               ChatSelectionScreen.this.font, Language.getInstance().getVisualOrder(this.text), textX, textY, this.canReport ? -1 : -1593835521
-            );
+            graphics.text(ChatSelectionScreen.this.font, Language.getInstance().getVisualOrder(this.text), textX, textY, this.canReport ? -1 : -1593835521);
             if (this.hoverText != null && hovered) {
                graphics.setTooltipForNextFrame(this.hoverText, mouseX, mouseY);
             }
 
             int textWidth = ChatSelectionScreen.this.font.width(this.text);
-            this.renderTag(graphics, textX + textWidth + 4, this.getContentY(), this.getContentHeight(), mouseX, mouseY);
+            this.extractTag(graphics, textX + textWidth + 4, this.getContentY(), this.getContentHeight(), mouseX, mouseY);
          }
 
-         private void renderTag(final GuiGraphics graphics, final int iconLeft, final int rowTop, final int rowHeight, final int mouseX, final int mouseY) {
+         private void extractTag(
+            final GuiGraphicsExtractor graphics, final int iconLeft, final int rowTop, final int rowHeight, final int mouseX, final int mouseY
+         ) {
             if (this.tagIcon != null) {
                int iconTop = rowTop + (rowHeight - this.tagIcon.height) / 2;
-               this.tagIcon.draw(graphics, iconLeft, iconTop);
+               this.tagIcon.extractRenderState(graphics, iconLeft, iconTop);
                if (this.tagHoverText != null
                   && mouseX >= iconLeft
                   && mouseX <= iconLeft + this.tagIcon.width
@@ -351,7 +351,7 @@ public class ChatSelectionScreen extends Screen {
             }
          }
 
-         private void renderSelectedCheckmark(final GuiGraphics graphics, final int rowTop, final int rowLeft, final int rowHeight) {
+         private void extractSelectedCheckmark(final GuiGraphicsExtractor graphics, final int rowTop, final int rowLeft, final int rowHeight) {
             int left = rowLeft;
             int top = rowTop + (rowHeight - 8) / 2;
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ChatSelectionScreen.CHECKMARK_SPRITE, left, top, 9, 8);
@@ -422,18 +422,18 @@ public class ChatSelectionScreen extends Screen {
          }
 
          @Override
-         public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
             int faceX = this.getContentX() - 12 + 4;
             int faceY = this.getContentY() + (this.getContentHeight() - 12) / 2;
-            PlayerFaceRenderer.draw(graphics, this.skin.get(), faceX, faceY, 12);
+            PlayerFaceExtractor.extractRenderState(graphics, this.skin.get(), faceX, faceY, 12);
             int textY = this.getContentY() + 1 + (this.getContentHeight() - 9) / 2;
-            graphics.drawString(ChatSelectionScreen.this.font, this.heading, faceX + 12 + 4, textY, this.canReport ? -1 : -1593835521);
+            graphics.text(ChatSelectionScreen.this.font, this.heading, faceX + 12 + 4, textY, this.canReport ? -1 : -1593835521);
          }
       }
 
       public static class PaddingEntry extends ChatSelectionScreen.ChatSelectionList.Entry {
          @Override
-         public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          }
       }
    }

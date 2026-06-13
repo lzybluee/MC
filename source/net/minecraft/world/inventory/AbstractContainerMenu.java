@@ -315,9 +315,9 @@ public abstract class AbstractContainerMenu {
       }
    }
 
-   public void clicked(final int slotIndex, final int buttonNum, final ClickType clickType, final Player player) {
+   public void clicked(final int slotIndex, final int buttonNum, final ContainerInput containerInput, final Player player) {
       try {
-         this.doClick(slotIndex, buttonNum, clickType, player);
+         this.doClick(slotIndex, buttonNum, containerInput, player);
       } catch (Exception e) {
          CrashReport report = CrashReport.forThrowable(e, "Container click");
          CrashReportCategory category = report.addCategory("Click info");
@@ -326,14 +326,14 @@ public abstract class AbstractContainerMenu {
          category.setDetail("Slot Count", this.slots.size());
          category.setDetail("Slot", slotIndex);
          category.setDetail("Button", buttonNum);
-         category.setDetail("Type", clickType);
+         category.setDetail("Type", containerInput);
          throw new ReportedException(report);
       }
    }
 
-   private void doClick(final int slotIndex, final int buttonNum, final ClickType clickType, final Player player) {
+   private void doClick(final int slotIndex, final int buttonNum, final ContainerInput containerInput, final Player player) {
       Inventory inventory = player.getInventory();
-      if (clickType == ClickType.QUICK_CRAFT) {
+      if (containerInput == ContainerInput.QUICK_CRAFT) {
          int expectedStatus = this.quickcraftStatus;
          this.quickcraftStatus = getQuickcraftHeader(buttonNum);
          if ((expectedStatus != 1 || this.quickcraftStatus != 2) && expectedStatus != this.quickcraftStatus) {
@@ -362,7 +362,7 @@ public abstract class AbstractContainerMenu {
                if (this.quickcraftSlots.size() == 1) {
                   int slot = this.quickcraftSlots.iterator().next().index;
                   this.resetQuickCraft();
-                  this.doClick(slot, this.quickcraftType, ClickType.PICKUP, player);
+                  this.doClick(slot, this.quickcraftType, ContainerInput.PICKUP, player);
                   return;
                }
 
@@ -383,7 +383,7 @@ public abstract class AbstractContainerMenu {
                      && this.canDragTo(slot)) {
                      int carry = slot.hasItem() ? slot.getItem().getCount() : 0;
                      int maxSize = Math.min(source.getMaxStackSize(), slot.getMaxStackSize(source));
-                     int newCount = Math.min(getQuickCraftPlaceCount(this.quickcraftSlots, this.quickcraftType, source) + carry, maxSize);
+                     int newCount = Math.min(getQuickCraftPlaceCount(this.quickcraftSlots.size(), this.quickcraftType, source) + carry, maxSize);
                      remaining -= newCount - carry;
                      slot.setByPlayer(source.copyWithCount(newCount));
                   }
@@ -399,7 +399,7 @@ public abstract class AbstractContainerMenu {
          }
       } else if (this.quickcraftStatus != 0) {
          this.resetQuickCraft();
-      } else if ((clickType == ClickType.PICKUP || clickType == ClickType.QUICK_MOVE) && (buttonNum == 0 || buttonNum == 1)) {
+      } else if ((containerInput == ContainerInput.PICKUP || containerInput == ContainerInput.QUICK_MOVE) && (buttonNum == 0 || buttonNum == 1)) {
          ClickAction clickAction = buttonNum == 0 ? ClickAction.PRIMARY : ClickAction.SECONDARY;
          if (slotIndex == -999) {
             if (!this.getCarried().isEmpty()) {
@@ -410,7 +410,7 @@ public abstract class AbstractContainerMenu {
                   player.drop(this.getCarried().split(1), true);
                }
             }
-         } else if (clickType == ClickType.QUICK_MOVE) {
+         } else if (containerInput == ContainerInput.QUICK_MOVE) {
             if (slotIndex < 0) {
                return;
             }
@@ -468,7 +468,7 @@ public abstract class AbstractContainerMenu {
 
             slot.setChanged();
          }
-      } else if (clickType == ClickType.SWAP && (buttonNum >= 0 && buttonNum < 9 || buttonNum == 40)) {
+      } else if (containerInput == ContainerInput.SWAP && (buttonNum >= 0 && buttonNum < 9 || buttonNum == 40)) {
          ItemStack source = inventory.getItem(buttonNum);
          Slot target = this.slots.get(slotIndex);
          ItemStack targetItemStack = target.getItem();
@@ -505,13 +505,13 @@ public abstract class AbstractContainerMenu {
                }
             }
          }
-      } else if (clickType == ClickType.CLONE && player.hasInfiniteMaterials() && this.getCarried().isEmpty() && slotIndex >= 0) {
+      } else if (containerInput == ContainerInput.CLONE && player.hasInfiniteMaterials() && this.getCarried().isEmpty() && slotIndex >= 0) {
          Slot slot = this.slots.get(slotIndex);
          if (slot.hasItem()) {
             ItemStack item = slot.getItem();
             this.setCarried(item.copyWithCount(item.getMaxStackSize()));
          }
-      } else if (clickType == ClickType.THROW && this.getCarried().isEmpty() && slotIndex >= 0) {
+      } else if (containerInput == ContainerInput.THROW && this.getCarried().isEmpty() && slotIndex >= 0) {
          Slot slot = this.slots.get(slotIndex);
          int amount = buttonNum == 0 ? 1 : slot.getItem().getCount();
          if (!player.canDropItems()) {
@@ -532,7 +532,7 @@ public abstract class AbstractContainerMenu {
                player.handleCreativeModeItemDrop(itemStack);
             }
          }
-      } else if (clickType == ClickType.PICKUP_ALL && slotIndex >= 0) {
+      } else if (containerInput == ContainerInput.PICKUP_ALL && slotIndex >= 0) {
          Slot slot = this.slots.get(slotIndex);
          ItemStack carried = this.getCarried();
          if (!carried.isEmpty() && (!slot.hasItem() || !slot.mayPickup(player))) {
@@ -731,9 +731,9 @@ public abstract class AbstractContainerMenu {
          : slotIsEmpty;
    }
 
-   public static int getQuickCraftPlaceCount(final Set<Slot> quickCraftSlots, final int quickCraftingType, final ItemStack itemStack) {
+   public static int getQuickCraftPlaceCount(final int quickCraftSlotsSize, final int quickCraftingType, final ItemStack itemStack) {
       return switch (quickCraftingType) {
-         case 0 -> Mth.floor((float)itemStack.getCount() / quickCraftSlots.size());
+         case 0 -> Mth.floor((float)itemStack.getCount() / quickCraftSlotsSize);
          case 1 -> 1;
          case 2 -> itemStack.getMaxStackSize();
          default -> itemStack.getCount();

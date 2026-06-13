@@ -5,8 +5,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.function.Function;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public abstract class CompositeSlotSource implements SlotSource {
@@ -37,9 +37,6 @@ public abstract class CompositeSlotSource implements SlotSource {
    @Override
    public void validate(final ValidationContext context) {
       SlotSource.super.validate(context);
-
-      for (int i = 0; i < this.terms.size(); i++) {
-         this.terms.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("terms", i)));
-      }
+      Validatable.validate(context, "terms", this.terms);
    }
 }

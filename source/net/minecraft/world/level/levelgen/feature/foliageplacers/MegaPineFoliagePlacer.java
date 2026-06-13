@@ -6,12 +6,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class MegaPineFoliagePlacer extends FoliagePlacer {
    public static final MapCodec<MegaPineFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-      i -> foliagePlacerParts(i).and(IntProvider.codec(0, 24).fieldOf("crown_height").forGetter(p -> p.crownHeight)).apply(i, MegaPineFoliagePlacer::new)
+      i -> foliagePlacerParts(i).and(IntProviders.codec(0, 24).fieldOf("crown_height").forGetter(p -> p.crownHeight)).apply(i, MegaPineFoliagePlacer::new)
    );
    private final IntProvider crownHeight;
 
@@ -27,7 +28,7 @@ public class MegaPineFoliagePlacer extends FoliagePlacer {
 
    @Override
    protected void createFoliage(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,

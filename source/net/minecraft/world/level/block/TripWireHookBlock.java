@@ -162,6 +162,11 @@ public class TripWireHookBlock extends Block {
             Direction opposite = direction.getOpposite();
             level.setBlock(testPos, newState.setValue(FACING, opposite), 3);
             notifyNeighbors(block, level, testPos, opposite);
+            if (!level.getBlockState(pos).is(Blocks.TRIPWIRE_HOOK)) {
+               onRemoved(newState, level, pos);
+               return;
+            }
+
             emitState(level, testPos, attached, powered, wasAttached, wasPowered);
          }
 
@@ -206,7 +211,7 @@ public class TripWireHookBlock extends Block {
          level.playSound(null, pos, SoundEvents.TRIPWIRE_ATTACH, SoundSource.BLOCKS, 0.4F, 0.7F);
          level.gameEvent(null, GameEvent.BLOCK_ATTACH, pos);
       } else if (!attached && wasAttached) {
-         level.playSound(null, pos, SoundEvents.TRIPWIRE_DETACH, SoundSource.BLOCKS, 0.4F, 1.2F / (level.random.nextFloat() * 0.2F + 0.9F));
+         level.playSound(null, pos, SoundEvents.TRIPWIRE_DETACH, SoundSource.BLOCKS, 0.4F, 1.2F / (level.getRandom().nextFloat() * 0.2F + 0.9F));
          level.gameEvent(null, GameEvent.BLOCK_DETACH, pos);
       }
    }
@@ -221,15 +226,19 @@ public class TripWireHookBlock extends Block {
    @Override
    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
       if (!movedByPiston) {
-         boolean attached = state.getValue(ATTACHED);
-         boolean powered = state.getValue(POWERED);
-         if (attached || powered) {
-            calculateState(level, pos, state, true, false, -1, null);
-         }
+         onRemoved(state, level, pos);
+      }
+   }
 
-         if (powered) {
-            notifyNeighbors(this, level, pos, state.getValue(FACING));
-         }
+   private static void onRemoved(final BlockState state, final Level level, final BlockPos pos) {
+      boolean attached = state.getValue(ATTACHED);
+      boolean powered = state.getValue(POWERED);
+      if (attached || powered) {
+         calculateState(level, pos, state, true, false, -1, null);
+      }
+
+      if (powered) {
+         notifyNeighbors(state.getBlock(), level, pos, state.getValue(FACING));
       }
    }
 

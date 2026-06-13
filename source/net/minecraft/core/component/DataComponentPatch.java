@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMaps;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -41,10 +42,10 @@ public final class DataComponentPatch {
          return new DataComponentPatch(map);
       }, patch -> {
          Reference2ObjectMap<DataComponentPatch.PatchKey, Object> map = new Reference2ObjectArrayMap(patch.map.size());
-         ObjectIterator var2 = Reference2ObjectMaps.fastIterable(patch.map).iterator();
+         Iterator i$ = Reference2ObjectMaps.fastIterable(patch.map).iterator();
 
-         while (var2.hasNext()) {
-            Entry<DataComponentType<?>, Optional<?>> entry = (Entry<DataComponentType<?>, Optional<?>>)var2.next();
+         while (i$.hasNext()) {
+            Entry<DataComponentType<?>, Optional<?>> entry = (Entry<DataComponentType<?>, Optional<?>>)i$.next();
             DataComponentType<?> type = entry.getKey();
             if (!type.isTransient()) {
                Optional<?> value = entry.getValue();
@@ -160,8 +161,15 @@ public final class DataComponentPatch {
       return new DataComponentPatch.Builder();
    }
 
-   public <T> @Nullable Optional<? extends T> get(final DataComponentType<? extends T> type) {
-      return (Optional<? extends T>)this.map.get(type);
+   public <T> @Nullable T get(final DataComponentGetter prototype, final DataComponentType<? extends T> type) {
+      return getFromPatchAndPrototype(this.map, prototype, type);
+   }
+
+   static <T> @Nullable T getFromPatchAndPrototype(
+      final Reference2ObjectMap<DataComponentType<?>, Optional<?>> patch, final DataComponentGetter prototype, final DataComponentType<? extends T> type
+   ) {
+      Optional<? extends T> value = (Optional<? extends T>)patch.get(type);
+      return (T)(value != null ? value.orElse(null) : prototype.get(type));
    }
 
    public Set<Entry<DataComponentType<?>, Optional<?>>> entrySet() {
@@ -265,6 +273,14 @@ public final class DataComponentPatch {
 
       public <T> DataComponentPatch.Builder set(final TypedDataComponent<T> component) {
          return this.set(component.type(), component.value());
+      }
+
+      public <T> DataComponentPatch.Builder set(final Iterable<TypedDataComponent<?>> components) {
+         for (TypedDataComponent<?> component : components) {
+            this.set(component);
+         }
+
+         return this;
       }
 
       public DataComponentPatch build() {

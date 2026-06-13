@@ -4,12 +4,14 @@ import com.google.common.collect.Maps;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.Map;
 import net.minecraft.client.model.AdultAndBabyModelPair;
+import net.minecraft.client.model.animal.chicken.AdultChickenModel;
+import net.minecraft.client.model.animal.chicken.BabyChickenModel;
 import net.minecraft.client.model.animal.chicken.ChickenModel;
 import net.minecraft.client.model.animal.chicken.ColdChickenModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.ChickenRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -20,7 +22,7 @@ public class ChickenRenderer extends MobRenderer<Chicken, ChickenRenderState, Ch
    private final Map<ChickenVariant.ModelType, AdultAndBabyModelPair<ChickenModel>> models;
 
    public ChickenRenderer(final EntityRendererProvider.Context context) {
-      super(context, new ChickenModel(context.bakeLayer(ModelLayers.CHICKEN)), 0.3F);
+      super(context, new AdultChickenModel(context.bakeLayer(ModelLayers.CHICKEN)), 0.3F);
       this.models = bakeModels(context);
    }
 
@@ -28,10 +30,12 @@ public class ChickenRenderer extends MobRenderer<Chicken, ChickenRenderState, Ch
       return Maps.newEnumMap(
          Map.of(
             ChickenVariant.ModelType.NORMAL,
-            new AdultAndBabyModelPair<>(new ChickenModel(context.bakeLayer(ModelLayers.CHICKEN)), new ChickenModel(context.bakeLayer(ModelLayers.CHICKEN_BABY))),
+            new AdultAndBabyModelPair<>(
+               new AdultChickenModel(context.bakeLayer(ModelLayers.CHICKEN)), new BabyChickenModel(context.bakeLayer(ModelLayers.CHICKEN_BABY))
+            ),
             ChickenVariant.ModelType.COLD,
             new AdultAndBabyModelPair<>(
-               new ColdChickenModel(context.bakeLayer(ModelLayers.COLD_CHICKEN)), new ColdChickenModel(context.bakeLayer(ModelLayers.COLD_CHICKEN_BABY))
+               new ColdChickenModel(context.bakeLayer(ModelLayers.COLD_CHICKEN)), new BabyChickenModel(context.bakeLayer(ModelLayers.CHICKEN_BABY))
             )
          )
       );
@@ -45,7 +49,9 @@ public class ChickenRenderer extends MobRenderer<Chicken, ChickenRenderState, Ch
    }
 
    public Identifier getTextureLocation(final ChickenRenderState state) {
-      return state.variant == null ? MissingTextureAtlasSprite.getLocation() : state.variant.modelAndTexture().asset().texturePath();
+      return state.variant == null
+         ? MissingTextureAtlasSprite.getLocation()
+         : (state.isBaby ? state.variant.babyTexture().texturePath() : state.variant.modelAndTexture().asset().texturePath());
    }
 
    public ChickenRenderState createRenderState() {

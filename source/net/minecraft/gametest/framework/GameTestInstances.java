@@ -12,7 +12,7 @@ public interface GameTestInstances {
 
    static void bootstrap(final BootstrapContext<GameTestInstance> context) {
       HolderGetter<Consumer<GameTestHelper>> functions = context.lookup(Registries.TEST_FUNCTION);
-      HolderGetter<TestEnvironmentDefinition> batches = context.lookup(Registries.TEST_ENVIRONMENT);
+      HolderGetter<TestEnvironmentDefinition<?>> batches = context.lookup(Registries.TEST_ENVIRONMENT);
       context.register(
          ALWAYS_PASS,
          new FunctionGameTestInstance(

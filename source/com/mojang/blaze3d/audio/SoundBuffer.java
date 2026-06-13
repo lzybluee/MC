@@ -11,10 +11,12 @@ public class SoundBuffer {
    private final AudioFormat format;
    private boolean hasAlBuffer;
    private int alBuffer;
+   private final int size;
 
    public SoundBuffer(final ByteBuffer data, final AudioFormat format) {
       this.data = data;
       this.format = format;
+      this.size = data.limit();
    }
 
    OptionalInt getAlBuffer() {
@@ -58,5 +60,17 @@ public class SoundBuffer {
       OptionalInt result = this.getAlBuffer();
       this.hasAlBuffer = false;
       return result;
+   }
+
+   public AudioFormat format() {
+      return this.format;
+   }
+
+   public int size() {
+      return this.size;
+   }
+
+   public boolean isValid() {
+      return this.data != null || this.hasAlBuffer;
    }
 }

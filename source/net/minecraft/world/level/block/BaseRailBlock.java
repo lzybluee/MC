@@ -139,7 +139,7 @@ public abstract class BaseRailBlock extends Block implements SimpleWaterloggedBl
    @Override
    public BlockState getStateForPlacement(final BlockPlaceContext context) {
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       BlockState state = super.defaultBlockState();
       Direction direction = context.getHorizontalDirection();
       boolean isEastWest = direction == Direction.EAST || direction == Direction.WEST;

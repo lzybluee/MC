@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -12,7 +11,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import org.jspecify.annotations.Nullable;
 
 public class DebugEntryLookingAtEntity implements DebugScreenEntry {
-   private static final Identifier GROUP = Identifier.withDefaultNamespace("looking_at_entity");
+   public static final Identifier GROUP = Identifier.withDefaultNamespace("looking_at_entity");
 
    @Override
    public void display(
@@ -26,7 +25,7 @@ public class DebugEntryLookingAtEntity implements DebugScreenEntry {
       List<String> result = new ArrayList<>();
       if (entity != null) {
          result.add(ChatFormatting.UNDERLINE + "Targeted Entity");
-         result.add(String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())));
+         result.add(entity.typeHolder().getRegisteredName());
       }
 
       displayer.addToGroup(GROUP, result);

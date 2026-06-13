@@ -14,13 +14,15 @@ import net.minecraft.world.entity.EquipmentSlot;
 import org.jspecify.annotations.Nullable;
 
 public class SlotRanges {
+   public static final int MOB_INVENTORY_SLOT_OFFSET = 300;
+   public static final int MOB_INVENTORY_SIZE = 8;
    private static final List<SlotRange> SLOTS = Util.make(new ArrayList<>(), values -> {
       addSingleSlot(values, "contents", 0);
       addSlotRange(values, "container.", 0, 54);
       addSlotRange(values, "hotbar.", 0, 9);
       addSlotRange(values, "inventory.", 9, 27);
       addSlotRange(values, "enderchest.", 200, 27);
-      addSlotRange(values, "villager.", 300, 8);
+      addSlotRange(values, "mob.inventory.", 300, 8);
       addSlotRange(values, "horse.", 500, 15);
       int mainhand = EquipmentSlot.MAINHAND.getIndex(98);
       int offhand = EquipmentSlot.OFFHAND.getIndex(98);

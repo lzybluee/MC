@@ -1,5 +1,7 @@
 package net.minecraft.world.entity.ai.sensing;
 
+import com.google.common.collect.Sets;
+import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.LivingEntity;
@@ -17,11 +19,11 @@ public class AxolotlAttackablesSensor extends NearestVisibleLivingEntitySensor {
    }
 
    private boolean isHuntTarget(final LivingEntity body, final LivingEntity mob) {
-      return !body.getBrain().hasMemoryValue(MemoryModuleType.HAS_HUNTING_COOLDOWN) && mob.getType().is(EntityTypeTags.AXOLOTL_HUNT_TARGETS);
+      return !body.getBrain().hasMemoryValue(MemoryModuleType.HAS_HUNTING_COOLDOWN) && mob.is(EntityTypeTags.AXOLOTL_HUNT_TARGETS);
    }
 
    private boolean isHostileTarget(final LivingEntity mob) {
-      return mob.getType().is(EntityTypeTags.AXOLOTL_ALWAYS_HOSTILES);
+      return mob.is(EntityTypeTags.AXOLOTL_ALWAYS_HOSTILES);
    }
 
    private boolean isClose(final LivingEntity body, final LivingEntity mob) {
@@ -29,7 +31,12 @@ public class AxolotlAttackablesSensor extends NearestVisibleLivingEntitySensor {
    }
 
    @Override
-   protected MemoryModuleType<LivingEntity> getMemory() {
+   protected MemoryModuleType<LivingEntity> getMemoryToSet() {
       return MemoryModuleType.NEAREST_ATTACKABLE;
+   }
+
+   @Override
+   public Set<MemoryModuleType<?>> requires() {
+      return Sets.union(super.requires(), Set.of(MemoryModuleType.HAS_HUNTING_COOLDOWN));
    }
 }

@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.InstrumentTags;
 import net.minecraft.tags.StructureTags;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -1889,7 +1890,6 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(2))
                .add(LootItem.lootTableItem(Items.MUSIC_DISC_13).setWeight(15))
                .add(LootItem.lootTableItem(Items.MUSIC_DISC_CAT).setWeight(15))
-               .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(20))
                .add(LootItem.lootTableItem(Items.CHAINMAIL_CHESTPLATE).setWeight(10))
                .add(LootItem.lootTableItem(Items.DIAMOND_HOE).setWeight(15))
                .add(LootItem.lootTableItem(Items.DIAMOND_CHESTPLATE).setWeight(5))
@@ -1991,7 +1991,6 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                .add(LootItem.lootTableItem(Items.MUSIC_DISC_OTHERSIDE).setWeight(1))
                .add(LootItem.lootTableItem(Items.COMPASS).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                .add(LootItem.lootTableItem(Items.SCULK_CATALYST).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
-               .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(2))
                .add(
                   LootItem.lootTableItem(Items.DIAMOND_HOE)
                      .setWeight(2)
@@ -2119,6 +2118,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
    }
 
    public LootTable.Builder pillagerOutpostLootTable() {
+      HolderLookup.RegistryLookup<Instrument> instruments = this.registries.lookupOrThrow(Registries.INSTRUMENT);
       return LootTable.lootTable()
          .withPool(LootPool.lootPool().setRolls(UniformGenerator.between(0.0F, 1.0F)).add(LootItem.lootTableItem(Items.CROSSBOW)))
          .withPool(
@@ -2147,7 +2147,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
             LootPool.lootPool()
                .setRolls(UniformGenerator.between(0.0F, 1.0F))
                .add(LootItem.lootTableItem(Items.GOAT_HORN))
-               .apply(SetInstrumentFunction.setInstrumentOptions(InstrumentTags.REGULAR_GOAT_HORNS))
+               .apply(SetInstrumentFunction.setInstrumentOptions(instruments.getOrThrow(InstrumentTags.REGULAR_GOAT_HORNS)))
          )
          .withPool(
             LootPool.lootPool()

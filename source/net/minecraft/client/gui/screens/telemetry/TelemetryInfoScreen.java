@@ -74,9 +74,7 @@ public class TelemetryInfoScreen extends Screen {
       LinearLayout content = this.layout.addToContents(LinearLayout.vertical().spacing(8));
       this.telemetryEventWidget = content.addChild(new TelemetryEventWidget(0, 0, this.width - 40, this.layout.getContentHeight(), this.font));
       this.telemetryEventWidget.setOnScrolledListener(scroll -> this.savedScroll = scroll);
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

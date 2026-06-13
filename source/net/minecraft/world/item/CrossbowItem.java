@@ -91,7 +91,7 @@ public class CrossbowItem extends ProjectileWeaponItem {
    private static boolean tryLoadProjectiles(final LivingEntity shooter, final ItemStack heldItem) {
       List<ItemStack> drawn = draw(heldItem, shooter.getProjectile(heldItem), shooter);
       if (!drawn.isEmpty()) {
-         heldItem.set(DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.of(drawn));
+         heldItem.set(DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.ofNonEmpty(drawn));
          return true;
       } else {
          return false;
@@ -180,7 +180,7 @@ public class CrossbowItem extends ProjectileWeaponItem {
       if (level instanceof ServerLevel serverLevel) {
          ChargedProjectiles charged = weapon.set(DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.EMPTY);
          if (charged != null && !charged.isEmpty()) {
-            this.shoot(serverLevel, shooter, hand, weapon, charged.getItems(), power, uncertainty, shooter instanceof Player, targetOverride);
+            this.shoot(serverLevel, shooter, hand, weapon, charged.itemCopies(), power, uncertainty, shooter instanceof Player, targetOverride);
             if (shooter instanceof ServerPlayer player) {
                CriteriaTriggers.SHOT_CROSSBOW.trigger(player, weapon);
                player.awardStat(Stats.ITEM_USED.get(weapon.getItem()));

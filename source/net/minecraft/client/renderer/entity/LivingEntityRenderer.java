@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -121,7 +121,7 @@ public abstract class LivingEntityRenderer<T extends LivingEntity, S extends Liv
    protected @Nullable RenderType getRenderType(final S state, final boolean isBodyVisible, final boolean forceTransparent, final boolean appearGlowing) {
       Identifier texture = this.getTextureLocation(state);
       if (forceTransparent) {
-         return RenderTypes.itemEntityTranslucentCull(texture);
+         return RenderTypes.entityTranslucentCullItemTarget(texture);
       } else if (isBodyVisible) {
          return this.model.renderType(texture);
       } else {

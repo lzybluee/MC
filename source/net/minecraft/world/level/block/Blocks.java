@@ -6,7 +6,7 @@ import java.util.function.ToIntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
-import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.core.cauldron.CauldronInteractions;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -14,10 +14,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.CaveFeatures;
 import net.minecraft.data.worldgen.features.TreeFeatures;
 import net.minecraft.data.worldgen.features.VegetationFeatures;
-import net.minecraft.references.Items;
+import net.minecraft.references.BlockIds;
+import net.minecraft.references.ItemIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.ColorRGBA;
 import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.UniformInt;
@@ -81,12 +83,12 @@ public class Blocks {
    public static final Block GRASS_BLOCK = register(
       "grass_block", GrassBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.GRASS).randomTicks().strength(0.6F).sound(SoundType.GRASS)
    );
-   public static final Block DIRT = register("dirt", BlockBehaviour.Properties.of().mapColor(MapColor.DIRT).strength(0.5F).sound(SoundType.GRAVEL));
+   public static final Block DIRT = register(BlockIds.DIRT, BlockBehaviour.Properties.of().mapColor(MapColor.DIRT).strength(0.5F).sound(SoundType.GRAVEL));
    public static final Block COARSE_DIRT = register(
       "coarse_dirt", BlockBehaviour.Properties.of().mapColor(MapColor.DIRT).strength(0.5F).sound(SoundType.GRAVEL)
    );
    public static final Block PODZOL = register(
-      "podzol", SnowyDirtBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.PODZOL).strength(0.5F).sound(SoundType.GRAVEL)
+      "podzol", SnowyBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.PODZOL).strength(0.5F).sound(SoundType.GRAVEL)
    );
    public static final Block COBBLESTONE = register(
       "cobblestone",
@@ -901,6 +903,7 @@ public class Blocks {
          .dynamicShape()
          .noLootTable()
          .noOcclusion()
+         .isValidSpawn(Blocks::never)
          .isRedstoneConductor(Blocks::never)
          .isSuffocating(Blocks::never)
          .isViewBlocking(Blocks::never)
@@ -908,6 +911,17 @@ public class Blocks {
    );
    public static final Block DANDELION = register(
       "dandelion",
+      p -> new FlowerBlock(MobEffects.SATURATION, 0.35F, p),
+      BlockBehaviour.Properties.of()
+         .mapColor(MapColor.PLANT)
+         .noCollision()
+         .instabreak()
+         .sound(SoundType.GRASS)
+         .offsetType(BlockBehaviour.OffsetType.XZ)
+         .pushReaction(PushReaction.DESTROY)
+   );
+   public static final Block GOLDEN_DANDELION = register(
+      "golden_dandelion",
       p -> new FlowerBlock(MobEffects.SATURATION, 0.35F, p),
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.PLANT)
@@ -1070,7 +1084,7 @@ public class Blocks {
          .instabreak()
          .sound(SoundType.GRASS)
          .lightLevel(statex -> 1)
-         .hasPostProcess(Blocks::always)
+         .postProcess(Blocks::postProcessSelf)
          .pushReaction(PushReaction.DESTROY)
    );
    public static final Block RED_MUSHROOM = register(
@@ -1082,7 +1096,7 @@ public class Blocks {
          .randomTicks()
          .instabreak()
          .sound(SoundType.GRASS)
-         .hasPostProcess(Blocks::always)
+         .postProcess(Blocks::postProcessSelf)
          .pushReaction(PushReaction.DESTROY)
    );
    public static final Block GOLD_BLOCK = register(
@@ -1348,7 +1362,7 @@ public class Blocks {
    );
    public static final Block FARMLAND = register(
       "farmland",
-      FarmBlock::new,
+      FarmlandBlock::new,
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.DIRT)
          .randomTicks()
@@ -2080,6 +2094,7 @@ public class Blocks {
          .isRedstoneConductor(Blocks::always)
          .isViewBlocking(Blocks::always)
          .isSuffocating(Blocks::always)
+         .postProcess(Blocks::postProcessAbove)
    );
    public static final Block SOUL_SOIL = register(
       "soul_soil", BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BROWN).strength(0.5F).sound(SoundType.SOUL_SOIL)
@@ -2383,7 +2398,7 @@ public class Blocks {
       "glass_pane", IronBarsBlock::new, BlockBehaviour.Properties.of().instrument(NoteBlockInstrument.HAT).strength(0.3F).sound(SoundType.GLASS).noOcclusion()
    );
    public static final Block PUMPKIN = register(
-      net.minecraft.references.Blocks.PUMPKIN,
+      BlockIds.PUMPKIN,
       PumpkinBlock::new,
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.COLOR_ORANGE)
@@ -2393,22 +2408,24 @@ public class Blocks {
          .pushReaction(PushReaction.DESTROY)
    );
    public static final Block MELON = register(
-      net.minecraft.references.Blocks.MELON,
+      BlockIds.MELON,
       BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GREEN).strength(1.0F).sound(SoundType.WOOD).pushReaction(PushReaction.DESTROY)
    );
    public static final Block ATTACHED_PUMPKIN_STEM = register(
-      net.minecraft.references.Blocks.ATTACHED_PUMPKIN_STEM,
-      p -> new AttachedStemBlock(net.minecraft.references.Blocks.PUMPKIN_STEM, net.minecraft.references.Blocks.PUMPKIN, Items.PUMPKIN_SEEDS, p),
+      BlockIds.ATTACHED_PUMPKIN_STEM,
+      p -> new AttachedStemBlock(BlockIds.PUMPKIN_STEM, BlockIds.PUMPKIN, ItemIds.PUMPKIN_SEEDS, BlockTags.SUPPORTS_PUMPKIN_STEM, p),
       BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollision().instabreak().sound(SoundType.WOOD).pushReaction(PushReaction.DESTROY)
    );
    public static final Block ATTACHED_MELON_STEM = register(
-      net.minecraft.references.Blocks.ATTACHED_MELON_STEM,
-      p -> new AttachedStemBlock(net.minecraft.references.Blocks.MELON_STEM, net.minecraft.references.Blocks.MELON, Items.MELON_SEEDS, p),
+      BlockIds.ATTACHED_MELON_STEM,
+      p -> new AttachedStemBlock(BlockIds.MELON_STEM, BlockIds.MELON, ItemIds.MELON_SEEDS, BlockTags.SUPPORTS_MELON_STEM, p),
       BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollision().instabreak().sound(SoundType.WOOD).pushReaction(PushReaction.DESTROY)
    );
    public static final Block PUMPKIN_STEM = register(
-      net.minecraft.references.Blocks.PUMPKIN_STEM,
-      p -> new StemBlock(net.minecraft.references.Blocks.PUMPKIN, net.minecraft.references.Blocks.ATTACHED_PUMPKIN_STEM, Items.PUMPKIN_SEEDS, p),
+      BlockIds.PUMPKIN_STEM,
+      p -> new StemBlock(
+         BlockIds.PUMPKIN, BlockIds.ATTACHED_PUMPKIN_STEM, ItemIds.PUMPKIN_SEEDS, BlockTags.SUPPORTS_PUMPKIN_STEM, BlockTags.SUPPORTS_PUMPKIN_STEM_FRUIT, p
+      ),
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.PLANT)
          .noCollision()
@@ -2418,8 +2435,10 @@ public class Blocks {
          .pushReaction(PushReaction.DESTROY)
    );
    public static final Block MELON_STEM = register(
-      net.minecraft.references.Blocks.MELON_STEM,
-      p -> new StemBlock(net.minecraft.references.Blocks.MELON, net.minecraft.references.Blocks.ATTACHED_MELON_STEM, Items.MELON_SEEDS, p),
+      BlockIds.MELON_STEM,
+      p -> new StemBlock(
+         BlockIds.MELON, BlockIds.ATTACHED_MELON_STEM, ItemIds.MELON_SEEDS, BlockTags.SUPPORTS_MELON_STEM, BlockTags.SUPPORTS_MELON_STEM_FRUIT, p
+      ),
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.PLANT)
          .noCollision()
@@ -2483,7 +2502,7 @@ public class Blocks {
    );
    public static final Block LILY_PAD = register(
       "lily_pad",
-      WaterlilyBlock::new,
+      LilyPadBlock::new,
       BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).instabreak().sound(SoundType.LILY_PAD).noOcclusion().pushReaction(PushReaction.DESTROY)
    );
    public static final Block RESIN_BLOCK = register(
@@ -2570,14 +2589,16 @@ public class Blocks {
       "cauldron", CauldronBlock::new, BlockBehaviour.Properties.of().mapColor(MapColor.STONE).requiresCorrectToolForDrops().strength(2.0F).noOcclusion()
    );
    public static final Block WATER_CAULDRON = register(
-      "water_cauldron", p -> new LayeredCauldronBlock(Biome.Precipitation.RAIN, CauldronInteraction.WATER, p), BlockBehaviour.Properties.ofLegacyCopy(CAULDRON)
+      "water_cauldron",
+      p -> new LayeredCauldronBlock(Biome.Precipitation.RAIN, CauldronInteractions.WATER, p),
+      BlockBehaviour.Properties.ofLegacyCopy(CAULDRON)
    );
    public static final Block LAVA_CAULDRON = register(
       "lava_cauldron", LavaCauldronBlock::new, BlockBehaviour.Properties.ofLegacyCopy(CAULDRON).lightLevel(statex -> 15)
    );
    public static final Block POWDER_SNOW_CAULDRON = register(
       "powder_snow_cauldron",
-      p -> new LayeredCauldronBlock(Biome.Precipitation.SNOW, CauldronInteraction.POWDER_SNOW, p),
+      p -> new LayeredCauldronBlock(Biome.Precipitation.SNOW, CauldronInteractions.POWDER_SNOW, p),
       BlockBehaviour.Properties.ofLegacyCopy(CAULDRON)
    );
    public static final Block END_PORTAL = register(
@@ -2706,6 +2727,7 @@ public class Blocks {
    );
    public static final Block POTTED_FERN = register("potted_fern", p -> new FlowerPotBlock(FERN, p), flowerPotProperties());
    public static final Block POTTED_DANDELION = register("potted_dandelion", p -> new FlowerPotBlock(DANDELION, p), flowerPotProperties());
+   public static final Block POTTED_GOLDEN_DANDELION = register("potted_golden_dandelion", p -> new FlowerPotBlock(GOLDEN_DANDELION, p), flowerPotProperties());
    public static final Block POTTED_POPPY = register("potted_poppy", p -> new FlowerPotBlock(POPPY, p), flowerPotProperties());
    public static final Block POTTED_BLUE_ORCHID = register("potted_blue_orchid", p -> new FlowerPotBlock(BLUE_ORCHID, p), flowerPotProperties());
    public static final Block POTTED_ALLIUM = register("potted_allium", p -> new FlowerPotBlock(ALLIUM, p), flowerPotProperties());
@@ -4373,7 +4395,7 @@ public class Blocks {
          .lightLevel(statex -> 3)
          .strength(0.5F)
          .isValidSpawn((statex, blockGetter, blockPos, entityType) -> entityType.fireImmune())
-         .hasPostProcess(Blocks::always)
+         .postProcess(Blocks::postProcessAbove)
          .emissiveRendering(Blocks::always)
    );
    public static final Block NETHER_WART_BLOCK = register(
@@ -5457,7 +5479,7 @@ public class Blocks {
    );
    public static final Block WARPED_FUNGUS = register(
       "warped_fungus",
-      p -> new FungusBlock(TreeFeatures.WARPED_FUNGUS_PLANTED, WARPED_NYLIUM, p),
+      p -> new NetherFungusBlock(TreeFeatures.WARPED_FUNGUS_PLANTED, WARPED_NYLIUM, BlockTags.SUPPORTS_WARPED_FUNGUS, p),
       BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_CYAN).instabreak().noCollision().sound(SoundType.FUNGUS).pushReaction(PushReaction.DESTROY)
    );
    public static final Block WARPED_WART_BLOCK = register(
@@ -5465,7 +5487,7 @@ public class Blocks {
    );
    public static final Block WARPED_ROOTS = register(
       "warped_roots",
-      RootsBlock::new,
+      p -> new NetherRootsBlock(BlockTags.SUPPORTS_WARPED_ROOTS, p),
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.COLOR_CYAN)
          .replaceable()
@@ -5512,7 +5534,7 @@ public class Blocks {
    );
    public static final Block CRIMSON_FUNGUS = register(
       "crimson_fungus",
-      p -> new FungusBlock(TreeFeatures.CRIMSON_FUNGUS_PLANTED, CRIMSON_NYLIUM, p),
+      p -> new NetherFungusBlock(TreeFeatures.CRIMSON_FUNGUS_PLANTED, CRIMSON_NYLIUM, BlockTags.SUPPORTS_CRIMSON_FUNGUS, p),
       BlockBehaviour.Properties.of().mapColor(MapColor.NETHER).instabreak().noCollision().sound(SoundType.FUNGUS).pushReaction(PushReaction.DESTROY)
    );
    public static final Block SHROOMLIGHT = register(
@@ -5552,7 +5574,7 @@ public class Blocks {
    );
    public static final Block CRIMSON_ROOTS = register(
       "crimson_roots",
-      RootsBlock::new,
+      p -> new NetherRootsBlock(BlockTags.SUPPORTS_CRIMSON_ROOTS, p),
       BlockBehaviour.Properties.of()
          .mapColor(MapColor.NETHER)
          .replaceable()
@@ -6078,22 +6100,27 @@ public class Blocks {
    public static final Block COPPER_BLOCK = register(
       "copper_block",
       p -> new WeatheringCopperFullBlock(WeatheringCopper.WeatherState.UNAFFECTED, p),
-      BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_ORANGE).requiresCorrectToolForDrops().strength(3.0F, 6.0F).sound(SoundType.COPPER)
+      BlockBehaviour.Properties.of()
+         .mapColor(MapColor.COLOR_ORANGE)
+         .requiresCorrectToolForDrops()
+         .strength(3.0F, 6.0F)
+         .instrument(NoteBlockInstrument.TRUMPET)
+         .sound(SoundType.COPPER)
    );
    public static final Block EXPOSED_COPPER = register(
       "exposed_copper",
       p -> new WeatheringCopperFullBlock(WeatheringCopper.WeatherState.EXPOSED, p),
-      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).mapColor(MapColor.TERRACOTTA_LIGHT_GRAY)
+      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).instrument(NoteBlockInstrument.TRUMPET_EXPOSED).mapColor(MapColor.TERRACOTTA_LIGHT_GRAY)
    );
    public static final Block WEATHERED_COPPER = register(
       "weathered_copper",
       p -> new WeatheringCopperFullBlock(WeatheringCopper.WeatherState.WEATHERED, p),
-      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).mapColor(MapColor.WARPED_STEM)
+      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).instrument(NoteBlockInstrument.TRUMPET_WEATHERED).mapColor(MapColor.WARPED_STEM)
    );
    public static final Block OXIDIZED_COPPER = register(
       "oxidized_copper",
       p -> new WeatheringCopperFullBlock(WeatheringCopper.WeatherState.OXIDIZED, p),
-      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).mapColor(MapColor.WARPED_NYLIUM)
+      BlockBehaviour.Properties.ofFullCopy(COPPER_BLOCK).instrument(NoteBlockInstrument.TRUMPET_OXIDIZED).mapColor(MapColor.WARPED_NYLIUM)
    );
    public static final Block COPPER_ORE = register(
       "copper_ore", p -> new DropExperienceBlock(ConstantInt.of(0), p), BlockBehaviour.Properties.ofLegacyCopy(IRON_ORE)
@@ -6902,6 +6929,14 @@ public class Blocks {
 
    private static boolean never(final BlockState state, final BlockGetter blockGetter, final BlockPos blockPos) {
       return false;
+   }
+
+   private static BlockPos postProcessSelf(final BlockState state, final BlockGetter blockGetter, final BlockPos blockPos) {
+      return blockPos;
+   }
+
+   private static BlockPos postProcessAbove(final BlockState state, final BlockGetter blockGetter, final BlockPos blockPos) {
+      return blockPos.above();
    }
 
    private static Block registerStainedGlass(final String id, final DyeColor color) {

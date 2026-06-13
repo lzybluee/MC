@@ -15,7 +15,7 @@ public class RingBell {
 
    public static BehaviorControl<LivingEntity> create() {
       return BehaviorBuilder.create(i -> i.group(i.present(MemoryModuleType.MEETING_POINT)).apply(i, meetingPoint -> (level, body, timestamp) -> {
-         if (level.random.nextFloat() <= 0.95F) {
+         if (level.getRandom().nextFloat() <= 0.95F) {
             return false;
          }
 

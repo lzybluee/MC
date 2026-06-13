@@ -32,7 +32,7 @@ public class NyliumBlock extends Block implements BonemealableBlock {
    private static boolean canBeNylium(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockPos above = pos.above();
       BlockState aboveState = level.getBlockState(above);
-      int lightBlockInto = LightEngine.getLightBlockInto(state, aboveState, Direction.UP, aboveState.getLightBlock());
+      int lightBlockInto = LightEngine.getLightBlockInto(state, aboveState, Direction.UP, aboveState.getLightDampening());
       return lightBlockInto < 15;
    }
 
@@ -45,7 +45,7 @@ public class NyliumBlock extends Block implements BonemealableBlock {
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return level.getBlockState(pos.above()).isAir();
+      return level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
    }
 
    @Override
@@ -78,7 +78,9 @@ public class NyliumBlock extends Block implements BonemealableBlock {
       final RandomSource random,
       final BlockPos pos
    ) {
-      configuredFeatures.get(id).ifPresent(h -> h.value().place(level, generator, random, pos));
+      if (level.isInsideBuildHeight(pos)) {
+         configuredFeatures.get(id).ifPresent(h -> h.value().place(level, generator, random, pos));
+      }
    }
 
    @Override

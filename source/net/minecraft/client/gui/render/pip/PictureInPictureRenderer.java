@@ -9,12 +9,13 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.render.TextureSetup;
-import net.minecraft.client.gui.render.state.BlitRenderState;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.state.gui.BlitRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import org.jspecify.annotations.Nullable;
 
 public abstract class PictureInPictureRenderer<T extends PictureInPictureRenderState> implements AutoCloseable {
@@ -23,9 +24,8 @@ public abstract class PictureInPictureRenderer<T extends PictureInPictureRenderS
    private @Nullable GpuTextureView textureView;
    private @Nullable GpuTexture depthTexture;
    private @Nullable GpuTextureView depthTextureView;
-   private final CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer(
-      "PIP - " + this.getClass().getSimpleName(), -1000.0F, 1000.0F, true
-   );
+   private final Projection projection = new Projection();
+   private final ProjectionMatrixBuffer projectionMatrixBuffer = new ProjectionMatrixBuffer("PIP - " + this.getClass().getSimpleName());
 
    protected PictureInPictureRenderer(final MultiBufferSource.BufferSource bufferSource) {
       this.bufferSource = bufferSource;
@@ -54,7 +54,7 @@ public abstract class PictureInPictureRenderer<T extends PictureInPictureRenderS
    }
 
    protected void blitTexture(final T renderState, final GuiRenderState guiRenderState) {
-      guiRenderState.submitBlitToCurrentLayer(
+      guiRenderState.addBlitToCurrentLayer(
          new BlitRenderState(
             RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
             TextureSetup.singleTexture(this.textureView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
@@ -88,14 +88,15 @@ public abstract class PictureInPictureRenderer<T extends PictureInPictureRenderS
 
       GpuDevice device = RenderSystem.getDevice();
       if (this.texture == null) {
-         this.texture = device.createTexture(() -> "UI " + this.getTextureLabel() + " texture", 12, TextureFormat.RGBA8, width, height, 1, 1);
+         this.texture = device.createTexture(() -> "UI " + this.getTextureLabel() + " texture", 13, TextureFormat.RGBA8, width, height, 1, 1);
          this.textureView = device.createTextureView(this.texture);
-         this.depthTexture = device.createTexture(() -> "UI " + this.getTextureLabel() + " depth texture", 8, TextureFormat.DEPTH32, width, height, 1, 1);
+         this.depthTexture = device.createTexture(() -> "UI " + this.getTextureLabel() + " depth texture", 9, TextureFormat.DEPTH32, width, height, 1, 1);
          this.depthTextureView = device.createTextureView(this.depthTexture);
       }
 
       device.createCommandEncoder().clearColorAndDepthTextures(this.texture, 0, this.depthTexture, 1.0);
-      RenderSystem.setProjectionMatrix(this.projectionMatrixBuffer.getBuffer(width, height), ProjectionType.ORTHOGRAPHIC);
+      this.projection.setupOrtho(-1000.0F, 1000.0F, width, height, true);
+      RenderSystem.setProjectionMatrix(this.projectionMatrixBuffer.getBuffer(this.projection), ProjectionType.ORTHOGRAPHIC);
    }
 
    protected boolean textureIsReadyToBlit(final T renderState) {

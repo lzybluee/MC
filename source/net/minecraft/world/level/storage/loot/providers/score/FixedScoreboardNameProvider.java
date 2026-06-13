@@ -3,13 +3,11 @@ package net.minecraft.world.level.storage.loot.providers.score;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.scores.ScoreHolder;
 
 public record FixedScoreboardNameProvider(String name) implements ScoreboardNameProvider {
-   public static final MapCodec<FixedScoreboardNameProvider> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<FixedScoreboardNameProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(Codec.STRING.fieldOf("name").forGetter(FixedScoreboardNameProvider::name)).apply(i, FixedScoreboardNameProvider::new)
    );
 
@@ -18,17 +16,12 @@ public record FixedScoreboardNameProvider(String name) implements ScoreboardName
    }
 
    @Override
-   public LootScoreProviderType getType() {
-      return ScoreboardNameProviders.FIXED;
+   public MapCodec<FixedScoreboardNameProvider> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public ScoreHolder getScoreHolder(final LootContext context) {
       return ScoreHolder.forNameOnly(this.name);
-   }
-
-   @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return Set.of();
    }
 }

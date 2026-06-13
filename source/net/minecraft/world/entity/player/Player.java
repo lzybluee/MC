@@ -94,6 +94,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.component.BlocksAttacks;
+import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
@@ -130,7 +131,6 @@ public abstract class Player extends Avatar implements ContainerUser {
    public static final int CRAFTING_SLOT_OFFSET = 500;
    public static final float DEFAULT_BLOCK_INTERACTION_RANGE = 4.5F;
    public static final float DEFAULT_ENTITY_INTERACTION_RANGE = 3.0F;
-   private static final int CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME_TICKS = 40;
    private static final EntityDataAccessor<Float> DATA_PLAYER_ABSORPTION_ID = SynchedEntityData.defineId(Player.class, EntityDataSerializers.FLOAT);
    private static final EntityDataAccessor<Integer> DATA_SCORE_ID = SynchedEntityData.defineId(Player.class, EntityDataSerializers.INT);
    private static final EntityDataAccessor<OptionalInt> DATA_SHOULDER_PARROT_LEFT = SynchedEntityData.defineId(
@@ -146,8 +146,6 @@ public abstract class Player extends Avatar implements ContainerUser {
    private static final int NO_ENCHANTMENT_SEED = 0;
    private static final int DEFAULT_SELECTED_SLOT = 0;
    private static final int DEFAULT_SCORE = 0;
-   private static final boolean DEFAULT_IGNORE_FALL_DAMAGE_FROM_CURRENT_IMPULSE = false;
-   private static final int DEFAULT_CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME = 0;
    public static final float CREATIVE_ENTITY_INTERACTION_RANGE_MODIFIER_VALUE = 2.0F;
    private final Inventory inventory;
    protected PlayerEnderChestContainer enderChestInventory = new PlayerEnderChestContainer();
@@ -172,10 +170,6 @@ public abstract class Player extends Avatar implements ContainerUser {
    private Optional<GlobalPos> lastDeathLocation = Optional.empty();
    public @Nullable FishingHook fishing;
    protected float hurtDir;
-   public @Nullable Vec3 currentImpulseImpactPos;
-   public @Nullable Entity currentExplosionCause;
-   private boolean ignoreFallDamageFromCurrentImpulse = false;
-   private int currentImpulseContextResetGraceTime = 0;
 
    public Player(final Level level, final GameProfile gameProfile) {
       super(EntityType.PLAYER, level);
@@ -214,8 +208,7 @@ public abstract class Player extends Avatar implements ContainerUser {
          .add(Attributes.MOVEMENT_SPEED, 0.1F)
          .add(Attributes.ATTACK_SPEED)
          .add(Attributes.LUCK)
-         .add(Attributes.BLOCK_INTERACTION_RANGE, 4.5)
-         .add(Attributes.ENTITY_INTERACTION_RANGE, 3.0)
+         .add(Attributes.BLOCK_INTERACTION_RANGE)
          .add(Attributes.BLOCK_BREAK_SPEED)
          .add(Attributes.SUBMERGED_MINING_SPEED)
          .add(Attributes.SNEAKING_SPEED)
@@ -288,9 +281,6 @@ public abstract class Player extends Avatar implements ContainerUser {
 
       this.cooldowns.tick();
       this.updatePlayerPose();
-      if (this.currentImpulseContextResetGraceTime > 0) {
-         this.currentImpulseContextResetGraceTime--;
-      }
    }
 
    @Override
@@ -476,7 +466,7 @@ public abstract class Player extends Avatar implements ContainerUser {
          List<Entity> orbs = Lists.newArrayList();
 
          for (Entity entity : entities) {
-            if (entity.getType() == EntityType.EXPERIENCE_ORB) {
+            if (entity.is(EntityType.EXPERIENCE_ORB)) {
                orbs.add(entity);
             } else if (!entity.isRemoved()) {
                this.touch(entity);
@@ -650,9 +640,6 @@ public abstract class Player extends Avatar implements ContainerUser {
       this.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(this.abilities.getWalkingSpeed());
       this.enderChestInventory.fromSlots(input.listOrEmpty("EnderItems", ItemStackWithSlot.CODEC));
       this.setLastDeathLocation(input.read("LastDeathLocation", GlobalPos.CODEC));
-      this.currentImpulseImpactPos = input.<Vec3>read("current_explosion_impact_pos", Vec3.CODEC).orElse(null);
-      this.ignoreFallDamageFromCurrentImpulse = input.getBooleanOr("ignore_fall_damage_from_current_explosion", false);
-      this.currentImpulseContextResetGraceTime = input.getIntOr("current_impulse_context_reset_grace_time", 0);
    }
 
    @Override
@@ -671,9 +658,6 @@ public abstract class Player extends Avatar implements ContainerUser {
       output.store("abilities", Abilities.Packed.CODEC, this.abilities.pack());
       this.enderChestInventory.storeAsSlots(output.list("EnderItems", ItemStackWithSlot.CODEC));
       this.lastDeathLocation.ifPresent(pos -> output.store("LastDeathLocation", GlobalPos.CODEC, pos));
-      output.storeNullable("current_explosion_impact_pos", Vec3.CODEC, this.currentImpulseImpactPos);
-      output.putBoolean("ignore_fall_damage_from_current_explosion", this.ignoreFallDamageFromCurrentImpulse);
-      output.putInt("current_impulse_context_reset_grace_time", this.currentImpulseContextResetGraceTime);
    }
 
    @Override
@@ -837,7 +821,7 @@ public abstract class Player extends Avatar implements ContainerUser {
    public void openItemGui(final ItemStack itemStack, final InteractionHand hand) {
    }
 
-   public InteractionResult interactOn(final Entity entity, final InteractionHand hand) {
+   public InteractionResult interactOn(final Entity entity, final InteractionHand hand, final Vec3 location) {
       if (this.isSpectator()) {
          if (entity instanceof MenuProvider) {
             this.openMenu((MenuProvider)entity);
@@ -847,7 +831,7 @@ public abstract class Player extends Avatar implements ContainerUser {
       } else {
          ItemStack itemStack = this.getItemInHand(hand);
          ItemStack itemStackClone = itemStack.copy();
-         InteractionResult interact = entity.interact(this, hand);
+         InteractionResult interact = entity.interact(this, hand, location);
          if (interact.consumesAction()) {
             if (this.hasInfiniteMaterials() && itemStack == this.getItemInHand(hand) && itemStack.getCount() < itemStackClone.getCount()) {
                itemStack.setCount(itemStackClone.getCount());
@@ -1015,7 +999,7 @@ public abstract class Player extends Avatar implements ContainerUser {
                }
             }
 
-            this.lungeForwardMaybe();
+            this.postPiercingAttack();
          }
       }
    }
@@ -1033,7 +1017,7 @@ public abstract class Player extends Avatar implements ContainerUser {
    }
 
    private boolean deflectProjectile(final Entity entity) {
-      if (entity.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE)
+      if (entity.is(EntityTypeTags.REDIRECTABLE_PROJECTILE)
          && entity instanceof Projectile projectile
          && projectile.deflect(ProjectileDeflection.AIM_DEFLECT, this, EntityReference.of(this), true)) {
          this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_NODAMAGE, this.getSoundSource());
@@ -1353,7 +1337,10 @@ public abstract class Player extends Avatar implements ContainerUser {
       return this.sleepCounter;
    }
 
-   public void displayClientMessage(final Component component, final boolean overlayMessage) {
+   public void sendSystemMessage(final Component message) {
+   }
+
+   public void sendOverlayMessage(final Component message) {
    }
 
    public void awardStat(final Identifier location) {
@@ -1447,27 +1434,7 @@ public abstract class Player extends Avatar implements ContainerUser {
          this.awardStat(Stats.FALL_ONE_CM, (int)Math.round(fallDistance * 100.0));
       }
 
-      boolean hasRelativeFallDamageResistance = this.currentImpulseImpactPos != null && this.ignoreFallDamageFromCurrentImpulse;
-      double effectiveFallDistance;
-      if (hasRelativeFallDamageResistance) {
-         effectiveFallDistance = Math.min(fallDistance, this.currentImpulseImpactPos.y - this.getY());
-         boolean hasLandedAboveCurrentImpulseImpactPosY = effectiveFallDistance <= 0.0;
-         if (hasLandedAboveCurrentImpulseImpactPosY) {
-            this.resetCurrentImpulseContext();
-         } else {
-            this.tryResetCurrentImpulseContext();
-         }
-      } else {
-         effectiveFallDistance = fallDistance;
-      }
-
-      if (effectiveFallDistance > 0.0 && super.causeFallDamage(effectiveFallDistance, damageModifier, damageSource)) {
-         this.resetCurrentImpulseContext();
-         return true;
-      } else {
-         this.propagateFallToPassengers(fallDistance, damageModifier, damageSource);
-         return false;
-      }
+      return super.causeFallDamage(fallDistance, damageModifier, damageSource);
    }
 
    public boolean tryToStartFallFlying() {
@@ -1599,13 +1566,6 @@ public abstract class Player extends Avatar implements ContainerUser {
       }
    }
 
-   @Override
-   public void lungeForwardMaybe() {
-      if (this.hasEnoughFoodToDoExhaustiveManoeuvres()) {
-         super.lungeForwardMaybe();
-      }
-   }
-
    protected boolean hasEnoughFoodToDoExhaustiveManoeuvres() {
       return this.getFoodData().hasEnoughFood() || this.getAbilities().mayfly;
    }
@@ -1694,8 +1654,8 @@ public abstract class Player extends Avatar implements ContainerUser {
    }
 
    @Override
-   public boolean canBeHitByProjectile() {
-      return !this.isSpectator() && super.canBeHitByProjectile();
+   public boolean isPickable() {
+      return !this.isSpectator() && super.isPickable();
    }
 
    @Override
@@ -2024,47 +1984,13 @@ public abstract class Player extends Avatar implements ContainerUser {
       return distanceToSq < maxRange * maxRange;
    }
 
-   public boolean isWithinAttackRange(final AABB aabb, final double buffer) {
-      return this.entityAttackRange().isInRange(this, aabb, buffer);
+   public boolean isWithinAttackRange(final ItemStack weaponItem, final AABB aabb, final double buffer) {
+      return this.getAttackRangeWith(weaponItem).isInRange(this, aabb, buffer);
    }
 
    public boolean isWithinBlockInteractionRange(final BlockPos pos, final double buffer) {
       double maxRange = this.blockInteractionRange() + buffer;
       return new AABB(pos).distanceToSqr(this.getEyePosition()) < maxRange * maxRange;
-   }
-
-   public void setIgnoreFallDamageFromCurrentImpulse(final boolean ignoreFallDamage) {
-      this.ignoreFallDamageFromCurrentImpulse = ignoreFallDamage;
-      if (ignoreFallDamage) {
-         this.applyPostImpulseGraceTime(40);
-      } else {
-         this.currentImpulseContextResetGraceTime = 0;
-      }
-   }
-
-   public void applyPostImpulseGraceTime(final int ticks) {
-      this.currentImpulseContextResetGraceTime = Math.max(this.currentImpulseContextResetGraceTime, ticks);
-   }
-
-   public boolean isIgnoringFallDamageFromCurrentImpulse() {
-      return this.ignoreFallDamageFromCurrentImpulse;
-   }
-
-   public void tryResetCurrentImpulseContext() {
-      if (this.currentImpulseContextResetGraceTime == 0) {
-         this.resetCurrentImpulseContext();
-      }
-   }
-
-   public boolean isInPostImpulseGraceTime() {
-      return this.currentImpulseContextResetGraceTime > 0;
-   }
-
-   public void resetCurrentImpulseContext() {
-      this.currentImpulseContextResetGraceTime = 0;
-      this.currentExplosionCause = null;
-      this.currentImpulseImpactPos = null;
-      this.ignoreFallDamageFromCurrentImpulse = false;
    }
 
    public boolean shouldRotateWithMinecart() {
@@ -2082,8 +2008,25 @@ public abstract class Player extends Avatar implements ContainerUser {
          .add("id", this.getId())
          .add("pos", this.position())
          .add("mode", this.gameMode())
-         .add("permission", this.permissions())
+         .add("permission", printPlayerPermissions(this.permissions()))
          .toString();
+   }
+
+   private static String printPlayerPermissions(final PermissionSet permissions) {
+      if (permissions.hasPermission(Permissions.COMMANDS_OWNER)) {
+         return "owner";
+      } else if (permissions.hasPermission(Permissions.COMMANDS_ADMIN)) {
+         return "admin";
+      } else if (permissions.hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+         return "gamemaster";
+      } else {
+         return permissions.hasPermission(Permissions.COMMANDS_MODERATOR) ? "moderator" : "none";
+      }
+   }
+
+   @Override
+   public ResolvableProfile getProfile() {
+      return ResolvableProfile.createResolved(this.gameProfile);
    }
 
    public record BedSleepingProblem(@Nullable Component message) {

@@ -26,7 +26,7 @@ public class RandomFeatureConfiguration implements FeatureConfiguration {
    }
 
    @Override
-   public Stream<ConfiguredFeature<?, ?>> getFeatures() {
+   public Stream<Holder<ConfiguredFeature<?, ?>>> getSubFeatures() {
       return Stream.concat(this.features.stream().flatMap(weighted -> weighted.feature.value().getFeatures()), this.defaultFeature.value().getFeatures());
    }
 }

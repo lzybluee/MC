@@ -7,10 +7,8 @@ public class DefaultVertexFormat {
       .add("Color", VertexFormatElement.COLOR)
       .add("UV0", VertexFormatElement.UV0)
       .add("UV2", VertexFormatElement.UV2)
-      .add("Normal", VertexFormatElement.NORMAL)
-      .padding(1)
       .build();
-   public static final VertexFormat NEW_ENTITY = VertexFormat.builder()
+   public static final VertexFormat ENTITY = VertexFormat.builder()
       .add("Position", VertexFormatElement.POSITION)
       .add("Color", VertexFormatElement.COLOR)
       .add("UV0", VertexFormatElement.UV0)
@@ -78,6 +76,7 @@ public class DefaultVertexFormat {
       .add("Position", VertexFormatElement.POSITION)
       .add("Color", VertexFormatElement.COLOR)
       .add("Normal", VertexFormatElement.NORMAL)
+      .padding(1)
       .add("LineWidth", VertexFormatElement.LINE_WIDTH)
       .build();
 }

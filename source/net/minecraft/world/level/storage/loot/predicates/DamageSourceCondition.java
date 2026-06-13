@@ -12,13 +12,13 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 
 public record DamageSourceCondition(Optional<DamageSourcePredicate> predicate) implements LootItemCondition {
-   public static final MapCodec<DamageSourceCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<DamageSourceCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(DamageSourcePredicate.CODEC.optionalFieldOf("predicate").forGetter(DamageSourceCondition::predicate)).apply(i, DamageSourceCondition::new)
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.DAMAGE_SOURCE_PROPERTIES;
+   public MapCodec<DamageSourceCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override

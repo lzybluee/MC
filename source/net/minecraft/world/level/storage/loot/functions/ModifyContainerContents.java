@@ -3,16 +3,16 @@ package net.minecraft.world.level.storage.loot.functions;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulator;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulators;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class ModifyContainerContents extends LootItemConditionalFunction {
-   public static final MapCodec<ModifyContainerContents> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ModifyContainerContents> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -32,8 +32,8 @@ public class ModifyContainerContents extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<ModifyContainerContents> getType() {
-      return LootItemFunctions.MODIFY_CONTENTS;
+   public MapCodec<ModifyContainerContents> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -49,6 +49,6 @@ public class ModifyContainerContents extends LootItemConditionalFunction {
    @Override
    public void validate(final ValidationContext context) {
       super.validate(context);
-      this.modifier.validate(context.forChild(new ProblemReporter.FieldPathElement("modifier")));
+      Validatable.validate(context, "modifier", this.modifier);
    }
 }

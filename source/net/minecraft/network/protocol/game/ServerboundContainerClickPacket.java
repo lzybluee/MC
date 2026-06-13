@@ -9,10 +9,10 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 
 public record ServerboundContainerClickPacket(
-   int containerId, int stateId, short slotNum, byte buttonNum, ClickType clickType, Int2ObjectMap<HashedStack> changedSlots, HashedStack carriedItem
+   int containerId, int stateId, short slotNum, byte buttonNum, ContainerInput containerInput, Int2ObjectMap<HashedStack> changedSlots, HashedStack carriedItem
 ) implements Packet<ServerGamePacketListener> {
    private static final int MAX_SLOT_COUNT = 128;
    private static final StreamCodec<RegistryFriendlyByteBuf, Int2ObjectMap<HashedStack>> SLOTS_STREAM_CODEC = ByteBufCodecs.map(
@@ -27,8 +27,8 @@ public record ServerboundContainerClickPacket(
       ServerboundContainerClickPacket::slotNum,
       ByteBufCodecs.BYTE,
       ServerboundContainerClickPacket::buttonNum,
-      ClickType.STREAM_CODEC,
-      ServerboundContainerClickPacket::clickType,
+      ContainerInput.STREAM_CODEC,
+      ServerboundContainerClickPacket::containerInput,
       SLOTS_STREAM_CODEC,
       ServerboundContainerClickPacket::changedSlots,
       HashedStack.STREAM_CODEC,

@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.animal.golem;
 
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,6 +33,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -65,6 +66,9 @@ public class CopperGolem extends AbstractGolem implements ContainerUser, Shearab
    private static final float TURN_TO_STATUE_CHANCE = 0.0058F;
    private static final int SPAWN_COOLDOWN_MIN = 60;
    private static final int SPAWN_COOLDOWN_MAX = 100;
+   private static final Brain.Provider<CopperGolem> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY), var0 -> CopperGolemAi.getActivities()
+   );
    private static final EntityDataAccessor<WeatheringCopper.WeatherState> DATA_WEATHER_STATE = SynchedEntityData.defineId(
       CopperGolem.class, EntityDataSerializers.WEATHERING_COPPER_STATE
    );
@@ -88,9 +92,9 @@ public class CopperGolem extends AbstractGolem implements ContainerUser, Shearab
       this.getNavigation().setCanOpenDoors(true);
       this.setPersistenceRequired();
       this.setState(CopperGolemState.IDLE);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, 16.0F);
-      this.setPathfindingMalus(PathType.DANGER_OTHER, 16.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 16.0F);
+      this.setPathfindingMalus(PathType.DAMAGING_IN_NEIGHBOR, 16.0F);
+      this.setPathfindingMalus(PathType.FIRE, -1.0F);
       this.getBrain().setMemory(MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS, this.getRandom().nextInt(60, 100));
    }
 
@@ -143,18 +147,13 @@ public class CopperGolem extends AbstractGolem implements ContainerUser, Shearab
    }
 
    @Override
-   protected Brain.Provider<CopperGolem> brainProvider() {
-      return CopperGolemAi.brainProvider();
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return CopperGolemAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<CopperGolem> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<CopperGolem> getBrain() {
-      return (Brain<CopperGolem>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -283,7 +282,7 @@ public class CopperGolem extends AbstractGolem implements ContainerUser, Shearab
    }
 
    private boolean canTurnToStatue(final Level level) {
-      return level.getBlockState(this.blockPosition()).isAir() && level.random.nextFloat() <= 0.0058F;
+      return level.getBlockState(this.blockPosition()).isAir() && level.getRandom().nextFloat() <= 0.0058F;
    }
 
    private void turnToStatue(final ServerLevel level) {

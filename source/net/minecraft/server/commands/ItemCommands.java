@@ -80,7 +80,7 @@ public class ItemCommands {
                                                                   (CommandSourceStack)c.getSource(),
                                                                   BlockPosArgument.getLoadedBlockPos(c, "pos"),
                                                                   SlotArgument.getSlot(c, "slot"),
-                                                                  ItemArgument.getItem(c, "item").createItemStack(1, false)
+                                                                  ItemArgument.getItem(c, "item").createItemStack(1)
                                                                )
                                                             ))
                                                          .then(
@@ -91,7 +91,7 @@ public class ItemCommands {
                                                                      BlockPosArgument.getLoadedBlockPos(c, "pos"),
                                                                      SlotArgument.getSlot(c, "slot"),
                                                                      ItemArgument.getItem(c, "item")
-                                                                        .createItemStack(IntegerArgumentType.getInteger(c, "count"), true)
+                                                                        .createItemStack(IntegerArgumentType.getInteger(c, "count"))
                                                                   )
                                                                )
                                                          )
@@ -180,7 +180,7 @@ public class ItemCommands {
                                                                (CommandSourceStack)c.getSource(),
                                                                EntityArgument.getEntities(c, "targets"),
                                                                SlotArgument.getSlot(c, "slot"),
-                                                               ItemArgument.getItem(c, "item").createItemStack(1, false)
+                                                               ItemArgument.getItem(c, "item").createItemStack(1)
                                                             )
                                                          ))
                                                       .then(
@@ -190,8 +190,7 @@ public class ItemCommands {
                                                                   (CommandSourceStack)c.getSource(),
                                                                   EntityArgument.getEntities(c, "targets"),
                                                                   SlotArgument.getSlot(c, "slot"),
-                                                                  ItemArgument.getItem(c, "item")
-                                                                     .createItemStack(IntegerArgumentType.getInteger(c, "count"), true)
+                                                                  ItemArgument.getItem(c, "item").createItemStack(IntegerArgumentType.getInteger(c, "count"))
                                                                )
                                                             )
                                                       )

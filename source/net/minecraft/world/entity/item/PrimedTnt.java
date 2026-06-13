@@ -62,7 +62,7 @@ public class PrimedTnt extends Entity implements TraceableEntity {
    public PrimedTnt(final Level level, final double x, final double y, final double z, final @Nullable LivingEntity owner) {
       this(EntityType.TNT, level);
       this.setPos(x, y, z);
-      double rot = level.random.nextDouble() * (float) (Math.PI * 2);
+      double rot = level.getRandom().nextDouble() * (float) (Math.PI * 2);
       this.setDeltaMovement(-Math.sin(rot) * 0.02, 0.2F, -Math.cos(rot) * 0.02);
       this.setFuse(80);
       this.xo = x;
@@ -111,7 +111,7 @@ public class PrimedTnt extends Entity implements TraceableEntity {
             this.explode();
          }
       } else {
-         this.updateInWaterStateAndDoFluidPushing();
+         this.updateFluidInteraction();
          if (this.level().isClientSide()) {
             this.level().addParticle(ParticleTypes.SMOKE, this.getX(), this.getY() + 0.5, this.getZ(), 0.0, 0.0, 0.0);
          }

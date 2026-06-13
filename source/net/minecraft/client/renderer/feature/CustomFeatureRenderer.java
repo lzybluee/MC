@@ -16,10 +16,22 @@ import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.rendertype.RenderType;
 
 public class CustomFeatureRenderer {
-   public void render(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
+   public void renderSolid(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
       CustomFeatureRenderer.Storage storage = nodeCollection.getCustomGeometrySubmits();
 
-      for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : storage.customGeometrySubmits.entrySet()) {
+      for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : storage.solidCustomGeometrySubmits.entrySet()) {
+         VertexConsumer buffer = bufferSource.getBuffer(entry.getKey());
+
+         for (SubmitNodeStorage.CustomGeometrySubmit customGeometrySubmit : entry.getValue()) {
+            customGeometrySubmit.customGeometryRenderer().render(customGeometrySubmit.pose(), buffer);
+         }
+      }
+   }
+
+   public void renderTranslucent(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource) {
+      CustomFeatureRenderer.Storage storage = nodeCollection.getCustomGeometrySubmits();
+
+      for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : storage.translucentCustomGeometrySubmits.entrySet()) {
          VertexConsumer buffer = bufferSource.getBuffer(entry.getKey());
 
          for (SubmitNodeStorage.CustomGeometrySubmit customGeometrySubmit : entry.getValue()) {
@@ -29,26 +41,41 @@ public class CustomFeatureRenderer {
    }
 
    public static class Storage {
-      private final Map<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> customGeometrySubmits = new HashMap<>();
-      private final Set<RenderType> customGeometrySubmitsUsage = new ObjectOpenHashSet();
+      private final Map<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> solidCustomGeometrySubmits = new HashMap<>();
+      private final Map<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> translucentCustomGeometrySubmits = new HashMap<>();
+      private final Set<RenderType> solidCustomGeometrySubmitsUsage = new ObjectOpenHashSet();
+      private final Set<RenderType> translucentCustomGeometrySubmitsUsage = new ObjectOpenHashSet();
 
       public void add(final PoseStack poseStack, final RenderType renderType, final SubmitNodeCollector.CustomGeometryRenderer customGeometryRenderer) {
-         List<SubmitNodeStorage.CustomGeometrySubmit> submits = this.customGeometrySubmits.computeIfAbsent(renderType, rt -> new ArrayList<>());
-         submits.add(new SubmitNodeStorage.CustomGeometrySubmit(poseStack.last().copy(), customGeometryRenderer));
+         SubmitNodeStorage.CustomGeometrySubmit submit = new SubmitNodeStorage.CustomGeometrySubmit(poseStack.last().copy(), customGeometryRenderer);
+         if (!renderType.hasBlending()) {
+            this.solidCustomGeometrySubmits.computeIfAbsent(renderType, rt -> new ArrayList<>()).add(submit);
+         } else {
+            this.translucentCustomGeometrySubmits.computeIfAbsent(renderType, rt -> new ArrayList<>()).add(submit);
+         }
       }
 
       public void clear() {
-         for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : this.customGeometrySubmits.entrySet()) {
+         for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : this.solidCustomGeometrySubmits.entrySet()) {
             if (!entry.getValue().isEmpty()) {
-               this.customGeometrySubmitsUsage.add(entry.getKey());
+               this.solidCustomGeometrySubmitsUsage.add(entry.getKey());
+               entry.getValue().clear();
+            }
+         }
+
+         for (Entry<RenderType, List<SubmitNodeStorage.CustomGeometrySubmit>> entry : this.translucentCustomGeometrySubmits.entrySet()) {
+            if (!entry.getValue().isEmpty()) {
+               this.translucentCustomGeometrySubmitsUsage.add(entry.getKey());
                entry.getValue().clear();
             }
          }
       }
 
       public void endFrame() {
-         this.customGeometrySubmits.keySet().removeIf(renderType -> !this.customGeometrySubmitsUsage.contains(renderType));
-         this.customGeometrySubmitsUsage.clear();
+         this.solidCustomGeometrySubmits.keySet().removeIf(renderType -> !this.solidCustomGeometrySubmitsUsage.contains(renderType));
+         this.solidCustomGeometrySubmitsUsage.clear();
+         this.translucentCustomGeometrySubmits.keySet().removeIf(renderType -> !this.translucentCustomGeometrySubmitsUsage.contains(renderType));
+         this.translucentCustomGeometrySubmitsUsage.clear();
       }
    }
 }

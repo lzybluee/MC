@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
@@ -26,13 +27,13 @@ public class GolemRandomStrollInVillageGoal extends RandomStrollGoal {
 
    @Override
    protected @Nullable Vec3 getPosition() {
-      float randomValue = this.mob.level().random.nextFloat();
-      if (this.mob.level().random.nextFloat() < 0.3F) {
+      RandomSource random = this.mob.level().getRandom();
+      if (random.nextFloat() < 0.3F) {
          return this.getPositionTowardsAnywhere();
       }
 
       Vec3 target;
-      if (randomValue < 0.7F) {
+      if (random.nextFloat() < 0.7F) {
          target = this.getPositionTowardsVillagerWhoWantsGolem();
          if (target == null) {
             target = this.getPositionTowardsPoi();
@@ -58,7 +59,7 @@ public class GolemRandomStrollInVillageGoal extends RandomStrollGoal {
          return null;
       }
 
-      Villager villager = villagers.get(this.mob.level().random.nextInt(villagers.size()));
+      Villager villager = villagers.get(this.mob.level().getRandom().nextInt(villagers.size()));
       Vec3 targetPos = villager.position();
       return LandRandomPos.getPosTowards(this.mob, 10, 7, targetPos);
    }
@@ -78,7 +79,7 @@ public class GolemRandomStrollInVillageGoal extends RandomStrollGoal {
       List<SectionPos> villageSections = SectionPos.cube(SectionPos.of(this.mob), 2)
          .filter(sectionPos -> level.sectionsToVillage(sectionPos) == 0)
          .collect(Collectors.toList());
-      return villageSections.isEmpty() ? null : villageSections.get(level.random.nextInt(villageSections.size()));
+      return villageSections.isEmpty() ? null : villageSections.get(level.getRandom().nextInt(villageSections.size()));
    }
 
    private @Nullable BlockPos getRandomPoiWithinSection(final SectionPos sectionPos) {
@@ -87,7 +88,7 @@ public class GolemRandomStrollInVillageGoal extends RandomStrollGoal {
       List<BlockPos> pois = poiManager.getInRange(poiType -> true, sectionPos.center(), 8, PoiManager.Occupancy.IS_OCCUPIED)
          .map(PoiRecord::getPos)
          .collect(Collectors.toList());
-      return pois.isEmpty() ? null : pois.get(level.random.nextInt(pois.size()));
+      return pois.isEmpty() ? null : pois.get(level.getRandom().nextInt(pois.size()));
    }
 
    private boolean doesVillagerWantGolem(final Villager villager) {

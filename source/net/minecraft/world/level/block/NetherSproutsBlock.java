@@ -29,6 +29,6 @@ public class NetherSproutsBlock extends VegetationBlock {
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(BlockTags.NYLIUM) || state.is(Blocks.SOUL_SOIL) || super.mayPlaceOn(state, level, pos);
+      return state.is(BlockTags.SUPPORTS_NETHER_SPROUTS);
    }
 }

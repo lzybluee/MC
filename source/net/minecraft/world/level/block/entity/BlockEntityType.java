@@ -6,7 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.datafix.fixes.References;
 import net.minecraft.world.level.BlockGetter;
@@ -276,10 +275,6 @@ public class BlockEntityType<T extends BlockEntity> {
    private final BlockEntityType.BlockEntitySupplier<? extends T> factory;
    private final Set<Block> validBlocks;
    private final Holder.Reference<BlockEntityType<?>> builtInRegistryHolder = BuiltInRegistries.BLOCK_ENTITY_TYPE.createIntrusiveHolder(this);
-
-   public static @Nullable Identifier getKey(final BlockEntityType<?> type) {
-      return BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(type);
-   }
 
    private static <T extends BlockEntity> BlockEntityType<T> register(
       final String name, final BlockEntityType.BlockEntitySupplier<? extends T> factory, final Block... validBlocks

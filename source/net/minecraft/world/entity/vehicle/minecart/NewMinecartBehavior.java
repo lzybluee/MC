@@ -574,7 +574,7 @@ public class NewMinecartBehavior extends MinecartBehavior {
          NewMinecartBehavior.MinecartStep::weight,
          NewMinecartBehavior.MinecartStep::new
       );
-      public static NewMinecartBehavior.MinecartStep ZERO = new NewMinecartBehavior.MinecartStep(Vec3.ZERO, Vec3.ZERO, 0.0F, 0.0F, 0.0F);
+      public static final NewMinecartBehavior.MinecartStep ZERO = new NewMinecartBehavior.MinecartStep(Vec3.ZERO, Vec3.ZERO, 0.0F, 0.0F, 0.0F);
    }
 
    private record StepPartialTicks(float partialTicksInStep, NewMinecartBehavior.MinecartStep currentStep, NewMinecartBehavior.MinecartStep previousStep) {

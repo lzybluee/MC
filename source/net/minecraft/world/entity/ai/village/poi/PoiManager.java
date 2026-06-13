@@ -88,7 +88,7 @@ public class PoiManager extends SectionStorage<PoiSection, PoiSection.Packed> {
       final Predicate<Holder<PoiType>> predicate, final BlockPos center, final int radius, final PoiManager.Occupancy occupancy
    ) {
       int chunkRadius = Math.floorDiv(radius, 16) + 1;
-      return ChunkPos.rangeClosed(new ChunkPos(center), chunkRadius).flatMap(pos -> this.getInChunk(predicate, pos, occupancy)).filter(record -> {
+      return ChunkPos.rangeClosed(ChunkPos.containing(center), chunkRadius).flatMap(pos -> this.getInChunk(predicate, pos, occupancy)).filter(record -> {
          BlockPos pos = record.getPos();
          return Math.abs(pos.getX() - center.getX()) <= radius && Math.abs(pos.getZ() - center.getZ()) <= radius;
       });
@@ -281,13 +281,13 @@ public class PoiManager extends SectionStorage<PoiSection, PoiSection.Packed> {
 
    public void ensureLoadedAndValid(final LevelReader reader, final BlockPos center, final int radius) {
       SectionPos.aroundChunk(
-            new ChunkPos(center), Math.floorDiv(radius, 16), this.levelHeightAccessor.getMinSectionY(), this.levelHeightAccessor.getMaxSectionY()
+            ChunkPos.containing(center), Math.floorDiv(radius, 16), this.levelHeightAccessor.getMinSectionY(), this.levelHeightAccessor.getMaxSectionY()
          )
          .map(pos -> Pair.of(pos, this.getOrLoad(pos.asLong())))
          .filter(poiSection -> !((Optional)poiSection.getSecond()).map(PoiSection::isValid).orElse(false))
          .map(p -> ((SectionPos)p.getFirst()).chunk())
-         .filter(pos -> this.loadedChunks.add(pos.toLong()))
-         .forEach(pos -> reader.getChunk(pos.x, pos.z, ChunkStatus.EMPTY));
+         .filter(pos -> this.loadedChunks.add(pos.pack()))
+         .forEach(pos -> reader.getChunk(pos.x(), pos.z(), ChunkStatus.EMPTY));
    }
 
    private final class DistanceTracker extends SectionTracker {

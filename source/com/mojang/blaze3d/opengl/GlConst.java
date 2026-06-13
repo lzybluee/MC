@@ -1,7 +1,7 @@
 package com.mojang.blaze3d.opengl;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.PolygonMode;
@@ -138,13 +138,16 @@ public class GlConst {
    public static final int GL_RED = 6403;
    public static final int GL_OUT_OF_MEMORY = 1285;
 
-   public static int toGl(final DepthTestFunction depthTestFunction) {
-      return switch (depthTestFunction) {
-         case NO_DEPTH_TEST -> 519;
-         case EQUAL_DEPTH_TEST -> 514;
-         case LESS_DEPTH_TEST -> 513;
-         case GREATER_DEPTH_TEST -> 516;
-         default -> 515;
+   public static int toGl(final CompareOp compareOp) {
+      return switch (compareOp) {
+         case ALWAYS_PASS -> 519;
+         case LESS_THAN -> 513;
+         case LESS_THAN_OR_EQUAL -> 515;
+         case EQUAL -> 514;
+         case NOT_EQUAL -> 517;
+         case GREATER_THAN_OR_EQUAL -> 518;
+         case GREATER_THAN -> 516;
+         case NEVER_PASS -> 512;
       };
    }
 

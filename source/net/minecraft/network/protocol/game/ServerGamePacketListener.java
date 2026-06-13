@@ -30,7 +30,11 @@ public interface ServerGamePacketListener extends ServerCommonPacketListener, Se
 
    void handleContainerClose(ServerboundContainerClosePacket packet);
 
+   void handleAttack(ServerboundAttackPacket packet);
+
    void handleInteract(ServerboundInteractPacket packet);
+
+   void handleSpectateEntity(ServerboundSpectateEntityPacket packet);
 
    void handleMovePlayer(ServerboundMovePlayerPacket packet);
 
@@ -83,6 +87,8 @@ public interface ServerGamePacketListener extends ServerCommonPacketListener, Se
    void handleRenameItem(ServerboundRenameItemPacket packet);
 
    void handleSetBeaconPacket(ServerboundSetBeaconPacket packet);
+
+   void handleSetGameRule(ServerboundSetGameRulePacket packet);
 
    void handleSetStructureBlock(ServerboundSetStructureBlockPacket packet);
 

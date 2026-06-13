@@ -102,7 +102,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
    }
 
    public boolean isTicking(final ChunkPos pos) {
-      return ((Visibility)this.chunkVisibility.get(pos.toLong())).isTicking();
+      return ((Visibility)this.chunkVisibility.get(pos.pack())).isTicking();
    }
 
    public void addLegacyChunkEntities(final Stream<T> entities) {
@@ -137,7 +137,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
    }
 
    public void updateChunkStatus(final ChunkPos pos, final Visibility chunkStatus) {
-      long chunkPosKey = pos.toLong();
+      long chunkPosKey = pos.pack();
       if (chunkStatus == Visibility.HIDDEN) {
          this.chunkVisibility.remove(chunkPosKey);
          this.chunksToUnload.add(chunkPosKey);
@@ -188,7 +188,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
          .collect(Collectors.toList());
       if (rootEntitiesToSave.isEmpty()) {
          if (chunkLoadStatus == PersistentEntitySectionManager.ChunkLoadStatus.LOADED) {
-            this.permanentStorage.storeEntities(new ChunkEntities<>(new ChunkPos(chunkPos), ImmutableList.of()));
+            this.permanentStorage.storeEntities(new ChunkEntities<>(ChunkPos.unpack(chunkPos), ImmutableList.of()));
          }
 
          return true;
@@ -196,7 +196,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
          this.requestChunkLoad(chunkPos);
          return false;
       } else {
-         this.permanentStorage.storeEntities(new ChunkEntities<>(new ChunkPos(chunkPos), rootEntitiesToSave));
+         this.permanentStorage.storeEntities(new ChunkEntities<>(ChunkPos.unpack(chunkPos), rootEntitiesToSave));
          rootEntitiesToSave.forEach(savedEntityVisitor);
          return true;
       }
@@ -204,7 +204,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
 
    private void requestChunkLoad(final long chunkKey) {
       this.chunkLoadStatuses.put(chunkKey, PersistentEntitySectionManager.ChunkLoadStatus.PENDING);
-      ChunkPos pos = new ChunkPos(chunkKey);
+      ChunkPos pos = ChunkPos.unpack(chunkKey);
       this.permanentStorage.loadEntities(pos).thenAccept(this.loadingInbox::add).exceptionally(t -> {
          LOGGER.error("Failed to read chunk {}", pos, t);
          return null;
@@ -234,7 +234,7 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
       ChunkEntities<T> loadedChunk;
       while ((loadedChunk = this.loadingInbox.poll()) != null) {
          loadedChunk.getEntities().forEach(e -> this.addEntity((T)e, true));
-         this.chunkLoadStatuses.put(loadedChunk.getPos().toLong(), PersistentEntitySectionManager.ChunkLoadStatus.LOADED);
+         this.chunkLoadStatuses.put(loadedChunk.getPos().pack(), PersistentEntitySectionManager.ChunkLoadStatus.LOADED);
       }
    }
 
@@ -298,11 +298,11 @@ public class PersistentEntitySectionManager<T extends EntityAccess> implements A
    }
 
    public boolean canPositionTick(final BlockPos pos) {
-      return ((Visibility)this.chunkVisibility.get(ChunkPos.asLong(pos))).isTicking();
+      return ((Visibility)this.chunkVisibility.get(ChunkPos.pack(pos))).isTicking();
    }
 
    public boolean canPositionTick(final ChunkPos pos) {
-      return ((Visibility)this.chunkVisibility.get(pos.toLong())).isTicking();
+      return ((Visibility)this.chunkVisibility.get(pos.pack())).isTicking();
    }
 
    public boolean areEntitiesLoaded(final long chunkKey) {

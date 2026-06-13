@@ -130,7 +130,7 @@ public enum ConversionType {
       to.setNoGravity(from.isNoGravity());
       to.setPortalCooldown(from.getPortalCooldown());
       to.setSilent(from.isSilent());
-      from.getTags().forEach(to::addTag);
+      from.entityTags().forEach(to::addTag);
 
       for (DataComponentType<?> component : COMPONENTS_TO_COPY) {
          copyComponent(from, to, component);

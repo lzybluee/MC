@@ -21,7 +21,7 @@ public class HorseInventoryMenu extends AbstractMountInventoryMenu {
       this.addSlot(new ArmorSlot(saddleContainer, horse, EquipmentSlot.SADDLE, 0, 8, 18, SADDLE_SLOT_SPRITE) {
          @Override
          public boolean isActive() {
-            return horse.canUseSlot(EquipmentSlot.SADDLE) && horse.getType().is(EntityTypeTags.CAN_EQUIP_SADDLE);
+            return horse.canUseSlot(EquipmentSlot.SADDLE) && horse.is(EntityTypeTags.CAN_EQUIP_SADDLE);
          }
       });
       final boolean isLlama = horse instanceof Llama;
@@ -30,7 +30,7 @@ public class HorseInventoryMenu extends AbstractMountInventoryMenu {
       this.addSlot(new ArmorSlot(armorContainer, horse, EquipmentSlot.BODY, 0, 8, 36, armorSprite) {
          @Override
          public boolean isActive() {
-            return horse.canUseSlot(EquipmentSlot.BODY) && (horse.getType().is(EntityTypeTags.CAN_WEAR_HORSE_ARMOR) || isLlama);
+            return horse.canUseSlot(EquipmentSlot.BODY) && (horse.is(EntityTypeTags.CAN_WEAR_HORSE_ARMOR) || isLlama);
          }
       });
       if (inventoryColumns > 0) {

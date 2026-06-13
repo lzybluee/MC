@@ -15,7 +15,7 @@ public class RealmsPopups {
       final Screen backgroundScreen, final Component popupTitle, final Component popupMessage, final Consumer<PopupScreen> onContinue
    ) {
       return new PopupScreen.Builder(backgroundScreen, popupTitle)
-         .setMessage(popupMessage)
+         .addMessage(popupMessage)
          .addButton(CommonComponents.GUI_CONTINUE, onContinue)
          .addButton(CommonComponents.GUI_CANCEL, PopupScreen::onClose)
          .build();
@@ -23,7 +23,7 @@ public class RealmsPopups {
 
    public static PopupScreen infoPopupScreen(final Screen backgroundScreen, final Component popupMessage, final Consumer<PopupScreen> onContinue) {
       return new PopupScreen.Builder(backgroundScreen, INFO)
-         .setMessage(popupMessage)
+         .addMessage(popupMessage)
          .addButton(CommonComponents.GUI_CONTINUE, onContinue)
          .addButton(CommonComponents.GUI_CANCEL, PopupScreen::onClose)
          .build();
@@ -31,13 +31,13 @@ public class RealmsPopups {
 
    public static PopupScreen warningPopupScreen(final Screen backgroundScreen, final Component popupMessage, final Consumer<PopupScreen> onContinue) {
       return new PopupScreen.Builder(backgroundScreen, WARNING)
-         .setMessage(popupMessage)
+         .addMessage(popupMessage)
          .addButton(CommonComponents.GUI_CONTINUE, onContinue)
          .addButton(CommonComponents.GUI_CANCEL, PopupScreen::onClose)
          .build();
    }
 
    public static PopupScreen warningAcknowledgePopupScreen(final Screen backgroundScreen, final Component popupMessage, final Consumer<PopupScreen> onContinue) {
-      return new PopupScreen.Builder(backgroundScreen, WARNING).setMessage(popupMessage).addButton(CommonComponents.GUI_OK, onContinue).build();
+      return new PopupScreen.Builder(backgroundScreen, WARNING).addMessage(popupMessage).addButton(CommonComponents.GUI_OK, onContinue).build();
    }
 }

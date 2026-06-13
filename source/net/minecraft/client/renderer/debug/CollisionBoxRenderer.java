@@ -29,7 +29,7 @@ public class CollisionBoxRenderer implements DebugRenderer.SimpleDebugRenderer {
       double time = Util.getNanos();
       if (time - this.lastUpdateTime > 1.0E8) {
          this.lastUpdateTime = time;
-         Entity cameraEntity = this.minecraft.gameRenderer.getMainCamera().entity();
+         Entity cameraEntity = this.minecraft.getCameraEntity();
          this.shapes = ImmutableList.copyOf(cameraEntity.level().getCollisions(cameraEntity, cameraEntity.getBoundingBox().inflate(6.0)));
       }
 

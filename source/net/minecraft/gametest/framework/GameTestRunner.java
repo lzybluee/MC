@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.ChunkPos;
@@ -28,7 +27,7 @@ public class GameTestRunner {
    private final List<GameTestInfo> scheduledForRerun = Lists.newArrayList();
    private final GameTestRunner.GameTestBatcher testBatcher;
    private boolean stopped = true;
-   private @Nullable Holder<TestEnvironmentDefinition> currentEnvironment;
+   private TestEnvironmentDefinition.@Nullable Activation<?> currentEnvironment;
    private final GameTestRunner.StructureSpawner existingStructureSpawner;
    private final GameTestRunner.StructureSpawner newStructureSpawner;
    private final boolean haltOnError;
@@ -92,7 +91,7 @@ public class GameTestRunner {
             GameTestBatch lastBatch = (GameTestBatch)this.batches.get(batchIndex - 1);
             lastBatch.gameTestInfos().forEach(gameTestInfo -> {
                TestInstanceBlockEntity testInstanceBlockEntity = gameTestInfo.getTestInstanceBlockEntity();
-               StructureUtils.clearSpaceForStructure(testInstanceBlockEntity.getStructureBoundingBox(), this.level);
+               StructureUtils.clearSpaceForStructure(testInstanceBlockEntity.getTestBoundingBox(), this.level);
                this.level.destroyBlock(testInstanceBlockEntity.getBlockPos(), false);
             });
          }
@@ -106,14 +105,12 @@ public class GameTestRunner {
             new Object[]{currentBatch.environment().getRegisteredName(), currentBatch.index(), testInfosForThisBatch.size()}
          );
          this.endCurrentEnvironment();
-         this.currentEnvironment = currentBatch.environment();
-         this.currentEnvironment.value().setup(this.level);
+         this.currentEnvironment = TestEnvironmentDefinition.activate(currentBatch.environment().value(), this.level);
          this.batchListeners.forEach(listener -> listener.testBatchStarting(currentBatch));
          final MultipleTestTracker currentBatchTracker = new MultipleTestTracker();
          testInfosForThisBatch.forEach(currentBatchTracker::addTestToTrack);
          currentBatchTracker.addListener(new GameTestListener() {
             private void testCompleted(final GameTestInfo testInfo) {
-               testInfo.getTestInstanceBlockEntity().removeBarriers();
                if (currentBatchTracker.isDone()) {
                   GameTestRunner.this.batchListeners.forEach(listener -> listener.testBatchFinished(currentBatch));
                   LongSet forcedChunks = new LongArraySet(GameTestRunner.this.level.getForceLoadedChunks());
@@ -128,6 +125,7 @@ public class GameTestRunner {
 
             @Override
             public void testPassed(final GameTestInfo testInfo, final GameTestRunner runner) {
+               testInfo.getTestInstanceBlockEntity().removeBarriers();
                this.testCompleted(testInfo);
             }
 
@@ -138,7 +136,6 @@ public class GameTestRunner {
                   LongSet forcedChunks = new LongArraySet(GameTestRunner.this.level.getForceLoadedChunks());
                   forcedChunks.forEach(pos -> GameTestRunner.this.level.setChunkForced(ChunkPos.getX(pos), ChunkPos.getZ(pos), false));
                   GameTestTicker.SINGLETON.clear();
-                  testInfo.getTestInstanceBlockEntity().removeBarriers();
                } else {
                   this.testCompleted(testInfo);
                }
@@ -154,7 +151,7 @@ public class GameTestRunner {
 
    private void endCurrentEnvironment() {
       if (this.currentEnvironment != null) {
-         this.currentEnvironment.value().teardown(this.level);
+         this.currentEnvironment.teardown();
          this.currentEnvironment = null;
       }
    }

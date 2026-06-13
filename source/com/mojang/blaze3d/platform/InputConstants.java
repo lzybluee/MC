@@ -8,10 +8,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -21,18 +17,17 @@ import java.util.function.Supplier;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
-import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWCharModsCallbackI;
+import org.lwjgl.glfw.GLFWCharCallbackI;
 import org.lwjgl.glfw.GLFWCursorPosCallbackI;
 import org.lwjgl.glfw.GLFWDropCallbackI;
+import org.lwjgl.glfw.GLFWIMEStatusCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
 import org.lwjgl.glfw.GLFWMouseButtonCallbackI;
+import org.lwjgl.glfw.GLFWPreeditCallbackI;
 import org.lwjgl.glfw.GLFWScrollCallbackI;
 
 public class InputConstants {
-   private static final @Nullable MethodHandle GLFW_RAW_MOUSE_MOTION_SUPPORTED;
-   private static final int GLFW_RAW_MOUSE_MOTION;
    public static final int KEY_0 = 48;
    public static final int KEY_1 = 49;
    public static final int KEY_2 = 50;
@@ -168,7 +163,7 @@ public class InputConstants {
    public static final int CURSOR = 208897;
    public static final int CURSOR_DISABLED = 212995;
    public static final int CURSOR_NORMAL = 212993;
-   public static final InputConstants.Key UNKNOWN;
+   public static final InputConstants.Key UNKNOWN = InputConstants.Type.KEYSYM.getOrCreate(-1);
 
    public static InputConstants.Key getKey(final KeyEvent event) {
       return event.key() == -1 ? InputConstants.Type.SCANCODE.getOrCreate(event.scancode()) : InputConstants.Type.KEYSYM.getOrCreate(event.key());
@@ -198,9 +193,17 @@ public class InputConstants {
       return GLFW.glfwGetKey(window.handle(), key) == 1;
    }
 
-   public static void setupKeyboardCallbacks(final Window window, final GLFWKeyCallbackI keyPressCallback, final GLFWCharModsCallbackI charTypedCallback) {
+   public static void setupKeyboardCallbacks(
+      final Window window,
+      final GLFWKeyCallbackI keyPressCallback,
+      final GLFWCharCallbackI charTypedCallback,
+      final GLFWPreeditCallbackI preeditCallback,
+      final GLFWIMEStatusCallbackI imeStatusCallback
+   ) {
       GLFW.glfwSetKeyCallback(window.handle(), keyPressCallback);
-      GLFW.glfwSetCharModsCallback(window.handle(), charTypedCallback);
+      GLFW.glfwSetCharCallback(window.handle(), charTypedCallback);
+      GLFW.glfwSetPreeditCallback(window.handle(), preeditCallback);
+      GLFW.glfwSetIMEStatusCallback(window.handle(), imeStatusCallback);
    }
 
    public static void setupMouseCallbacks(
@@ -222,37 +225,13 @@ public class InputConstants {
    }
 
    public static boolean isRawMouseInputSupported() {
-      try {
-         return GLFW_RAW_MOUSE_MOTION_SUPPORTED != null && (boolean)GLFW_RAW_MOUSE_MOTION_SUPPORTED.invokeExact();
-      } catch (Throwable throwable) {
-         throw new RuntimeException(throwable);
-      }
+      return GLFW.glfwRawMouseMotionSupported();
    }
 
    public static void updateRawMouseInput(final Window window, final boolean value) {
       if (isRawMouseInputSupported()) {
-         GLFW.glfwSetInputMode(window.handle(), GLFW_RAW_MOUSE_MOTION, value ? 1 : 0);
+         GLFW.glfwSetInputMode(window.handle(), 208901, GLX.glfwBool(value));
       }
-   }
-
-   static {
-      Lookup lookup = MethodHandles.lookup();
-      MethodType type = MethodType.methodType(boolean.class);
-      MethodHandle handle = null;
-      int rawInput = 0;
-
-      try {
-         handle = lookup.findStatic(GLFW.class, "glfwRawMouseMotionSupported", type);
-         MethodHandle field = lookup.findStaticGetter(GLFW.class, "GLFW_RAW_MOUSE_MOTION", int.class);
-         rawInput = (int)field.invokeExact();
-      } catch (NoSuchMethodException | NoSuchFieldException var5) {
-      } catch (Throwable e) {
-         throw new RuntimeException(e);
-      }
-
-      GLFW_RAW_MOUSE_MOTION_SUPPORTED = handle;
-      GLFW_RAW_MOUSE_MOTION = rawInput;
-      UNKNOWN = InputConstants.Type.KEYSYM.getOrCreate(-1);
    }
 
    public static final class Key {

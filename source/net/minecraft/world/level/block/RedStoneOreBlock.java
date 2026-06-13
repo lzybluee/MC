@@ -107,7 +107,7 @@ public class RedStoneOreBlock extends Block {
 
    private static void spawnParticles(final Level level, final BlockPos pos) {
       double offset = 0.5625;
-      RandomSource random = level.random;
+      RandomSource random = level.getRandom();
 
       for (Direction direction : Direction.values()) {
          BlockPos relative = pos.relative(direction);

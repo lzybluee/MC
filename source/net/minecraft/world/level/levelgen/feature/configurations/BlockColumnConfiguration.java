@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.level.levelgen.blockpredicates.BlockPredicate;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 
@@ -31,7 +32,7 @@ public record BlockColumnConfiguration(List<BlockColumnConfiguration.Layer> laye
    public record Layer(IntProvider height, BlockStateProvider state) {
       public static final Codec<BlockColumnConfiguration.Layer> CODEC = RecordCodecBuilder.create(
          i -> i.group(
-               IntProvider.NON_NEGATIVE_CODEC.fieldOf("height").forGetter(BlockColumnConfiguration.Layer::height),
+               IntProviders.NON_NEGATIVE_CODEC.fieldOf("height").forGetter(BlockColumnConfiguration.Layer::height),
                BlockStateProvider.CODEC.fieldOf("provider").forGetter(BlockColumnConfiguration.Layer::state)
             )
             .apply(i, BlockColumnConfiguration.Layer::new)

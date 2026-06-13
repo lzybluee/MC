@@ -13,22 +13,22 @@ public class SharedConstants {
    @Deprecated
    public static final boolean SNAPSHOT = false;
    @Deprecated
-   public static final int WORLD_VERSION = 4671;
+   public static final int WORLD_VERSION = 4790;
    @Deprecated
    public static final String SERIES = "main";
    @Deprecated
-   public static final int RELEASE_NETWORK_PROTOCOL_VERSION = 774;
+   public static final int RELEASE_NETWORK_PROTOCOL_VERSION = 775;
    @Deprecated
-   public static final int SNAPSHOT_NETWORK_PROTOCOL_VERSION = 286;
-   public static final int SNBT_NAG_VERSION = 4650;
+   public static final int SNAPSHOT_NETWORK_PROTOCOL_VERSION = 307;
+   public static final int SNBT_NAG_VERSION = 4763;
    private static final int SNAPSHOT_PROTOCOL_BIT = 30;
    public static final boolean CRASH_EAGERLY = false;
    @Deprecated
-   public static final int RESOURCE_PACK_FORMAT_MAJOR = 75;
+   public static final int RESOURCE_PACK_FORMAT_MAJOR = 84;
    @Deprecated
    public static final int RESOURCE_PACK_FORMAT_MINOR = 0;
    @Deprecated
-   public static final int DATA_PACK_FORMAT_MAJOR = 94;
+   public static final int DATA_PACK_FORMAT_MAJOR = 101;
    @Deprecated
    public static final int DATA_PACK_FORMAT_MINOR = 1;
    public static final String RPC_MANAGEMENT_SERVER_API_VERSION = "2.0.0";
@@ -56,7 +56,6 @@ public class SharedConstants {
    public static final boolean DEBUG_STRUCTURES = debugFlag("STRUCTURES");
    public static final boolean DEBUG_GAME_EVENT_LISTENERS = debugFlag("GAME_EVENT_LISTENERS");
    public static final boolean DEBUG_DUMP_TEXTURE_ATLAS = debugFlag("DUMP_TEXTURE_ATLAS");
-   public static final boolean DEBUG_DUMP_INTERPOLATED_TEXTURE_FRAMES = debugFlag("DUMP_INTERPOLATED_TEXTURE_FRAMES");
    public static final boolean DEBUG_STRUCTURE_EDIT_MODE = debugFlag("STRUCTURE_EDIT_MODE");
    public static final boolean DEBUG_SAVE_STRUCTURES_AS_SNBT = debugFlag("SAVE_STRUCTURES_AS_SNBT");
    public static final boolean DEBUG_SYNCHRONOUS_GL_LOGS = debugFlag("SYNCHRONOUS_GL_LOGS");
@@ -78,6 +77,7 @@ public class SharedConstants {
    public static final boolean DEBUG_SCULK_CATALYST = debugFlag("SCULK_CATALYST");
    public static final boolean DEBUG_BYPASS_REALMS_VERSION_CHECK = debugFlag("BYPASS_REALMS_VERSION_CHECK");
    public static final boolean DEBUG_SOCIAL_INTERACTIONS = debugFlag("SOCIAL_INTERACTIONS");
+   public static final boolean DEBUG_CHAT_DISABLED = debugFlag("CHAT_DISABLED");
    public static final boolean DEBUG_VALIDATE_RESOURCE_PATH_CASE = debugFlag("VALIDATE_RESOURCE_PATH_CASE");
    public static final boolean DEBUG_UNLOCK_ALL_TRADES = debugFlag("UNLOCK_ALL_TRADES");
    public static final boolean DEBUG_BREEZE_MOB = debugFlag("BREEZE_MOB");
@@ -91,6 +91,7 @@ public class SharedConstants {
    public static final boolean DEBUG_VERBOSE_COMMAND_ERRORS = debugFlag("VERBOSE_COMMAND_ERRORS");
    public static final boolean DEBUG_DEV_COMMANDS = debugFlag("DEV_COMMANDS");
    public static final boolean DEBUG_ACTIVE_TEXT_AREAS = debugFlag("ACTIVE_TEXT_AREAS");
+   public static final boolean DEBUG_PREFER_WAYLAND = debugFlag("PREFER_WAYLAND");
    public static final boolean DEBUG_IGNORE_LOCAL_MOB_CAP = debugFlag("IGNORE_LOCAL_MOB_CAP");
    public static final boolean DEBUG_DISABLE_LIQUID_SPREADING = debugFlag("DISABLE_LIQUID_SPREADING");
    public static final boolean DEBUG_AQUIFERS = debugFlag("AQUIFERS");
@@ -120,7 +121,6 @@ public class SharedConstants {
    public static final boolean DEBUG_DONT_SEND_TELEMETRY_TO_BACKEND = debugFlag("DONT_SEND_TELEMETRY_TO_BACKEND");
    public static final long MAXIMUM_TICK_TIME_NANOS = Duration.ofMillis(300L).toNanos();
    public static final float MAXIMUM_BLOCK_EXPLOSION_RESISTANCE = 3600000.0F;
-   public static final boolean USE_WORKFLOWS_HOOKS = false;
    public static final boolean USE_DEVONLY = false;
    public static boolean CHECK_DATA_FIXER_SCHEMA = true;
    public static boolean IS_RUNNING_IN_IDE;
@@ -202,7 +202,7 @@ public class SharedConstants {
    }
 
    public static int getProtocolVersion() {
-      return 774;
+      return 775;
    }
 
    public static boolean debugVoidTerrain(final ChunkPos pos) {

@@ -139,7 +139,7 @@ public class FireBlock extends BaseFireBlock {
 
    @Override
    protected void tick(BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
-      level.scheduleTick(pos, this, getFireTickDelay(level.random));
+      level.scheduleTick(pos, this, getFireTickDelay(level.getRandom()));
       if (level.canSpreadFireAround(pos)) {
          if (!state.canSurvive(level, pos)) {
             level.removeBlock(pos, false);
@@ -289,7 +289,7 @@ public class FireBlock extends BaseFireBlock {
    @Override
    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
       super.onPlace(state, level, pos, oldState, movedByPiston);
-      level.scheduleTick(pos, this, getFireTickDelay(level.random));
+      level.scheduleTick(pos, this, getFireTickDelay(level.getRandom()));
    }
 
    private static int getFireTickDelay(final RandomSource random) {
@@ -301,7 +301,7 @@ public class FireBlock extends BaseFireBlock {
       builder.add(AGE, NORTH, EAST, SOUTH, WEST, UP);
    }
 
-   public void setFlammable(final Block block, final int igniteOdds, final int burnOdds) {
+   private void setFlammable(final Block block, final int igniteOdds, final int burnOdds) {
       this.igniteOdds.put(block, igniteOdds);
       this.burnOdds.put(block, burnOdds);
    }
@@ -423,6 +423,7 @@ public class FireBlock extends BaseFireBlock {
       fire.setFlammable(Blocks.TALL_GRASS, 60, 100);
       fire.setFlammable(Blocks.LARGE_FERN, 60, 100);
       fire.setFlammable(Blocks.DANDELION, 60, 100);
+      fire.setFlammable(Blocks.GOLDEN_DANDELION, 60, 100);
       fire.setFlammable(Blocks.POPPY, 60, 100);
       fire.setFlammable(Blocks.OPEN_EYEBLOSSOM, 60, 100);
       fire.setFlammable(Blocks.CLOSED_EYEBLOSSOM, 60, 100);

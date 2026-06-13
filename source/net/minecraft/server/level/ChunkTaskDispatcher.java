@@ -63,7 +63,7 @@ public class ChunkTaskDispatcher implements ChunkHolder.LevelChangeListener, Aut
       this.dispatcher.schedule(new StrictQueue.RunnableWithPriority(2, () -> {
          int ticketLevel = level.getAsInt();
          if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-            LOGGER.debug("SUB {} {} {} {}", new Object[]{new ChunkPos(pos), ticketLevel, this.executor, this.queue});
+            LOGGER.debug("SUB {} {} {} {}", new Object[]{ChunkPos.unpack(pos), ticketLevel, this.executor, this.queue});
          }
 
          this.queue.submit(task, pos, ticketLevel);

@@ -78,7 +78,7 @@ public final class NaturalSpawner {
             MobCategory category = entity.getType().getCategory();
             if (category != MobCategory.MISC) {
                BlockPos pos = entity.blockPosition();
-               chunkGetter.query(ChunkPos.asLong(pos), chunk -> {
+               chunkGetter.query(ChunkPos.pack(pos), chunk -> {
                   MobSpawnSettings.MobSpawnCost mobSpawnCost = getRoughBiome(pos, chunk).getMobSettings().getMobSpawnCost(entity.getType());
                   if (mobSpawnCost != null) {
                      spawnPotential.addCharge(entity.blockPosition(), mobSpawnCost.charge());
@@ -240,7 +240,7 @@ public final class NaturalSpawner {
          return false;
       }
 
-      ChunkPos chunkPos = new ChunkPos(pos);
+      ChunkPos chunkPos = ChunkPos.containing(pos);
       return Objects.equals(chunkPos, chunk.getPos()) || level.canSpawnEntitiesInChunk(chunkPos);
    }
 
@@ -522,7 +522,7 @@ public final class NaturalSpawner {
          this.spawnPotential.addCharge(pos, charge);
          MobCategory category = type.getCategory();
          this.mobCategoryCounts.addTo(category, 1);
-         this.localMobCapCalculator.addMob(new ChunkPos(pos), category);
+         this.localMobCapCalculator.addMob(ChunkPos.containing(pos), category);
       }
 
       public int getSpawnableChunkCount() {

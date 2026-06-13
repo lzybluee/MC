@@ -154,7 +154,7 @@ public class SpawnArmorTrimsCommand {
    private static List<Holder.Reference<Item>> findEquippableItemsWithAssets(final HolderLookup<Item> items) {
       List<Holder.Reference<Item>> result = new ArrayList<>();
       items.listElements().forEach(item -> {
-         Equippable equippable = item.value().components().get(DataComponents.EQUIPPABLE);
+         Equippable equippable = item.components().get(DataComponents.EQUIPPABLE);
          if (equippable != null && equippable.slot().getType() == EquipmentSlot.Type.HUMANOID_ARMOR && equippable.assetId().isPresent()) {
             result.add((Holder.Reference<Item>)item);
          }

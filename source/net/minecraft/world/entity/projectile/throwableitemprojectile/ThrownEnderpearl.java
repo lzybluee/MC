@@ -135,6 +135,10 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
                   newOwner.resetFallDistance();
                }
 
+               if (newOwner instanceof LivingEntity livingEntity) {
+                  livingEntity.resetCurrentImpulseContext();
+               }
+
                this.playSound(level, teleportPos);
             }
 

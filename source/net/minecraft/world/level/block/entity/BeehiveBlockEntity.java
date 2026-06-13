@@ -22,6 +22,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.VisibleForDebug;
 import net.minecraft.util.debug.DebugHiveInfo;
 import net.minecraft.util.debug.DebugSubscriptions;
@@ -170,7 +171,7 @@ public class BeehiveBlockEntity extends BlockEntity {
          bee.dropLeash();
          this.storeBee(BeehiveBlockEntity.Occupant.of(bee));
          if (this.level != null) {
-            if (bee.hasSavedFlowerPos() && (!this.hasSavedFlowerPos() || this.level.random.nextBoolean())) {
+            if (bee.hasSavedFlowerPos() && (!this.hasSavedFlowerPos() || this.level.getRandom().nextBoolean())) {
                this.savedFlowerPos = bee.getSavedFlowerPos();
             }
 
@@ -212,7 +213,8 @@ public class BeehiveBlockEntity extends BlockEntity {
       Entity entity = beeData.createEntity(level, blockPos);
       if (entity != null) {
          if (entity instanceof Bee bee) {
-            if (savedFlowerPos != null && !bee.hasSavedFlowerPos() && level.random.nextFloat() < 0.9F) {
+            RandomSource random = level.getRandom();
+            if (savedFlowerPos != null && !bee.hasSavedFlowerPos() && random.nextFloat() < 0.9F) {
                bee.setSavedFlowerPos(savedFlowerPos);
             }
 
@@ -221,7 +223,7 @@ public class BeehiveBlockEntity extends BlockEntity {
                if (state.is(BlockTags.BEEHIVES, s -> s.hasProperty(BeehiveBlock.HONEY_LEVEL))) {
                   int honeyLevel = getHoneyLevel(state);
                   if (honeyLevel < 5) {
-                     int levelIncrease = level.random.nextInt(100) == 0 ? 2 : 1;
+                     int levelIncrease = random.nextInt(100) == 0 ? 2 : 1;
                      if (honeyLevel + levelIncrease > 5) {
                         levelIncrease--;
                      }
@@ -400,7 +402,7 @@ public class BeehiveBlockEntity extends BlockEntity {
          CompoundTag entityTag = this.entityData.copyTagWithoutId();
          BeehiveBlockEntity.IGNORED_BEE_TAGS.forEach(entityTag::remove);
          Entity entity = EntityType.loadEntityRecursive(this.entityData.type(), entityTag, level, EntitySpawnReason.LOAD, EntityProcessor.NOP);
-         if (entity != null && entity.getType().is(EntityTypeTags.BEEHIVE_INHABITORS)) {
+         if (entity != null && entity.is(EntityTypeTags.BEEHIVE_INHABITORS)) {
             entity.setNoGravity(true);
             if (entity instanceof Bee bee) {
                bee.setHivePos(hivePos);
@@ -414,14 +416,19 @@ public class BeehiveBlockEntity extends BlockEntity {
       }
 
       private static void setBeeReleaseData(final int ticksInHive, final Bee bee) {
-         int age = bee.getAge();
-         if (age < 0) {
-            bee.setAge(Math.min(0, age + ticksInHive));
-         } else if (age > 0) {
-            bee.setAge(Math.max(0, age - ticksInHive));
-         }
-
+         updateBeeAge(ticksInHive, bee);
          bee.setInLoveTime(Math.max(0, bee.getInLoveTime() - ticksInHive));
+      }
+
+      private static void updateBeeAge(int ticksInHive, final Bee bee) {
+         if (!bee.isAgeLocked()) {
+            int age = bee.getAge();
+            if (age < 0) {
+               bee.setAge(Math.min(0, age + ticksInHive));
+            } else if (age > 0) {
+               bee.setAge(Math.max(0, age - ticksInHive));
+            }
+         }
       }
    }
 }

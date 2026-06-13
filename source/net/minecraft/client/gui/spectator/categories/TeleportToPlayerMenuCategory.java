@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.spectator.PlayerMenuItem;
 import net.minecraft.client.gui.spectator.SpectatorMenu;
 import net.minecraft.client.gui.spectator.SpectatorMenuCategory;
@@ -57,7 +57,7 @@ public class TeleportToPlayerMenuCategory implements SpectatorMenuCategory, Spec
    }
 
    @Override
-   public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+   public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TELEPORT_TO_PLAYER_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
    }
 

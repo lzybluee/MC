@@ -1,5 +1,6 @@
 package net.minecraft.client.multiplayer;
 
+import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -16,14 +17,18 @@ import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.RegistrySynchronization;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.tags.TagLoader;
 import net.minecraft.tags.TagNetworkSerialization;
+import net.minecraft.util.Util;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class RegistryDataCollector {
+   private static final Logger LOGGER = LogUtils.getLogger();
    private RegistryDataCollector.@Nullable ContentsCollector contentsCollector;
    private RegistryDataCollector.@Nullable TagCollector tagCollector;
 
@@ -85,8 +90,13 @@ public class RegistryDataCollector {
 
       RegistryAccess.Frozen receivedRegistries;
       try {
-         receivedRegistries = RegistryDataLoader.load(entriesToLoad, knownDataSource, contextRegistriesWithTags, RegistryDataLoader.SYNCHRONIZED_REGISTRIES)
-            .freeze();
+         long start = Util.getMillis();
+         receivedRegistries = RegistryDataLoader.load(
+               entriesToLoad, knownDataSource, contextRegistriesWithTags, RegistryDataLoader.SYNCHRONIZED_REGISTRIES, Util.backgroundExecutor()
+            )
+            .join();
+         long end = Util.getMillis();
+         LOGGER.debug("Loading network data took {} ms", end - start);
       } catch (Exception e) {
          CrashReport report = CrashReport.forThrowable(e, "Network Registry Load");
          addCrashDetails(report, entriesToLoad, pendingStaticTags);
@@ -125,31 +135,41 @@ public class RegistryDataCollector {
       );
    }
 
-   private void loadOnlyTags(
-      final RegistryDataCollector.TagCollector tagCollector, final RegistryAccess.Frozen originalRegistries, final boolean includeSharedTags
+   private static void loadOnlyTags(
+      final RegistryDataCollector.TagCollector tagCollector, final RegistryAccess.Frozen originalRegistries, final boolean includeSharedRegistries
    ) {
       tagCollector.forEach((registryKey, tags) -> {
-         if (includeSharedTags || RegistrySynchronization.isNetworkable((ResourceKey<? extends Registry<?>>)registryKey)) {
+         if (includeSharedRegistries || RegistrySynchronization.isNetworkable((ResourceKey<? extends Registry<?>>)registryKey)) {
             resolveRegistryTags(originalRegistries, (ResourceKey<? extends Registry<?>>)registryKey, tags).apply();
          }
       });
    }
 
+   private static void updateComponents(final RegistryAccess.Frozen frozenRegistries, final boolean includeSharedRegistries) {
+      BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.build(frozenRegistries).forEach(pendingComponents -> {
+         if (includeSharedRegistries || RegistrySynchronization.isNetworkable(pendingComponents.key())) {
+            pendingComponents.apply();
+         }
+      });
+   }
+
    public RegistryAccess.Frozen collectGameRegistries(
-      final ResourceProvider knownDataSource, final RegistryAccess.Frozen originalRegistries, final boolean tagsForSynchronizedRegistriesOnly
+      final ResourceProvider knownDataSource, final RegistryAccess.Frozen originalRegistries, final boolean tagsAndComponentsForSynchronizedRegistriesOnly
    ) {
       RegistryAccess registries;
       if (this.contentsCollector != null) {
-         registries = this.loadNewElementsAndTags(knownDataSource, this.contentsCollector, tagsForSynchronizedRegistriesOnly);
+         registries = this.loadNewElementsAndTags(knownDataSource, this.contentsCollector, tagsAndComponentsForSynchronizedRegistriesOnly);
       } else {
          if (this.tagCollector != null) {
-            this.loadOnlyTags(this.tagCollector, originalRegistries, !tagsForSynchronizedRegistriesOnly);
+            loadOnlyTags(this.tagCollector, originalRegistries, !tagsAndComponentsForSynchronizedRegistriesOnly);
          }
 
          registries = originalRegistries;
       }
 
-      return registries.freeze();
+      RegistryAccess.Frozen frozenRegistries = registries.freeze();
+      updateComponents(frozenRegistries, !tagsAndComponentsForSynchronizedRegistriesOnly);
+      return frozenRegistries;
    }
 
    private static class ContentsCollector {

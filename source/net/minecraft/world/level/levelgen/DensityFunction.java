@@ -13,7 +13,7 @@ public interface DensityFunction {
    Codec<DensityFunction> DIRECT_CODEC = DensityFunctions.DIRECT_CODEC;
    Codec<Holder<DensityFunction>> CODEC = RegistryFileCodec.create(Registries.DENSITY_FUNCTION, DIRECT_CODEC);
    Codec<DensityFunction> HOLDER_HELPER_CODEC = CODEC.xmap(
-      DensityFunctions.HolderHolder::new, value -> value instanceof DensityFunctions.HolderHolder holder ? holder.function() : new Holder.Direct<>(value)
+      DensityFunctions.HolderHolder::new, value -> value instanceof DensityFunctions.HolderHolder holder ? holder.function() : Holder.direct(value)
    );
 
    double compute(final DensityFunction.FunctionContext context);

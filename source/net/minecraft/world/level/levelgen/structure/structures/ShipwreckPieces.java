@@ -86,6 +86,7 @@ public class ShipwreckPieces {
 
    public static class ShipwreckPiece extends TemplateStructurePiece {
       private final boolean isBeached;
+      private boolean heightAdjusted;
 
       public ShipwreckPiece(
          final StructureTemplateManager structureTemplateManager,
@@ -106,6 +107,7 @@ public class ShipwreckPieces {
             location -> makeSettings(tag.<Rotation>read("Rot", Rotation.LEGACY_CODEC).orElseThrow())
          );
          this.isBeached = tag.getBooleanOr("isBeached", false);
+         this.heightAdjusted = tag.getBooleanOr("height_adjusted", false);
       }
 
       @Override
@@ -113,6 +115,7 @@ public class ShipwreckPieces {
          super.addAdditionalSaveData(context, tag);
          tag.putBoolean("isBeached", this.isBeached);
          tag.store("Rot", Rotation.LEGACY_CODEC, this.placeSettings.getRotation());
+         tag.putBoolean("height_adjusted", this.heightAdjusted);
       }
 
       private static StructurePlaceSettings makeSettings(final Rotation rotation) {
@@ -143,9 +146,7 @@ public class ShipwreckPieces {
          final ChunkPos chunkPos,
          final BlockPos referencePos
       ) {
-         if (this.isTooBigToFitInWorldGenRegion()) {
-            super.postProcess(level, structureManager, generator, random, chunkBB, chunkPos, referencePos);
-         } else {
+         if (!this.heightAdjusted && !this.isTooBigToFitInWorldGenRegion()) {
             int minY = level.getMaxY() + 1;
             int mean = 0;
             Vec3i templateSize = this.template.getSize();
@@ -167,6 +168,8 @@ public class ShipwreckPieces {
 
             this.adjustPositionHeight(this.isBeached ? this.calculateBeachedPosition(minY, random) : mean);
             super.postProcess(level, structureManager, generator, random, chunkBB, chunkPos, referencePos);
+         } else {
+            super.postProcess(level, structureManager, generator, random, chunkBB, chunkPos, referencePos);
          }
       }
 
@@ -180,6 +183,7 @@ public class ShipwreckPieces {
       }
 
       public void adjustPositionHeight(final int newHeight) {
+         this.heightAdjusted = true;
          this.templatePosition = new BlockPos(this.templatePosition.getX(), newHeight, this.templatePosition.getZ());
       }
    }

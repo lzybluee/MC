@@ -11,15 +11,13 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.item.ItemModel;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -73,17 +71,20 @@ public class ModelProvider implements DataProvider {
       }
 
       public void validate() {
-         Stream<Holder.Reference<Block>> holders = BuiltInRegistries.BLOCK.listElements().filter(entry -> true);
-         List<Identifier> missingDefinitions = holders.filter(e -> !this.generators.containsKey(e.value())).map(e -> e.key().identifier()).toList();
+         List<Identifier> missingDefinitions = BuiltInRegistries.BLOCK
+            .listElements()
+            .filter(e -> !this.generators.containsKey(e.value()))
+            .map(e -> e.key().identifier())
+            .toList();
          if (!missingDefinitions.isEmpty()) {
             throw new IllegalStateException("Missing blockstate definitions for: " + missingDefinitions);
          }
       }
 
       public CompletableFuture<?> save(final CachedOutput cache, final PackOutput.PathProvider pathProvider) {
-         Map<Block, BlockModelDefinition> definitions = Maps.transformValues(this.generators, BlockModelDefinitionGenerator::create);
+         Map<Block, BlockStateModelDispatcher> definitions = Maps.transformValues(this.generators, BlockModelDefinitionGenerator::create);
          Function<Block, Path> pathGetter = block -> pathProvider.json(block.builtInRegistryHolder().key().identifier());
-         return DataProvider.saveAll(cache, BlockModelDefinition.CODEC, pathGetter, definitions);
+         return DataProvider.saveAll(cache, BlockStateModelDispatcher.CODEC, pathGetter, definitions);
       }
    }
 

@@ -36,7 +36,6 @@ public class Mth {
          sin[i] = (float)Math.sin(i / 10430.378350470453);
       }
    });
-   private static final RandomSource RANDOM = RandomSource.createThreadSafe();
    private static final int[] MULTIPLY_DE_BRUIJN_BIT_POSITION = new int[]{
       0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
    };
@@ -60,18 +59,15 @@ public class Mth {
    }
 
    public static int floor(final float v) {
-      int i = (int)v;
-      return v < i ? i - 1 : i;
+      return (int)Math.floor(v);
    }
 
    public static int floor(final double v) {
-      int i = (int)v;
-      return v < i ? i - 1 : i;
+      return (int)Math.floor(v);
    }
 
    public static long lfloor(final double v) {
-      long i = (long)v;
-      return v < i ? i - 1L : i;
+      return (long)Math.floor(v);
    }
 
    public static float abs(final float v) {
@@ -83,18 +79,15 @@ public class Mth {
    }
 
    public static int ceil(final float v) {
-      int i = (int)v;
-      return v > i ? i + 1 : i;
+      return (int)Math.ceil(v);
    }
 
    public static int ceil(final double v) {
-      int i = (int)v;
-      return v > i ? i + 1 : i;
+      return (int)Math.ceil(v);
    }
 
    public static long ceilLong(final double v) {
-      long l = (long)v;
-      return v > l ? l + 1L : l;
+      return (long)Math.ceil(v);
    }
 
    public static int clamp(final int value, final int min, final int max) {
@@ -328,10 +321,6 @@ public class Mth {
       long most = random.nextLong() & -61441L | 16384L;
       long least = random.nextLong() & 4611686018427387903L | Long.MIN_VALUE;
       return new UUID(most, least);
-   }
-
-   public static UUID createInsecureUUID() {
-      return createInsecureUUID(RANDOM);
    }
 
    public static double inverseLerp(final double value, final double min, final double max) {
@@ -661,7 +650,7 @@ public class Mth {
    }
 
    public static double wobble(final double coord) {
-      return coord + (2.0 * RandomSource.create(floor(coord * 3000.0)).nextDouble() - 1.0) * 1.0E-7 / 2.0;
+      return coord + (2.0 * RandomSource.createThreadLocalInstance(floor(coord * 3000.0)).nextDouble() - 1.0) * 1.0E-7 / 2.0;
    }
 
    public static int roundToward(final int input, final int multiple) {

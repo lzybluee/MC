@@ -1,17 +1,13 @@
 package net.minecraft.world.level.material;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
-import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
+import net.minecraft.core.TypedInstance;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
@@ -25,13 +21,13 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public final class FluidState extends StateHolder<Fluid, FluidState> {
-   public static final Codec<FluidState> CODEC = codec(BuiltInRegistries.FLUID.byNameCodec(), Fluid::defaultFluidState).stable();
+public final class FluidState extends StateHolder<Fluid, FluidState> implements TypedInstance<Fluid> {
+   public static final Codec<FluidState> CODEC = codec(BuiltInRegistries.FLUID.byNameCodec(), Fluid::defaultFluidState, Fluid::getStateDefinition).stable();
    public static final int AMOUNT_MAX = 9;
    public static final int AMOUNT_FULL = 8;
 
-   public FluidState(final Fluid owner, final Reference2ObjectArrayMap<Property<?>, Comparable<?>> values, final MapCodec<FluidState> propertiesCodec) {
-      super(owner, values, propertiesCodec);
+   public FluidState(final Fluid owner, final Property<?>[] propertyKeys, final Comparable<?>[] propertyValues) {
+      super(owner, propertyKeys, propertyValues);
    }
 
    public Fluid getType() {
@@ -56,6 +52,10 @@ public final class FluidState extends StateHolder<Fluid, FluidState> {
 
    public float getOwnHeight() {
       return this.getType().getOwnHeight(this);
+   }
+
+   public boolean isFull() {
+      return this.getAmount() == 8;
    }
 
    public int getAmount() {
@@ -104,16 +104,9 @@ public final class FluidState extends StateHolder<Fluid, FluidState> {
       return this.getType().getDripParticle();
    }
 
-   public boolean is(final TagKey<Fluid> tag) {
-      return this.getType().builtInRegistryHolder().is(tag);
-   }
-
-   public boolean is(final HolderSet<Fluid> set) {
-      return set.contains(this.getType().builtInRegistryHolder());
-   }
-
-   public boolean is(final Fluid fluid) {
-      return this.getType() == fluid;
+   @Override
+   public Holder<Fluid> typeHolder() {
+      return this.getType().builtInRegistryHolder();
    }
 
    public float getExplosionResistance() {
@@ -130,14 +123,6 @@ public final class FluidState extends StateHolder<Fluid, FluidState> {
 
    public @Nullable AABB getAABB(final BlockGetter level, final BlockPos pos) {
       return this.getType().getAABB(this, level, pos);
-   }
-
-   public Holder<Fluid> holder() {
-      return this.owner.builtInRegistryHolder();
-   }
-
-   public Stream<TagKey<Fluid>> getTags() {
-      return this.owner.builtInRegistryHolder().tags();
    }
 
    public void entityInside(final Level level, final BlockPos pos, final Entity entity, final InsideBlockEffectApplier effectApplier) {

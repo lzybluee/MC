@@ -4,13 +4,14 @@ import com.google.common.collect.Maps;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.Map;
 import net.minecraft.client.model.AdultAndBabyModelPair;
+import net.minecraft.client.model.animal.pig.BabyPigModel;
 import net.minecraft.client.model.animal.pig.ColdPigModel;
 import net.minecraft.client.model.animal.pig.PigModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.layers.SimpleEquipmentLayer;
 import net.minecraft.client.renderer.entity.state.PigRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
@@ -31,7 +32,7 @@ public class PigRenderer extends MobRenderer<Pig, PigRenderState, PigModel> {
             EquipmentClientInfo.LayerType.PIG_SADDLE,
             state -> state.saddle,
             new PigModel(context.bakeLayer(ModelLayers.PIG_SADDLE)),
-            new PigModel(context.bakeLayer(ModelLayers.PIG_BABY_SADDLE))
+            null
          )
       );
    }
@@ -40,11 +41,9 @@ public class PigRenderer extends MobRenderer<Pig, PigRenderState, PigModel> {
       return Maps.newEnumMap(
          Map.of(
             PigVariant.ModelType.NORMAL,
-            new AdultAndBabyModelPair<>(new PigModel(context.bakeLayer(ModelLayers.PIG)), new PigModel(context.bakeLayer(ModelLayers.PIG_BABY))),
+            new AdultAndBabyModelPair<>(new PigModel(context.bakeLayer(ModelLayers.PIG)), new BabyPigModel(context.bakeLayer(ModelLayers.PIG_BABY))),
             PigVariant.ModelType.COLD,
-            new AdultAndBabyModelPair<>(
-               new ColdPigModel(context.bakeLayer(ModelLayers.COLD_PIG)), new ColdPigModel(context.bakeLayer(ModelLayers.COLD_PIG_BABY))
-            )
+            new AdultAndBabyModelPair<>(new ColdPigModel(context.bakeLayer(ModelLayers.COLD_PIG)), new BabyPigModel(context.bakeLayer(ModelLayers.PIG_BABY)))
          )
       );
    }
@@ -57,7 +56,9 @@ public class PigRenderer extends MobRenderer<Pig, PigRenderState, PigModel> {
    }
 
    public Identifier getTextureLocation(final PigRenderState state) {
-      return state.variant == null ? MissingTextureAtlasSprite.getLocation() : state.variant.modelAndTexture().asset().texturePath();
+      return state.variant == null
+         ? MissingTextureAtlasSprite.getLocation()
+         : (state.isBaby ? state.variant.babyTexture().texturePath() : state.variant.modelAndTexture().asset().texturePath());
    }
 
    public PigRenderState createRenderState() {

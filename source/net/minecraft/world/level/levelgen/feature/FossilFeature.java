@@ -33,7 +33,7 @@ public class FossilFeature extends Feature<FossilFeatureConfiguration> {
       StructureTemplateManager structureTemplateManager = level.getLevel().getServer().getStructureManager();
       StructureTemplate fossilBase = structureTemplateManager.getOrCreate(config.fossilStructures.get(fossilIndex));
       StructureTemplate fossilOverlay = structureTemplateManager.getOrCreate(config.overlayStructures.get(fossilIndex));
-      ChunkPos chunkPos = new ChunkPos(origin);
+      ChunkPos chunkPos = ChunkPos.containing(origin);
       BoundingBox boundingBox = new BoundingBox(
          chunkPos.getMinBlockX() - 16,
          level.getMinY(),

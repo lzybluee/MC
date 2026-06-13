@@ -10,7 +10,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
@@ -22,7 +23,7 @@ public class BendingTrunkPlacer extends TrunkPlacer {
          .and(
             i.group(
                ExtraCodecs.POSITIVE_INT.optionalFieldOf("min_height_for_leaves", 1).forGetter(c -> c.minHeightForLeaves),
-               IntProvider.codec(1, 64).fieldOf("bend_length").forGetter(c -> c.bendLength)
+               IntProviders.codec(1, 64).fieldOf("bend_length").forGetter(c -> c.bendLength)
             )
          )
          .apply(i, BendingTrunkPlacer::new)
@@ -43,7 +44,7 @@ public class BendingTrunkPlacer extends TrunkPlacer {
 
    @Override
    public List<FoliagePlacer.FoliageAttachment> placeTrunk(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final BiConsumer<BlockPos, BlockState> trunkSetter,
       final RandomSource random,
       final int treeHeight,
@@ -54,7 +55,7 @@ public class BendingTrunkPlacer extends TrunkPlacer {
       int logHeight = treeHeight - 1;
       BlockPos.MutableBlockPos pos = origin.mutable();
       BlockPos belowPos = pos.below();
-      setDirtAt(level, trunkSetter, random, belowPos, config);
+      placeBelowTrunkBlock(level, trunkSetter, random, belowPos, config);
       List<FoliagePlacer.FoliageAttachment> foliagePoints = Lists.newArrayList();
 
       for (int i = 0; i <= logHeight; i++) {

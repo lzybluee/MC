@@ -52,7 +52,7 @@ public class SeaPickleBlock extends VegetationBlock implements SimpleWaterlogged
       }
 
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
    }
 

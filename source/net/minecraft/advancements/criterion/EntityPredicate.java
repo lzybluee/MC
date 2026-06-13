@@ -94,7 +94,7 @@ public record EntityPredicate(
          return false;
       }
 
-      if (this.entityType.isPresent() && !this.entityType.get().matches(entity.getType())) {
+      if (this.entityType.isPresent() && !this.entityType.get().matches(entity.typeHolder())) {
          return false;
       }
 

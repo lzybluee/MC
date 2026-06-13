@@ -281,15 +281,15 @@ public final class SkyLightEngine extends LightEngine<SkyLightSectionStorage.Sky
    public void setLightEnabled(final ChunkPos pos, final boolean enable) {
       super.setLightEnabled(pos, enable);
       if (enable) {
-         ChunkSkyLightSources sources = Objects.requireNonNullElse(this.getChunkSources(pos.x, pos.z), this.emptyChunkSources);
+         ChunkSkyLightSources sources = Objects.requireNonNullElse(this.getChunkSources(pos.x(), pos.z()), this.emptyChunkSources);
          int highestNonSourceY = sources.getHighestLowestSourceY() - 1;
          int lowestFullySourceSectionY = SectionPos.blockToSectionCoord(highestNonSourceY) + 1;
-         long zeroNode = SectionPos.getZeroNode(pos.x, pos.z);
+         long zeroNode = SectionPos.getZeroNode(pos.x(), pos.z());
          int topSectionY = this.storage.getTopSectionY(zeroNode);
          int bottomSectionY = Math.max(this.storage.getBottomSectionY(), lowestFullySourceSectionY);
 
          for (int sectionY = topSectionY - 1; sectionY >= bottomSectionY; sectionY--) {
-            DataLayer dataLayer = this.storage.getDataLayerToWrite(SectionPos.asLong(pos.x, sectionY, pos.z));
+            DataLayer dataLayer = this.storage.getDataLayerToWrite(SectionPos.asLong(pos.x(), sectionY, pos.z()));
             if (dataLayer != null && dataLayer.isEmpty()) {
                dataLayer.fill(15);
             }
@@ -299,20 +299,20 @@ public final class SkyLightEngine extends LightEngine<SkyLightSectionStorage.Sky
 
    @Override
    public void propagateLightSources(final ChunkPos pos) {
-      long zeroNode = SectionPos.getZeroNode(pos.x, pos.z);
+      long zeroNode = SectionPos.getZeroNode(pos.x(), pos.z());
       this.storage.setLightEnabled(zeroNode, true);
-      ChunkSkyLightSources sources = Objects.requireNonNullElse(this.getChunkSources(pos.x, pos.z), this.emptyChunkSources);
-      ChunkSkyLightSources northSources = Objects.requireNonNullElse(this.getChunkSources(pos.x, pos.z - 1), this.emptyChunkSources);
-      ChunkSkyLightSources southSources = Objects.requireNonNullElse(this.getChunkSources(pos.x, pos.z + 1), this.emptyChunkSources);
-      ChunkSkyLightSources westSources = Objects.requireNonNullElse(this.getChunkSources(pos.x - 1, pos.z), this.emptyChunkSources);
-      ChunkSkyLightSources eastSources = Objects.requireNonNullElse(this.getChunkSources(pos.x + 1, pos.z), this.emptyChunkSources);
+      ChunkSkyLightSources sources = Objects.requireNonNullElse(this.getChunkSources(pos.x(), pos.z()), this.emptyChunkSources);
+      ChunkSkyLightSources northSources = Objects.requireNonNullElse(this.getChunkSources(pos.x(), pos.z() - 1), this.emptyChunkSources);
+      ChunkSkyLightSources southSources = Objects.requireNonNullElse(this.getChunkSources(pos.x(), pos.z() + 1), this.emptyChunkSources);
+      ChunkSkyLightSources westSources = Objects.requireNonNullElse(this.getChunkSources(pos.x() - 1, pos.z()), this.emptyChunkSources);
+      ChunkSkyLightSources eastSources = Objects.requireNonNullElse(this.getChunkSources(pos.x() + 1, pos.z()), this.emptyChunkSources);
       int topSectionY = this.storage.getTopSectionY(zeroNode);
       int bottomSectionY = this.storage.getBottomSectionY();
-      int sectionMinX = SectionPos.sectionToBlockCoord(pos.x);
-      int sectionMinZ = SectionPos.sectionToBlockCoord(pos.z);
+      int sectionMinX = SectionPos.sectionToBlockCoord(pos.x());
+      int sectionMinZ = SectionPos.sectionToBlockCoord(pos.z());
 
       for (int sectionY = topSectionY - 1; sectionY >= bottomSectionY; sectionY--) {
-         long sectionNode = SectionPos.asLong(pos.x, sectionY, pos.z);
+         long sectionNode = SectionPos.asLong(pos.x(), sectionY, pos.z());
          DataLayer dataLayer = this.storage.getDataLayerToWrite(sectionNode);
          if (dataLayer != null) {
             int sectionMinY = SectionPos.sectionToBlockCoord(sectionY);

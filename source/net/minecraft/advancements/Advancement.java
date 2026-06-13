@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
-import net.minecraft.advancements.criterion.CriterionValidator;
 import net.minecraft.core.ClientAsset;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.network.FriendlyByteBuf;
@@ -21,8 +20,9 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.jspecify.annotations.Nullable;
 
 public record Advancement(
@@ -104,7 +104,7 @@ public record Advancement(
 
    public void validate(final ProblemReporter reporter, final HolderGetter.Provider lootData) {
       this.criteria.forEach((name, criterion) -> {
-         CriterionValidator validator = new CriterionValidator(reporter.forChild(new ProblemReporter.RootFieldPathElement(name)), lootData);
+         ValidationContextSource validator = new ValidationContextSource(reporter.forChild(new ProblemReporter.RootFieldPathElement(name)), lootData);
          criterion.triggerInstance().validate(validator);
       });
    }
@@ -138,7 +138,7 @@ public record Advancement(
       }
 
       public Advancement.Builder display(
-         final ItemStack icon,
+         final ItemStackTemplate icon,
          final Component title,
          final Component description,
          final @Nullable Identifier background,
@@ -166,7 +166,7 @@ public record Advancement(
       ) {
          return this.display(
             new DisplayInfo(
-               new ItemStack(icon.asItem()),
+               new ItemStackTemplate(icon.asItem()),
                title,
                description,
                Optional.ofNullable(background).map(ClientAsset.ResourceTexture::new),

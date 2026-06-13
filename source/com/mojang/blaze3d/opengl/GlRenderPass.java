@@ -4,6 +4,7 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderPassBackend;
 import com.mojang.blaze3d.systems.ScissorState;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
@@ -16,10 +17,11 @@ import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
 import org.jspecify.annotations.Nullable;
 
-public class GlRenderPass implements RenderPass {
+class GlRenderPass implements RenderPassBackend {
    protected static final int MAX_VERTEX_BUFFERS = 1;
    public static final boolean VALIDATION = SharedConstants.IS_RUNNING_IN_IDE;
    private final GlCommandEncoder encoder;
+   private final GlDevice device;
    private final boolean hasDepthTexture;
    private boolean closed;
    protected @Nullable GlRenderPipeline pipeline;
@@ -30,10 +32,10 @@ public class GlRenderPass implements RenderPass {
    protected final HashMap<String, GpuBufferSlice> uniforms = new HashMap<>();
    protected final HashMap<String, GlRenderPass.TextureViewAndSampler> samplers = new HashMap<>();
    protected final Set<String> dirtyUniforms = new HashSet<>();
-   protected int pushedDebugGroups;
 
-   public GlRenderPass(final GlCommandEncoder encoder, final boolean hasDepthTexture) {
+   public GlRenderPass(final GlCommandEncoder encoder, final GlDevice device, final boolean hasDepthTexture) {
       this.encoder = encoder;
+      this.device = device;
       this.hasDepthTexture = hasDepthTexture;
    }
 
@@ -43,26 +45,12 @@ public class GlRenderPass implements RenderPass {
 
    @Override
    public void pushDebugGroup(final Supplier<String> label) {
-      if (this.closed) {
-         throw new IllegalStateException("Can't use a closed render pass");
-      }
-
-      this.pushedDebugGroups++;
-      this.encoder.getDevice().debugLabels().pushDebugGroup(label);
+      this.device.debugLabels().pushDebugGroup(label);
    }
 
    @Override
    public void popDebugGroup() {
-      if (this.closed) {
-         throw new IllegalStateException("Can't use a closed render pass");
-      }
-
-      if (this.pushedDebugGroups == 0) {
-         throw new IllegalStateException("Can't pop more debug groups than was pushed!");
-      }
-
-      this.pushedDebugGroups--;
-      this.encoder.getDevice().debugLabels().popDebugGroup();
+      this.device.debugLabels().popDebugGroup();
    }
 
    @Override
@@ -72,7 +60,7 @@ public class GlRenderPass implements RenderPass {
          this.dirtyUniforms.addAll(this.samplers.keySet());
       }
 
-      this.pipeline = this.encoder.getDevice().getOrCompilePipeline(pipeline);
+      this.pipeline = this.device.getOrCompilePipeline(pipeline);
    }
 
    @Override
@@ -94,11 +82,6 @@ public class GlRenderPass implements RenderPass {
 
    @Override
    public void setUniform(final String name, final GpuBufferSlice value) {
-      int alignment = this.encoder.getDevice().getUniformOffsetAlignment();
-      if (value.offset() % alignment > 0L) {
-         throw new IllegalArgumentException("Uniform buffer offset must be aligned to " + alignment);
-      }
-
       this.uniforms.put(name, value);
       this.dirtyUniforms.add(name);
    }
@@ -150,10 +133,6 @@ public class GlRenderPass implements RenderPass {
 
    @Override
    public void drawIndexed(final int baseVertex, final int firstIndex, final int indexCount, final int instanceCount) {
-      if (this.closed) {
-         throw new IllegalStateException("Can't use a closed render pass");
-      }
-
       this.encoder.executeDraw(this, baseVertex, firstIndex, indexCount, this.indexType, instanceCount);
    }
 
@@ -165,32 +144,25 @@ public class GlRenderPass implements RenderPass {
       final Collection<String> dynamicUniforms,
       final T uniformArgument
    ) {
-      if (this.closed) {
-         throw new IllegalStateException("Can't use a closed render pass");
-      }
-
       this.encoder.executeDrawMultiple(this, draws, defaultIndexBuffer, defaultIndexType, dynamicUniforms, uniformArgument);
    }
 
    @Override
    public void draw(final int firstVertex, final int vertexCount) {
-      if (this.closed) {
-         throw new IllegalStateException("Can't use a closed render pass");
-      }
-
       this.encoder.executeDraw(this, firstVertex, 0, vertexCount, null, 1);
    }
 
    @Override
    public void close() {
       if (!this.closed) {
-         if (this.pushedDebugGroups > 0) {
-            throw new IllegalStateException("Render pass had debug groups left open!");
-         }
-
          this.closed = true;
          this.encoder.finishRenderPass();
       }
+   }
+
+   @Override
+   public boolean isClosed() {
+      return this.closed;
    }
 
    protected record TextureViewAndSampler(GlTextureView view, GlSampler sampler) {

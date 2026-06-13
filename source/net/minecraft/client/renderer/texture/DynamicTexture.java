@@ -10,12 +10,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 import net.minecraft.resources.Identifier;
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class DynamicTexture extends AbstractTexture implements Dumpable {
    private static final Logger LOGGER = LogUtils.getLogger();
-   private @Nullable NativeImage pixels;
+   private NativeImage pixels;
 
    public DynamicTexture(final Supplier<String> label, final NativeImage image) {
       this.pixels = image;
@@ -48,38 +47,31 @@ public class DynamicTexture extends AbstractTexture implements Dumpable {
    }
 
    public void upload() {
-      if (this.pixels != null && this.texture != null) {
+      if (this.texture != null) {
          RenderSystem.getDevice().createCommandEncoder().writeToTexture(this.texture, this.pixels);
       } else {
          LOGGER.warn("Trying to upload disposed texture {}", this.getTexture().getLabel());
       }
    }
 
-   public @Nullable NativeImage getPixels() {
+   public NativeImage getPixels() {
       return this.pixels;
    }
 
    public void setPixels(final NativeImage pixels) {
-      if (this.pixels != null) {
-         this.pixels.close();
-      }
-
+      this.pixels.close();
       this.pixels = pixels;
    }
 
    @Override
    public void close() {
-      if (this.pixels != null) {
-         this.pixels.close();
-         this.pixels = null;
-      }
-
+      this.pixels.close();
       super.close();
    }
 
    @Override
    public void dumpContents(final Identifier selfId, final Path dir) throws IOException {
-      if (this.pixels != null) {
+      if (!this.pixels.isClosed()) {
          String outputId = selfId.toDebugFileName() + ".png";
          Path path = dir.resolve(outputId);
          this.pixels.writeToFile(path);

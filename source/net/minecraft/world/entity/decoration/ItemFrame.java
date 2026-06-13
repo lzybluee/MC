@@ -252,8 +252,6 @@ public class ItemFrame extends HangingEntity {
             mapItemSavedData.removedFromFrame(this.pos, this.getId());
          }
       }
-
-      itemStack.setEntityRepresentation(null);
    }
 
    public ItemStack getItem() {
@@ -306,10 +304,6 @@ public class ItemFrame extends HangingEntity {
    }
 
    private void onItemChanged(final ItemStack item) {
-      if (!item.isEmpty() && item.getFrame() != this) {
-         item.setEntityRepresentation(this);
-      }
-
       this.recalculateBoundingBox();
    }
 
@@ -361,7 +355,7 @@ public class ItemFrame extends HangingEntity {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       ItemStack itemStack = player.getItemInHand(hand);
       boolean frameHasItem = !this.getItem().isEmpty();
       boolean hasHeldItem = !itemStack.isEmpty();

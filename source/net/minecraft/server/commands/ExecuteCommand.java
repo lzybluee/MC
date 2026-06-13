@@ -501,9 +501,9 @@ public class ExecuteCommand {
    }
 
    private static boolean isChunkLoaded(final ServerLevel level, final BlockPos pos) {
-      ChunkPos chunkPos = new ChunkPos(pos);
-      LevelChunk chunk = level.getChunkSource().getChunkNow(chunkPos.x, chunkPos.z);
-      return chunk == null ? false : chunk.getFullStatus() == FullChunkStatus.ENTITY_TICKING && level.areEntitiesLoaded(chunkPos.toLong());
+      ChunkPos chunkPos = ChunkPos.containing(pos);
+      LevelChunk chunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
+      return chunk == null ? false : chunk.getFullStatus() == FullChunkStatus.ENTITY_TICKING && level.areEntitiesLoaded(chunkPos.pack());
    }
 
    private static ArgumentBuilder<CommandSourceStack, ?> addConditionals(
@@ -991,8 +991,8 @@ public class ExecuteCommand {
       BoundingBox from = BoundingBox.fromCorners(startPos, endPos);
       BoundingBox destination = BoundingBox.fromCorners(destPos, destPos.offset(from.getLength()));
       BlockPos offset = new BlockPos(destination.minX() - from.minX(), destination.minY() - from.minY(), destination.minZ() - from.minZ());
-      int area = from.getXSpan() * from.getYSpan() * from.getZSpan();
-      if (area > 32768) {
+      long area = (long)from.getXSpan() * from.getYSpan() * from.getZSpan();
+      if (area > 32768L) {
          throw ERROR_AREA_TOO_LARGE.create(32768, area);
       }
 

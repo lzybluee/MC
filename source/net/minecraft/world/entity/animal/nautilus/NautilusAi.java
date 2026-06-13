@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
@@ -14,7 +15,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
@@ -31,7 +32,6 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.sensing.Sensor;
-import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.ItemStack;
@@ -51,50 +51,20 @@ public class NautilusAi {
    private static final double MAX_TARGET_DETECTION_DISTANCE = 11.0;
    protected static final TargetingConditions ATTACK_TARGET_CONDITIONS = TargetingConditions.forCombat()
       .selector(
-         (target, level) -> (level.getGameRules().get(GameRules.MOB_GRIEFING) || !target.getType().equals(EntityType.ARMOR_STAND))
+         (target, level) -> (level.getGameRules().get(GameRules.MOB_GRIEFING) || !target.is(EntityType.ARMOR_STAND))
             && level.getWorldBorder().isWithinBounds(target.getBoundingBox())
       );
-   protected static final ImmutableList<SensorType<? extends Sensor<? super Nautilus>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.NAUTILUS_TEMPTATIONS
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT,
-      MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-      MemoryModuleType.IS_TEMPTED,
-      MemoryModuleType.TEMPTING_PLAYER,
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.IS_PANICKING,
-      MemoryModuleType.ATTACK_TARGET,
-      new MemoryModuleType[]{
-         MemoryModuleType.CHARGE_COOLDOWN_TICKS, MemoryModuleType.HURT_BY, MemoryModuleType.ANGRY_AT, MemoryModuleType.ATTACK_TARGET_COOLDOWN
-      }
-   );
 
    protected static void initMemories(final AbstractNautilus body, final RandomSource random) {
       body.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET_COOLDOWN, TIME_BETWEEN_NON_PLAYER_ATTACKS.sample(random));
    }
 
-   protected static Brain.Provider<Nautilus> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
+   public static List<ActivityData<Nautilus>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity());
    }
 
-   protected static Brain<?> makeBrain(final Brain<Nautilus> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initFightActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
-   }
-
-   private static void initCoreActivity(final Brain<Nautilus> brain) {
-      brain.addActivity(
+   private static ActivityData<Nautilus> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -108,8 +78,8 @@ public class NautilusAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Nautilus> brain) {
-      brain.addActivity(
+   private static ActivityData<Nautilus> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(1, new AnimalMakeLove(EntityType.NAUTILUS, 0.4F, 2)),
@@ -129,8 +99,8 @@ public class NautilusAi {
       );
    }
 
-   private static void initFightActivity(final Brain<Nautilus> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Nautilus> initFightActivity() {
+      return ActivityData.create(
          Activity.FIGHT,
          ImmutableList.of(Pair.of(0, new ChargeAttack(80, ATTACK_TARGET_CONDITIONS, 0.6F, 2.0F, 12.0, 11.0, SoundEvents.NAUTILUS_DASH))),
          ImmutableSet.of(
@@ -154,8 +124,9 @@ public class NautilusAi {
             return Optional.empty();
          }
 
-         body.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET_COOLDOWN, TIME_BETWEEN_NON_PLAYER_ATTACKS.sample(level.random));
-         return level.random.nextFloat() < 0.5F
+         RandomSource random = level.getRandom();
+         body.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET_COOLDOWN, TIME_BETWEEN_NON_PLAYER_ATTACKS.sample(random));
+         return random.nextFloat() < 0.5F
             ? Optional.empty()
             : body.getBrain()
                .getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
@@ -174,7 +145,7 @@ public class NautilusAi {
    }
 
    private static boolean isHostileTarget(final LivingEntity mob) {
-      return mob.isInWater() && mob.getType().is(EntityTypeTags.NAUTILUS_HOSTILES);
+      return mob.isInWater() && mob.is(EntityTypeTags.NAUTILUS_HOSTILES);
    }
 
    public static void updateActivity(final Nautilus body) {

@@ -6,7 +6,7 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 
-public class ColdChickenModel extends ChickenModel {
+public class ColdChickenModel extends AdultChickenModel {
    public ColdChickenModel(final ModelPart root) {
       super(root);
    }

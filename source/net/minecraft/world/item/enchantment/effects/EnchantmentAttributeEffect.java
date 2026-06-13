@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 
 public record EnchantmentAttributeEffect(Identifier id, Holder<Attribute> attribute, LevelBasedValue amount, AttributeModifier.Operation operation)
    implements EnchantmentLocationBasedEffect {
-   public static final MapCodec<EnchantmentAttributeEffect> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<EnchantmentAttributeEffect> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Identifier.CODEC.fieldOf("id").forGetter(EnchantmentAttributeEffect::id),
             Attribute.CODEC.fieldOf("attribute").forGetter(EnchantmentAttributeEffect::attribute),
@@ -65,6 +65,6 @@ public record EnchantmentAttributeEffect(Identifier id, Holder<Attribute> attrib
 
    @Override
    public MapCodec<EnchantmentAttributeEffect> codec() {
-      return CODEC;
+      return MAP_CODEC;
    }
 }

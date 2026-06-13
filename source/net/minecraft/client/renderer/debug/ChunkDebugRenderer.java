@@ -66,7 +66,7 @@ public class ChunkDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
             for (String part : parts) {
                Gizmos.billboardText(
                      part,
-                     new Vec3(SectionPos.sectionToBlockCoord(pos.x, 8), y + yOffset, SectionPos.sectionToBlockCoord(pos.z, 8)),
+                     new Vec3(SectionPos.sectionToBlockCoord(pos.x(), 8), y + yOffset, SectionPos.sectionToBlockCoord(pos.z(), 8)),
                      TextGizmo.Style.whiteAndCentered().withScale(2.4F)
                   )
                   .setAlwaysOnTop();

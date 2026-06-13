@@ -2,6 +2,7 @@ package net.minecraft.client.renderer.entity;
 
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.monster.zombie.BabyZombieModel;
 import net.minecraft.client.model.monster.zombie.ZombieModel;
 import net.minecraft.client.renderer.entity.state.ZombieRenderState;
 import net.minecraft.world.entity.monster.zombie.Zombie;
@@ -24,10 +25,10 @@ public class ZombieRenderer extends AbstractZombieRenderer<Zombie, ZombieRenderS
    ) {
       super(
          context,
-         new ZombieModel<>(context.bakeLayer(body)),
-         new ZombieModel<>(context.bakeLayer(babyBody)),
+         new ZombieModel<ZombieRenderState>(context.bakeLayer(body)),
+         new BabyZombieModel<>(context.bakeLayer(babyBody)),
          ArmorModelSet.bake(armorSet, context.getModelSet(), ZombieModel::new),
-         ArmorModelSet.bake(babyArmorSet, context.getModelSet(), ZombieModel::new)
+         ArmorModelSet.bake(babyArmorSet, context.getModelSet(), BabyZombieModel::new)
       );
    }
 }

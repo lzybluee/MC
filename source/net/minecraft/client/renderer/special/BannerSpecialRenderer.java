@@ -9,8 +9,8 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BannerRenderer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.BannerBlock;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
@@ -18,10 +18,12 @@ import org.jspecify.annotations.Nullable;
 public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPatternLayers> {
    private final BannerRenderer bannerRenderer;
    private final DyeColor baseColor;
+   private final BannerBlock.AttachmentType attachment;
 
-   public BannerSpecialRenderer(final DyeColor baseColor, final BannerRenderer bannerRenderer) {
+   public BannerSpecialRenderer(final DyeColor baseColor, final BannerRenderer bannerRenderer, final BannerBlock.AttachmentType attachment) {
       this.bannerRenderer = bannerRenderer;
       this.baseColor = baseColor;
+      this.attachment = attachment;
    }
 
    public @Nullable BannerPatternLayers extractArgument(final ItemStack stack) {
@@ -30,7 +32,6 @@ public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPattern
 
    public void submit(
       final @Nullable BannerPatternLayers patterns,
-      final ItemDisplayContext type,
       final PoseStack poseStack,
       final SubmitNodeCollector submitNodeCollector,
       final int lightCoords,
@@ -40,6 +41,7 @@ public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPattern
    ) {
       this.bannerRenderer
          .submitSpecial(
+            this.attachment,
             poseStack,
             submitNodeCollector,
             lightCoords,
@@ -55,9 +57,15 @@ public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPattern
       this.bannerRenderer.getExtents(output);
    }
 
-   public record Unbaked(DyeColor baseColor) implements SpecialModelRenderer.Unbaked {
+   public record Unbaked(DyeColor baseColor, BannerBlock.AttachmentType attachment) implements SpecialModelRenderer.Unbaked<BannerPatternLayers> {
       public static final MapCodec<BannerSpecialRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
-         i -> i.group(DyeColor.CODEC.fieldOf("color").forGetter(BannerSpecialRenderer.Unbaked::baseColor)).apply(i, BannerSpecialRenderer.Unbaked::new)
+         i -> i.group(
+               DyeColor.CODEC.fieldOf("color").forGetter(BannerSpecialRenderer.Unbaked::baseColor),
+               BannerBlock.AttachmentType.CODEC
+                  .optionalFieldOf("attachment", BannerBlock.AttachmentType.GROUND)
+                  .forGetter(BannerSpecialRenderer.Unbaked::attachment)
+            )
+            .apply(i, BannerSpecialRenderer.Unbaked::new)
       );
 
       @Override
@@ -65,9 +73,8 @@ public class BannerSpecialRenderer implements SpecialModelRenderer<BannerPattern
          return MAP_CODEC;
       }
 
-      @Override
-      public SpecialModelRenderer<?> bake(final SpecialModelRenderer.BakingContext context) {
-         return new BannerSpecialRenderer(this.baseColor, new BannerRenderer(context));
+      public BannerSpecialRenderer bake(final SpecialModelRenderer.BakingContext context) {
+         return new BannerSpecialRenderer(this.baseColor, new BannerRenderer(context), this.attachment);
       }
    }
 }

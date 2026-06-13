@@ -22,7 +22,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class CopyBlockState extends LootItemConditionalFunction {
-   public static final MapCodec<CopyBlockState> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<CopyBlockState> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -46,8 +46,8 @@ public class CopyBlockState extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<CopyBlockState> getType() {
-      return LootItemFunctions.COPY_STATE;
+   public MapCodec<CopyBlockState> codec() {
+      return MAP_CODEC;
    }
 
    @Override

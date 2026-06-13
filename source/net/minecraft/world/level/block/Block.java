@@ -45,6 +45,7 @@ import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -266,7 +267,7 @@ public class Block extends BlockBehaviour implements ItemLike {
       final ResourceKey<LootTable> key,
       final BlockState interactedBlockState,
       final @Nullable BlockEntity interactedBlockEntity,
-      final @Nullable ItemStack tool,
+      final @Nullable ItemInstance tool,
       final @Nullable Entity interactingEntity,
       final BiConsumer<ServerLevel, ItemStack> consumer
    ) {
@@ -374,7 +375,7 @@ public class Block extends BlockBehaviour implements ItemLike {
       final BlockPos pos,
       final @Nullable BlockEntity blockEntity,
       final @Nullable Entity breaker,
-      final ItemStack tool
+      final ItemInstance tool
    ) {
       LootParams.Builder params = new LootParams.Builder(level)
          .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
@@ -385,16 +386,16 @@ public class Block extends BlockBehaviour implements ItemLike {
    }
 
    public static void dropResources(final BlockState state, final Level level, final BlockPos pos) {
-      if (level instanceof ServerLevel) {
-         getDrops(state, (ServerLevel)level, pos, null).forEach(stack -> popResource(level, pos, stack));
-         state.spawnAfterBreak((ServerLevel)level, pos, ItemStack.EMPTY, true);
+      if (level instanceof ServerLevel serverLevel) {
+         getDrops(state, serverLevel, pos, null).forEach(stack -> popResource(level, pos, stack));
+         state.spawnAfterBreak(serverLevel, pos, ItemStack.EMPTY, true);
       }
    }
 
    public static void dropResources(final BlockState state, final LevelAccessor level, final BlockPos pos, final @Nullable BlockEntity blockEntity) {
-      if (level instanceof ServerLevel) {
-         getDrops(state, (ServerLevel)level, pos, blockEntity).forEach(stack -> popResource((ServerLevel)level, pos, stack));
-         state.spawnAfterBreak((ServerLevel)level, pos, ItemStack.EMPTY, true);
+      if (level instanceof ServerLevel serverLevel) {
+         getDrops(state, serverLevel, pos, blockEntity).forEach(stack -> popResource(serverLevel, pos, stack));
+         state.spawnAfterBreak(serverLevel, pos, ItemStack.EMPTY, true);
       }
    }
 
@@ -406,17 +407,18 @@ public class Block extends BlockBehaviour implements ItemLike {
       final @Nullable Entity breaker,
       final ItemStack tool
    ) {
-      if (level instanceof ServerLevel) {
-         getDrops(state, (ServerLevel)level, pos, blockEntity, breaker, tool).forEach(stack -> popResource(level, pos, stack));
-         state.spawnAfterBreak((ServerLevel)level, pos, tool, true);
+      if (level instanceof ServerLevel serverLevel) {
+         getDrops(state, serverLevel, pos, blockEntity, breaker, tool).forEach(stack -> popResource(level, pos, stack));
+         state.spawnAfterBreak(serverLevel, pos, tool, true);
       }
    }
 
    public static void popResource(final Level level, final BlockPos pos, final ItemStack itemStack) {
       double halfHeight = EntityType.ITEM.getHeight() / 2.0;
-      double x = pos.getX() + 0.5 + Mth.nextDouble(level.random, -0.25, 0.25);
-      double y = pos.getY() + 0.5 + Mth.nextDouble(level.random, -0.25, 0.25) - halfHeight;
-      double z = pos.getZ() + 0.5 + Mth.nextDouble(level.random, -0.25, 0.25);
+      RandomSource random = level.getRandom();
+      double x = pos.getX() + 0.5 + Mth.nextDouble(random, -0.25, 0.25);
+      double y = pos.getY() + 0.5 + Mth.nextDouble(random, -0.25, 0.25) - halfHeight;
+      double z = pos.getZ() + 0.5 + Mth.nextDouble(random, -0.25, 0.25);
       popResource(level, () -> new ItemEntity(level, x, y, z, itemStack), itemStack);
    }
 
@@ -426,12 +428,13 @@ public class Block extends BlockBehaviour implements ItemLike {
       int stepZ = face.getStepZ();
       double halfWidth = EntityType.ITEM.getWidth() / 2.0;
       double halfHeight = EntityType.ITEM.getHeight() / 2.0;
-      double x = pos.getX() + 0.5 + (stepX == 0 ? Mth.nextDouble(level.random, -0.25, 0.25) : stepX * (0.5 + halfWidth));
-      double y = pos.getY() + 0.5 + (stepY == 0 ? Mth.nextDouble(level.random, -0.25, 0.25) : stepY * (0.5 + halfHeight)) - halfHeight;
-      double z = pos.getZ() + 0.5 + (stepZ == 0 ? Mth.nextDouble(level.random, -0.25, 0.25) : stepZ * (0.5 + halfWidth));
-      double deltaX = stepX == 0 ? Mth.nextDouble(level.random, -0.1, 0.1) : stepX * 0.1;
-      double deltaY = stepY == 0 ? Mth.nextDouble(level.random, 0.0, 0.1) : stepY * 0.1 + 0.1;
-      double deltaZ = stepZ == 0 ? Mth.nextDouble(level.random, -0.1, 0.1) : stepZ * 0.1;
+      RandomSource random = level.getRandom();
+      double x = pos.getX() + 0.5 + (stepX == 0 ? Mth.nextDouble(random, -0.25, 0.25) : stepX * (0.5 + halfWidth));
+      double y = pos.getY() + 0.5 + (stepY == 0 ? Mth.nextDouble(random, -0.25, 0.25) : stepY * (0.5 + halfHeight)) - halfHeight;
+      double z = pos.getZ() + 0.5 + (stepZ == 0 ? Mth.nextDouble(random, -0.25, 0.25) : stepZ * (0.5 + halfWidth));
+      double deltaX = stepX == 0 ? Mth.nextDouble(random, -0.1, 0.1) : stepX * 0.1;
+      double deltaY = stepY == 0 ? Mth.nextDouble(random, 0.0, 0.1) : stepY * 0.1 + 0.1;
+      double deltaZ = stepZ == 0 ? Mth.nextDouble(random, -0.1, 0.1) : stepZ * 0.1;
       popResource(level, () -> new ItemEntity(level, x, y, z, itemStack, deltaX, deltaY, deltaZ), itemStack);
    }
 

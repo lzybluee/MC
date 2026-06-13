@@ -9,6 +9,8 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentInitializers;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleReloadInstance;
@@ -27,6 +29,7 @@ public class ReloadableServerResources {
    private final ServerAdvancementManager advancements;
    private final ServerFunctionLibrary functionLibrary;
    private final List<Registry.PendingTags<?>> postponedTags;
+   private final List<DataComponentInitializers.PendingComponents<?>> newComponents;
 
    private ReloadableServerResources(
       final LayeredRegistryAccess<RegistryLayer> fullLayers,
@@ -34,10 +37,12 @@ public class ReloadableServerResources {
       final FeatureFlagSet enabledFeatures,
       final Commands.CommandSelection commandSelection,
       final List<Registry.PendingTags<?>> postponedTags,
-      final PermissionSet functionCompilationPermissions
+      final PermissionSet functionCompilationPermissions,
+      final List<DataComponentInitializers.PendingComponents<?>> newComponents
    ) {
       this.fullRegistryHolder = new ReloadableServerRegistries.Holder(fullLayers.compositeAccess());
       this.postponedTags = postponedTags;
+      this.newComponents = newComponents;
       this.recipes = new RecipeManager(loadingContext);
       this.commands = new Commands(commandSelection, CommandBuildContext.simple(loadingContext, enabledFeatures));
       this.advancements = new ServerAdvancementManager(loadingContext);
@@ -80,25 +85,32 @@ public class ReloadableServerResources {
    ) {
       return ReloadableServerRegistries.reload(contextLayers, updatedContextTags, resourceManager, backgroundExecutor)
          .thenCompose(
-            fullRegistries -> {
-               ReloadableServerResources result = new ReloadableServerResources(
-                  fullRegistries.layers(),
-                  fullRegistries.lookupWithUpdatedTags(),
-                  enabledFeatures,
-                  commandSelection,
-                  updatedContextTags,
-                  functionCompilationPermissions
-               );
-               return SimpleReloadInstance.create(
-                     resourceManager, result.listeners(), backgroundExecutor, mainThreadExecutor, DATA_RELOAD_INITIAL_TASK, LOGGER.isDebugEnabled()
-                  )
-                  .done()
-                  .thenApply(ignore -> result);
-            }
+            fullRegistries -> CompletableFuture.<List<DataComponentInitializers.PendingComponents<?>>>supplyAsync(
+                  () -> BuiltInRegistries.DATA_COMPONENT_INITIALIZERS.build(fullRegistries.lookupWithUpdatedTags()), backgroundExecutor
+               )
+               .thenCompose(
+                  pendingComponents -> {
+                     ReloadableServerResources result = new ReloadableServerResources(
+                        fullRegistries.layers(),
+                        fullRegistries.lookupWithUpdatedTags(),
+                        enabledFeatures,
+                        commandSelection,
+                        updatedContextTags,
+                        functionCompilationPermissions,
+                        (List<DataComponentInitializers.PendingComponents<?>>)pendingComponents
+                     );
+                     return SimpleReloadInstance.create(
+                           resourceManager, result.listeners(), backgroundExecutor, mainThreadExecutor, DATA_RELOAD_INITIAL_TASK, LOGGER.isDebugEnabled()
+                        )
+                        .done()
+                        .thenApply(ignore -> result);
+                  }
+               )
          );
    }
 
-   public void updateStaticRegistryTags() {
+   public void updateComponentsAndStaticRegistryTags() {
       this.postponedTags.forEach(Registry.PendingTags::apply);
+      this.newComponents.forEach(DataComponentInitializers.PendingComponents::apply);
    }
 }

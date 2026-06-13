@@ -21,6 +21,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.bossevents.CustomBossEvent;
 import net.minecraft.server.bossevents.CustomBossEvents;
@@ -252,13 +253,13 @@ public class BossBarCommands {
    }
 
    private static int getValue(final CommandSourceStack source, final CustomBossEvent bossBar) {
-      source.sendSuccess(() -> Component.translatable("commands.bossbar.get.value", bossBar.getDisplayName(), bossBar.getValue()), true);
-      return bossBar.getValue();
+      source.sendSuccess(() -> Component.translatable("commands.bossbar.get.value", bossBar.getDisplayName(), bossBar.value()), true);
+      return bossBar.value();
    }
 
    private static int getMax(final CommandSourceStack source, final CustomBossEvent bossBar) {
-      source.sendSuccess(() -> Component.translatable("commands.bossbar.get.max", bossBar.getDisplayName(), bossBar.getMax()), true);
-      return bossBar.getMax();
+      source.sendSuccess(() -> Component.translatable("commands.bossbar.get.max", bossBar.getDisplayName(), bossBar.max()), true);
+      return bossBar.max();
    }
 
    private static int getVisible(final CommandSourceStack source, final CustomBossEvent bossBar) {
@@ -309,7 +310,7 @@ public class BossBarCommands {
    }
 
    private static int setValue(final CommandSourceStack source, final CustomBossEvent bossBar, final int value) throws CommandSyntaxException {
-      if (bossBar.getValue() == value) {
+      if (bossBar.value() == value) {
          throw ERROR_NO_VALUE_CHANGE.create();
       }
 
@@ -319,7 +320,7 @@ public class BossBarCommands {
    }
 
    private static int setMax(final CommandSourceStack source, final CustomBossEvent bossBar, final int value) throws CommandSyntaxException {
-      if (bossBar.getMax() == value) {
+      if (bossBar.max() == value) {
          throw ERROR_NO_MAX_CHANGE.create();
       }
 
@@ -349,7 +350,7 @@ public class BossBarCommands {
    }
 
    private static int setName(final CommandSourceStack source, final CustomBossEvent bossBar, final Component name) throws CommandSyntaxException {
-      Component replaced = ComponentUtils.updateForEntity(source, name, null, 0);
+      Component replaced = ComponentUtils.resolve(ResolutionContext.builder().withSource(source).withEntityOverride(null).build(), name);
       if (bossBar.getName().equals(replaced)) {
          throw ERROR_NO_NAME_CHANGE.create();
       }
@@ -402,7 +403,9 @@ public class BossBarCommands {
          throw ERROR_ALREADY_EXISTS.create(id.toString());
       }
 
-      CustomBossEvent event = events.create(id, ComponentUtils.updateForEntity(source, name, null, 0));
+      CustomBossEvent event = events.create(
+         source.getLevel().getRandom(), id, ComponentUtils.resolve(ResolutionContext.builder().withSource(source).withEntityOverride(null).build(), name)
+      );
       source.sendSuccess(() -> Component.translatable("commands.bossbar.create.success", event.getDisplayName()), true);
       return events.getEvents().size();
    }

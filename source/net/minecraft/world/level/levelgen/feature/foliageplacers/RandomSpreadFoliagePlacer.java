@@ -6,7 +6,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class RandomSpreadFoliagePlacer extends FoliagePlacer {
@@ -14,7 +15,7 @@ public class RandomSpreadFoliagePlacer extends FoliagePlacer {
       i -> foliagePlacerParts(i)
          .and(
             i.group(
-               IntProvider.codec(1, 512).fieldOf("foliage_height").forGetter(c -> c.foliageHeight),
+               IntProviders.codec(1, 512).fieldOf("foliage_height").forGetter(c -> c.foliageHeight),
                Codec.intRange(0, 256).fieldOf("leaf_placement_attempts").forGetter(c -> c.leafPlacementAttempts)
             )
          )
@@ -36,7 +37,7 @@ public class RandomSpreadFoliagePlacer extends FoliagePlacer {
 
    @Override
    protected void createFoliage(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,

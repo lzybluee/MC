@@ -5,20 +5,16 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 
 public class NbtProviders {
-   private static final Codec<NbtProvider> TYPED_CODEC = BuiltInRegistries.LOOT_NBT_PROVIDER_TYPE
-      .byNameCodec()
-      .dispatch(NbtProvider::getType, LootNbtProviderType::codec);
+   private static final Codec<NbtProvider> TYPED_CODEC = BuiltInRegistries.LOOT_NBT_PROVIDER_TYPE.byNameCodec().dispatch(NbtProvider::codec, c -> c);
    public static final Codec<NbtProvider> CODEC = Codec.lazyInitialized(
       () -> Codec.either(ContextNbtProvider.INLINE_CODEC, TYPED_CODEC)
          .xmap(Either::unwrap, provider -> provider instanceof ContextNbtProvider context ? Either.left(context) : Either.right(provider))
    );
-   public static final LootNbtProviderType STORAGE = register("storage", StorageNbtProvider.CODEC);
-   public static final LootNbtProviderType CONTEXT = register("context", ContextNbtProvider.MAP_CODEC);
 
-   private static LootNbtProviderType register(final String name, final MapCodec<? extends NbtProvider> codec) {
-      return Registry.register(BuiltInRegistries.LOOT_NBT_PROVIDER_TYPE, Identifier.withDefaultNamespace(name), new LootNbtProviderType(codec));
+   public static MapCodec<? extends NbtProvider> bootstrap(final Registry<MapCodec<? extends NbtProvider>> registry) {
+      Registry.register(registry, "storage", StorageNbtProvider.MAP_CODEC);
+      return Registry.register(registry, "context", ContextNbtProvider.MAP_CODEC);
    }
 }

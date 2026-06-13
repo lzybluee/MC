@@ -43,28 +43,28 @@ public class WolfSoundVariants {
    }
 
    public enum SoundSet {
-      CLASSIC("classic", ""),
-      PUGLIN("puglin", "_puglin"),
-      SAD("sad", "_sad"),
-      ANGRY("angry", "_angry"),
-      GRUMPY("grumpy", "_grumpy"),
-      BIG("big", "_big"),
-      CUTE("cute", "_cute");
+      CLASSIC("classic", "wolf"),
+      PUGLIN("puglin", "wolf_puglin"),
+      SAD("sad", "wolf_sad"),
+      ANGRY("angry", "wolf_angry"),
+      GRUMPY("grumpy", "wolf_grumpy"),
+      BIG("big", "wolf_big"),
+      CUTE("cute", "wolf_cute");
 
       private final String identifier;
-      private final String soundEventSuffix;
+      private final String soundEventIdentifier;
 
-      SoundSet(final String identifier, final String suffix) {
+      SoundSet(final String identifier, final String soundEventIdentifier) {
          this.identifier = identifier;
-         this.soundEventSuffix = suffix;
+         this.soundEventIdentifier = soundEventIdentifier;
       }
 
       public String getIdentifier() {
          return this.identifier;
       }
 
-      public String getSoundEventSuffix() {
-         return this.soundEventSuffix;
+      public String getSoundEventIdentifier() {
+         return this.soundEventIdentifier;
       }
    }
 }

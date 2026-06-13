@@ -80,7 +80,7 @@ public class CanyonWorldCarver extends WorldCarver<CanyonCarverConfiguration> {
       final double yScale,
       final CarvingMask mask
    ) {
-      RandomSource random = RandomSource.create(tunnelSeed);
+      RandomSource random = RandomSource.createThreadLocalInstance(tunnelSeed);
       float[] widthFactorPerHeight = this.initWidthFactors(context, configuration, random);
       float yRota = 0.0F;
       float xRota = 0.0F;

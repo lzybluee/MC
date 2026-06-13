@@ -10,6 +10,7 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Util;
+import org.jspecify.annotations.Nullable;
 
 public class ConfirmLinkScreen extends ConfirmScreen {
    private static final Component WARNING_TEXT = Component.translatable("chat.link.warning").withColor(-13108);
@@ -90,7 +91,7 @@ public class ConfirmLinkScreen extends ConfirmScreen {
       }, uri, trusted));
    }
 
-   public static void confirmLinkNow(final Screen parentScreen, final URI uri, final boolean trusted) {
+   public static void confirmLinkNow(final @Nullable Screen parentScreen, final URI uri, final boolean trusted) {
       Minecraft minecraft = Minecraft.getInstance();
       minecraft.setScreen(new ConfirmLinkScreen(shouldOpen -> {
          if (shouldOpen) {
@@ -101,7 +102,7 @@ public class ConfirmLinkScreen extends ConfirmScreen {
       }, uri.toString(), trusted));
    }
 
-   public static void confirmLinkNow(final Screen parentScreen, final URI uri) {
+   public static void confirmLinkNow(final @Nullable Screen parentScreen, final URI uri) {
       confirmLinkNow(parentScreen, uri, true);
    }
 

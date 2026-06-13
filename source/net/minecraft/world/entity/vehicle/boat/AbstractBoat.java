@@ -36,7 +36,7 @@ import net.minecraft.world.entity.vehicle.VehicleEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.WaterlilyBlock;
+import net.minecraft.world.level.block.LilyPadBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.FluidState;
@@ -283,7 +283,7 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
                   && !entity.isPassenger()
                   && this.hasEnoughSpaceFor(entity)
                   && entity instanceof LivingEntity
-                  && !entity.getType().is(EntityTypeTags.CANNOT_BE_PUSHED_ONTO_BOATS)) {
+                  && !entity.is(EntityTypeTags.CANNOT_BE_PUSHED_ONTO_BOATS)) {
                   entity.startRiding(this);
                } else {
                   this.push(entity);
@@ -448,7 +448,7 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
                   if (edges <= 0 || y != y0 && y != y1 - 1) {
                      blockPos.set(x, y, z);
                      BlockState blockState = this.level().getBlockState(blockPos);
-                     if (!(blockState.getBlock() instanceof WaterlilyBlock)
+                     if (!(blockState.getBlock() instanceof LilyPadBlock)
                         && Shapes.joinIsNotEmpty(blockState.getCollisionShape(this.level(), blockPos).move(blockPos), boatShape, BooleanOp.AND)) {
                         friction += blockState.getBlock().getFriction();
                         count++;
@@ -615,7 +615,7 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
    @Override
    protected void positionRider(final Entity passenger, final Entity.MoveFunction moveFunction) {
       super.positionRider(passenger, moveFunction);
-      if (!passenger.getType().is(EntityTypeTags.CAN_TURN_IN_BOATS)) {
+      if (!passenger.is(EntityTypeTags.CAN_TURN_IN_BOATS)) {
          passenger.setYRot(passenger.getYRot() + this.deltaRotation);
          passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaRotation);
          this.clampRotation(passenger);
@@ -688,8 +688,8 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
-      InteractionResult superInteraction = super.interact(player, hand);
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+      InteractionResult superInteraction = super.interact(player, hand, location);
       if (superInteraction != InteractionResult.PASS) {
          return superInteraction;
       } else {
@@ -770,6 +770,21 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
    @Override
    public final ItemStack getPickResult() {
       return new ItemStack(this.dropItem.get());
+   }
+
+   @Override
+   protected @Nullable AABB modifyPassengerFluidInteractionBox(final AABB passengerBox) {
+      if (this.isUnderWater()) {
+         return passengerBox;
+      }
+
+      AABB boatBox = this.getBoundingBox();
+      if (boatBox.maxY >= passengerBox.maxY) {
+         return null;
+      }
+
+      double minY = Math.max(passengerBox.minY, boatBox.maxY);
+      return new AABB(passengerBox.minX, minY, passengerBox.minZ, passengerBox.maxX, passengerBox.maxY, passengerBox.maxZ);
    }
 
    public enum Status {

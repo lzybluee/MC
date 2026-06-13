@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.animal.frog;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -48,7 +47,6 @@ import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Slime;
@@ -70,32 +68,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Frog extends Animal {
-   protected static final ImmutableList<SensorType<? extends Sensor<? super Frog>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FROG_ATTACKABLES, SensorType.FROG_TEMPTATIONS, SensorType.IS_IN_WATER
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS,
-      MemoryModuleType.LONG_JUMP_MID_JUMP,
-      MemoryModuleType.ATTACK_TARGET,
-      MemoryModuleType.TEMPTING_PLAYER,
-      MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-      new MemoryModuleType[]{
-         MemoryModuleType.IS_TEMPTED,
-         MemoryModuleType.HURT_BY,
-         MemoryModuleType.HURT_BY_ENTITY,
-         MemoryModuleType.NEAREST_ATTACKABLE,
-         MemoryModuleType.IS_IN_WATER,
-         MemoryModuleType.IS_PREGNANT,
-         MemoryModuleType.IS_PANICKING,
-         MemoryModuleType.UNREACHABLE_TONGUE_TARGETS
-      }
+   private static final Brain.Provider<Frog> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FROG_ATTACKABLES, SensorType.FROG_TEMPTATIONS, SensorType.IS_IN_WATER),
+      var0 -> FrogAi.getActivities()
    );
    private static final EntityDataAccessor<Holder<FrogVariant>> DATA_VARIANT_ID = SynchedEntityData.defineId(Frog.class, EntityDataSerializers.FROG_VARIANT);
    private static final EntityDataAccessor<OptionalInt> DATA_TONGUE_TARGET_ID = SynchedEntityData.defineId(
@@ -117,18 +92,13 @@ public class Frog extends Animal {
    }
 
    @Override
-   protected Brain.Provider<Frog> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return FrogAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Frog> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Frog> getBrain() {
-      return (Brain<Frog>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -346,7 +316,7 @@ public class Frog extends Animal {
    }
 
    public static boolean canEat(final LivingEntity entity) {
-      return entity instanceof Slime slime && slime.getSize() != 1 ? false : entity.getType().is(EntityTypeTags.FROG_FOOD);
+      return entity instanceof Slime slime && slime.getSize() != 1 ? false : entity.is(EntityTypeTags.FROG_FOOD);
    }
 
    @Override

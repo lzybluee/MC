@@ -109,7 +109,7 @@ public class ShulkerBoxBlock extends BaseEntityBlock {
       BlockEntity blockEntity = level.getBlockEntity(pos);
       if (blockEntity instanceof ShulkerBoxBlockEntity shulkerBoxBlockEntity) {
          if (!level.isClientSide() && player.preventsBlockDrops() && !shulkerBoxBlockEntity.isEmpty()) {
-            ItemStack itemStack = getColoredItemStack(this.getColor());
+            ItemStack itemStack = new ItemStack(state.getBlock());
             itemStack.applyComponents(blockEntity.collectComponents());
             ItemEntity entity = new ItemEntity(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, itemStack);
             entity.setDefaultPickUpDelay();
@@ -170,37 +170,8 @@ public class ShulkerBoxBlock extends BaseEntityBlock {
       return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
    }
 
-   public static Block getBlockByColor(final @Nullable DyeColor color) {
-      if (color == null) {
-         return Blocks.SHULKER_BOX;
-      }
-
-      return switch (color) {
-         case WHITE -> Blocks.WHITE_SHULKER_BOX;
-         case ORANGE -> Blocks.ORANGE_SHULKER_BOX;
-         case MAGENTA -> Blocks.MAGENTA_SHULKER_BOX;
-         case LIGHT_BLUE -> Blocks.LIGHT_BLUE_SHULKER_BOX;
-         case YELLOW -> Blocks.YELLOW_SHULKER_BOX;
-         case LIME -> Blocks.LIME_SHULKER_BOX;
-         case PINK -> Blocks.PINK_SHULKER_BOX;
-         case GRAY -> Blocks.GRAY_SHULKER_BOX;
-         case LIGHT_GRAY -> Blocks.LIGHT_GRAY_SHULKER_BOX;
-         case CYAN -> Blocks.CYAN_SHULKER_BOX;
-         case BLUE -> Blocks.BLUE_SHULKER_BOX;
-         case BROWN -> Blocks.BROWN_SHULKER_BOX;
-         case GREEN -> Blocks.GREEN_SHULKER_BOX;
-         case RED -> Blocks.RED_SHULKER_BOX;
-         case BLACK -> Blocks.BLACK_SHULKER_BOX;
-         case PURPLE -> Blocks.PURPLE_SHULKER_BOX;
-      };
-   }
-
    public @Nullable DyeColor getColor() {
       return this.color;
-   }
-
-   public static ItemStack getColoredItemStack(final @Nullable DyeColor color) {
-      return new ItemStack(getBlockByColor(color));
    }
 
    @Override

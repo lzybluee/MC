@@ -35,7 +35,7 @@ public class ShowTradesToPlayer extends Behavior<Villager> {
       }
 
       LivingEntity target = brain.getMemory(MemoryModuleType.INTERACTION_TARGET).get();
-      return target.getType() == EntityType.PLAYER && body.isAlive() && target.isAlive() && !body.isBaby() && body.distanceToSqr(target) <= 17.0;
+      return target.is(EntityType.PLAYER) && body.isAlive() && target.isAlive() && !body.isBaby() && body.distanceToSqr(target) <= 17.0;
    }
 
    public boolean canStillUse(final ServerLevel level, final Villager body, final long timestamp) {

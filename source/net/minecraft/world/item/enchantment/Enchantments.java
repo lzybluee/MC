@@ -7,10 +7,13 @@ import net.minecraft.advancements.criterion.DamageSourcePredicate;
 import net.minecraft.advancements.criterion.EntityFlagsPredicate;
 import net.minecraft.advancements.criterion.EntityPredicate;
 import net.minecraft.advancements.criterion.EntityTypePredicate;
+import net.minecraft.advancements.criterion.FoodPredicate;
+import net.minecraft.advancements.criterion.GameTypePredicate;
 import net.minecraft.advancements.criterion.ItemPredicate;
 import net.minecraft.advancements.criterion.LocationPredicate;
 import net.minecraft.advancements.criterion.MinMaxBounds;
 import net.minecraft.advancements.criterion.MovementPredicate;
+import net.minecraft.advancements.criterion.PlayerPredicate;
 import net.minecraft.advancements.criterion.TagPredicate;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderSet;
@@ -26,6 +29,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.UniformFloat;
@@ -57,6 +61,7 @@ import net.minecraft.world.item.enchantment.effects.ReplaceDisk;
 import net.minecraft.world.item.enchantment.effects.SetValue;
 import net.minecraft.world.item.enchantment.effects.SpawnParticlesEffect;
 import net.minecraft.world.item.enchantment.effects.SummonEntityEffect;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -1016,6 +1021,27 @@ public class Enchantments {
                   ),
                   LootItemEntityPropertyCondition.hasProperties(
                      LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setIsInWater(false))
+                  ),
+                  AnyOfCondition.anyOf(
+                     InvertedLootItemCondition.invert(
+                        LootItemEntityPropertyCondition.hasProperties(
+                           LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().subPredicate(PlayerPredicate.Builder.player().build())
+                        )
+                     ),
+                     LootItemEntityPropertyCondition.hasProperties(
+                        LootContext.EntityTarget.THIS,
+                        EntityPredicate.Builder.entity()
+                           .subPredicate(PlayerPredicate.Builder.player().setGameType(GameTypePredicate.of(GameType.CREATIVE)).build())
+                     ),
+                     LootItemEntityPropertyCondition.hasProperties(
+                        LootContext.EntityTarget.THIS,
+                        EntityPredicate.Builder.entity()
+                           .subPredicate(
+                              PlayerPredicate.Builder.player()
+                                 .setFood(FoodPredicate.Builder.food().withLevel(MinMaxBounds.Ints.atLeast(Mth.floor(6.0F) + 1)).build())
+                                 .build()
+                           )
+                     )
                   )
                )
             )

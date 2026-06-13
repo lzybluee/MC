@@ -69,7 +69,7 @@ public class WorldgenRandom extends LegacyRandomSource {
    }
 
    public static RandomSource seedSlimeChunk(final int x, final int z, final long seed, final long salt) {
-      return RandomSource.create(seed + x * x * 4987142 + x * 5947611 + z * z * 4392871L + z * 389711 ^ salt);
+      return RandomSource.createThreadLocalInstance(seed + x * x * 4987142 + x * 5947611 + z * z * 4392871L + z * 389711 ^ salt);
    }
 
    public enum Algorithm {

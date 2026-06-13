@@ -1,5 +1,6 @@
 package net.minecraft.client.renderer.item;
 
+import com.mojang.math.Transformation;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,6 +16,7 @@ import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 
 public class RangeSelectItemModel implements ItemModel {
@@ -89,10 +91,16 @@ public class RangeSelectItemModel implements ItemModel {
       public static final Comparator<RangeSelectItemModel.Entry> BY_THRESHOLD = Comparator.comparingDouble(RangeSelectItemModel.Entry::threshold);
    }
 
-   public record Unbaked(RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback)
-      implements ItemModel.Unbaked {
+   public record Unbaked(
+      Optional<Transformation> transformation,
+      RangeSelectItemModelProperty property,
+      float scale,
+      List<RangeSelectItemModel.Entry> entries,
+      Optional<ItemModel.Unbaked> fallback
+   ) implements ItemModel.Unbaked {
       public static final MapCodec<RangeSelectItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
+               Transformation.EXTENDED_CODEC.optionalFieldOf("transformation").forGetter(RangeSelectItemModel.Unbaked::transformation),
                RangeSelectItemModelProperties.MAP_CODEC.forGetter(RangeSelectItemModel.Unbaked::property),
                Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(RangeSelectItemModel.Unbaked::scale),
                RangeSelectItemModel.Entry.CODEC.listOf().fieldOf("entries").forGetter(RangeSelectItemModel.Unbaked::entries),
@@ -107,7 +115,8 @@ public class RangeSelectItemModel implements ItemModel {
       }
 
       @Override
-      public ItemModel bake(final ItemModel.BakingContext context) {
+      public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation) {
+         Matrix4fc childTransform = Transformation.compose(transformation, this.transformation);
          float[] thresholds = new float[this.entries.size()];
          ItemModel[] models = new ItemModel[this.entries.size()];
          List<RangeSelectItemModel.Entry> mutableEntries = new ArrayList<>(this.entries);
@@ -116,10 +125,10 @@ public class RangeSelectItemModel implements ItemModel {
          for (int i = 0; i < mutableEntries.size(); i++) {
             RangeSelectItemModel.Entry entry = mutableEntries.get(i);
             thresholds[i] = entry.threshold;
-            models[i] = entry.model.bake(context);
+            models[i] = entry.model.bake(context, childTransform);
          }
 
-         ItemModel bakedFallback = this.fallback.<ItemModel>map(m -> m.bake(context)).orElse(context.missingItemModel());
+         ItemModel bakedFallback = this.fallback.<ItemModel>map(m -> m.bake(context, childTransform)).orElseGet(() -> context.missingItemModel(childTransform));
          return new RangeSelectItemModel(this.property, this.scale, thresholds, models, bakedFallback);
       }
 

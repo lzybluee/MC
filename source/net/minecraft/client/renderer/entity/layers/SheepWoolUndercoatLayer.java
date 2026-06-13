@@ -14,13 +14,11 @@ import net.minecraft.world.item.DyeColor;
 
 public class SheepWoolUndercoatLayer extends RenderLayer<SheepRenderState, SheepModel> {
    private static final Identifier SHEEP_WOOL_UNDERCOAT_LOCATION = Identifier.withDefaultNamespace("textures/entity/sheep/sheep_wool_undercoat.png");
-   private final EntityModel<SheepRenderState> adultModel;
-   private final EntityModel<SheepRenderState> babyModel;
+   private final EntityModel<SheepRenderState> model;
 
    public SheepWoolUndercoatLayer(final RenderLayerParent<SheepRenderState, SheepModel> renderer, final EntityModelSet modelSet) {
       super(renderer);
-      this.adultModel = new SheepFurModel(modelSet.bakeLayer(ModelLayers.SHEEP_WOOL_UNDERCOAT));
-      this.babyModel = new SheepFurModel(modelSet.bakeLayer(ModelLayers.SHEEP_BABY_WOOL_UNDERCOAT));
+      this.model = new SheepFurModel(modelSet.bakeLayer(ModelLayers.SHEEP_WOOL_UNDERCOAT));
    }
 
    public void submit(
@@ -31,9 +29,10 @@ public class SheepWoolUndercoatLayer extends RenderLayer<SheepRenderState, Sheep
       final float yRot,
       final float xRot
    ) {
-      if (!state.isInvisible && (state.isJebSheep || state.woolColor != DyeColor.WHITE)) {
-         EntityModel<SheepRenderState> model = state.isBaby ? this.babyModel : this.adultModel;
-         coloredCutoutModelCopyLayerRender(model, SHEEP_WOOL_UNDERCOAT_LOCATION, poseStack, submitNodeCollector, lightCoords, state, state.getWoolColor(), 1);
+      if (!state.isInvisible && (state.isJebSheep || state.woolColor != DyeColor.WHITE) && !state.isBaby) {
+         coloredCutoutModelCopyLayerRender(
+            this.model, SHEEP_WOOL_UNDERCOAT_LOCATION, poseStack, submitNodeCollector, lightCoords, state, state.getWoolColor(), 1
+         );
       }
    }
 }

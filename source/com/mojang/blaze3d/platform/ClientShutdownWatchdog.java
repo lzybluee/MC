@@ -9,7 +9,7 @@ import net.minecraft.server.dedicated.ServerWatchdog;
 public class ClientShutdownWatchdog {
    private static final Duration CRASH_REPORT_PRELOAD_LOAD = Duration.ofSeconds(15L);
 
-   public static void startShutdownWatchdog(final File gameDirectory, final long mainThreadId) {
+   public static void startShutdownWatchdog(final Minecraft minecraft, final File gameDirectory, final long mainThreadId) {
       Thread thread = new Thread(() -> {
          try {
             Thread.sleep(CRASH_REPORT_PRELOAD_LOAD);
@@ -18,6 +18,7 @@ public class ClientShutdownWatchdog {
          }
 
          CrashReport report = ServerWatchdog.createWatchdogCrashReport("Client shutdown", mainThreadId);
+         minecraft.fillReport(report);
          Minecraft.saveReport(gameDirectory, report);
       });
       thread.setDaemon(true);

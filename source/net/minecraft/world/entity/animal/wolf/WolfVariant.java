@@ -15,22 +15,28 @@ import net.minecraft.world.entity.variant.SpawnCondition;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.SpawnPrioritySelectors;
 
-public record WolfVariant(WolfVariant.AssetInfo assetInfo, SpawnPrioritySelectors spawnConditions) implements PriorityProvider<SpawnContext, SpawnCondition> {
+public record WolfVariant(WolfVariant.AssetInfo adultInfo, WolfVariant.AssetInfo babyInfo, SpawnPrioritySelectors spawnConditions)
+   implements PriorityProvider<SpawnContext, SpawnCondition> {
    public static final Codec<WolfVariant> DIRECT_CODEC = RecordCodecBuilder.create(
       i -> i.group(
-            WolfVariant.AssetInfo.CODEC.fieldOf("assets").forGetter(WolfVariant::assetInfo),
+            WolfVariant.AssetInfo.CODEC.fieldOf("assets").forGetter(WolfVariant::adultInfo),
+            WolfVariant.AssetInfo.CODEC.fieldOf("baby_assets").forGetter(WolfVariant::babyInfo),
             SpawnPrioritySelectors.CODEC.fieldOf("spawn_conditions").forGetter(WolfVariant::spawnConditions)
          )
          .apply(i, WolfVariant::new)
    );
    public static final Codec<WolfVariant> NETWORK_CODEC = RecordCodecBuilder.create(
-      i -> i.group(WolfVariant.AssetInfo.CODEC.fieldOf("assets").forGetter(WolfVariant::assetInfo)).apply(i, WolfVariant::new)
+      i -> i.group(
+            WolfVariant.AssetInfo.CODEC.fieldOf("assets").forGetter(WolfVariant::adultInfo),
+            WolfVariant.AssetInfo.CODEC.fieldOf("baby_assets").forGetter(WolfVariant::babyInfo)
+         )
+         .apply(i, WolfVariant::new)
    );
    public static final Codec<Holder<WolfVariant>> CODEC = RegistryFixedCodec.create(Registries.WOLF_VARIANT);
    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<WolfVariant>> STREAM_CODEC = ByteBufCodecs.holderRegistry(Registries.WOLF_VARIANT);
 
-   private WolfVariant(final WolfVariant.AssetInfo assetInfo) {
-      this(assetInfo, SpawnPrioritySelectors.EMPTY);
+   private WolfVariant(final WolfVariant.AssetInfo adultInfo, final WolfVariant.AssetInfo babyInfo) {
+      this(adultInfo, babyInfo, SpawnPrioritySelectors.EMPTY);
    }
 
    @Override

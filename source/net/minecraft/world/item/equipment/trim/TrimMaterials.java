@@ -1,9 +1,5 @@
 package net.minecraft.world.item.equipment.trim;
 
-import java.util.Optional;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.network.chat.Component;
@@ -11,8 +7,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Util;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.ProvidesTrimMaterial;
 
 public class TrimMaterials {
    public static final ResourceKey<TrimMaterial> QUARTZ = registryKey("quartz");
@@ -39,11 +33,6 @@ public class TrimMaterials {
       register(context, LAPIS, Style.EMPTY.withColor(4288151), MaterialAssetGroup.LAPIS);
       register(context, AMETHYST, Style.EMPTY.withColor(10116294), MaterialAssetGroup.AMETHYST);
       register(context, RESIN, Style.EMPTY.withColor(16545810), MaterialAssetGroup.RESIN);
-   }
-
-   public static Optional<Holder<TrimMaterial>> getFromIngredient(final HolderLookup.Provider registries, final ItemStack stack) {
-      ProvidesTrimMaterial material = stack.get(DataComponents.PROVIDES_TRIM_MATERIAL);
-      return material != null ? material.unwrap(registries) : Optional.empty();
    }
 
    private static void register(

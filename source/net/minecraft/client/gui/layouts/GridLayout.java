@@ -8,8 +8,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 
 public class GridLayout extends AbstractLayout {
-   private final List<LayoutElement> children = new ArrayList<>();
-   private final List<GridLayout.CellInhabitant> cellInhabitants = new ArrayList<>();
+   private final List<GridLayout.ChildContainer> children = new ArrayList<>();
    private final LayoutSettings defaultCellSettings = LayoutSettings.defaults();
    private int rowSpacing = 0;
    private int columnSpacing = 0;
@@ -28,26 +27,26 @@ public class GridLayout extends AbstractLayout {
       int maxRow = 0;
       int maxColumn = 0;
 
-      for (GridLayout.CellInhabitant cellInhabitant : this.cellInhabitants) {
-         maxRow = Math.max(cellInhabitant.getLastOccupiedRow(), maxRow);
-         maxColumn = Math.max(cellInhabitant.getLastOccupiedColumn(), maxColumn);
+      for (GridLayout.ChildContainer child : this.children) {
+         maxRow = Math.max(child.getLastOccupiedRow(), maxRow);
+         maxColumn = Math.max(child.getLastOccupiedColumn(), maxColumn);
       }
 
       int[] maxColumnWidths = new int[maxColumn + 1];
       int[] maxRowHeights = new int[maxRow + 1];
 
-      for (GridLayout.CellInhabitant cellInhabitant : this.cellInhabitants) {
-         int cellInhabitantHeight = cellInhabitant.getHeight() - (cellInhabitant.occupiedRows - 1) * this.rowSpacing;
-         Divisor heightDivisor = new Divisor(cellInhabitantHeight, cellInhabitant.occupiedRows);
+      for (GridLayout.ChildContainer child : this.children) {
+         int childHeight = child.getHeight() - (child.occupiedRows - 1) * this.rowSpacing;
+         Divisor heightDivisor = new Divisor(childHeight, child.occupiedRows);
 
-         for (int row = cellInhabitant.row; row <= cellInhabitant.getLastOccupiedRow(); row++) {
+         for (int row = child.row; row <= child.getLastOccupiedRow(); row++) {
             maxRowHeights[row] = Math.max(maxRowHeights[row], heightDivisor.nextInt());
          }
 
-         int cellInhabitantWidth = cellInhabitant.getWidth() - (cellInhabitant.occupiedColumns - 1) * this.columnSpacing;
-         Divisor widthDivisor = new Divisor(cellInhabitantWidth, cellInhabitant.occupiedColumns);
+         int childWidth = child.getWidth() - (child.occupiedColumns - 1) * this.columnSpacing;
+         Divisor widthDivisor = new Divisor(childWidth, child.occupiedColumns);
 
-         for (int column = cellInhabitant.column; column <= cellInhabitant.getLastOccupiedColumn(); column++) {
+         for (int column = child.column; column <= child.getLastOccupiedColumn(); column++) {
             maxColumnWidths[column] = Math.max(maxColumnWidths[column], widthDivisor.nextInt());
          }
       }
@@ -66,23 +65,23 @@ public class GridLayout extends AbstractLayout {
          rowYOffsets[row] = rowYOffsets[row - 1] + maxRowHeights[row - 1] + this.rowSpacing;
       }
 
-      for (GridLayout.CellInhabitant cellInhabitant : this.cellInhabitants) {
+      for (GridLayout.ChildContainer child : this.children) {
          int availableWidth = 0;
 
-         for (int column = cellInhabitant.column; column <= cellInhabitant.getLastOccupiedColumn(); column++) {
+         for (int column = child.column; column <= child.getLastOccupiedColumn(); column++) {
             availableWidth += maxColumnWidths[column];
          }
 
-         availableWidth += this.columnSpacing * (cellInhabitant.occupiedColumns - 1);
-         cellInhabitant.setX(this.getX() + columnXOffsets[cellInhabitant.column], availableWidth);
+         availableWidth += this.columnSpacing * (child.occupiedColumns - 1);
+         child.setX(this.getX() + columnXOffsets[child.column], availableWidth);
          int availableHeight = 0;
 
-         for (int row = cellInhabitant.row; row <= cellInhabitant.getLastOccupiedRow(); row++) {
+         for (int row = child.row; row <= child.getLastOccupiedRow(); row++) {
             availableHeight += maxRowHeights[row];
          }
 
-         availableHeight += this.rowSpacing * (cellInhabitant.occupiedRows - 1);
-         cellInhabitant.setY(this.getY() + rowYOffsets[cellInhabitant.row], availableHeight);
+         availableHeight += this.rowSpacing * (child.occupiedRows - 1);
+         child.setY(this.getY() + rowYOffsets[child.row], availableHeight);
       }
 
       this.width = columnXOffsets[maxColumn] + maxColumnWidths[maxColumn];
@@ -116,8 +115,7 @@ public class GridLayout extends AbstractLayout {
          throw new IllegalArgumentException("Occupied columns must be at least 1");
       }
 
-      this.cellInhabitants.add(new GridLayout.CellInhabitant(child, row, column, rows, columns, cellSettings));
-      this.children.add(child);
+      this.children.add(new GridLayout.ChildContainer(child, row, column, rows, columns, cellSettings));
       return child;
    }
 
@@ -143,7 +141,7 @@ public class GridLayout extends AbstractLayout {
 
    @Override
    public void visitChildren(final Consumer<LayoutElement> layoutElementVisitor) {
-      this.children.forEach(layoutElementVisitor);
+      this.children.forEach(child -> layoutElementVisitor.accept(child.child));
    }
 
    public LayoutSettings newCellSettings() {
@@ -158,13 +156,13 @@ public class GridLayout extends AbstractLayout {
       return new GridLayout.RowHelper(columns);
    }
 
-   private static class CellInhabitant extends AbstractLayout.AbstractChildWrapper {
+   private static class ChildContainer extends AbstractLayout.AbstractChildWrapper {
       private final int row;
       private final int column;
       private final int occupiedRows;
       private final int occupiedColumns;
 
-      private CellInhabitant(
+      private ChildContainer(
          final LayoutElement widget, final int row, final int column, final int occupiedRows, final int occupiedColumns, final LayoutSettings cellSettings
       ) {
          super(widget, cellSettings.getExposed());

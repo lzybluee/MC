@@ -4,13 +4,14 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
 public class ScoreboardSaveData extends SavedData {
    public static final SavedDataType<ScoreboardSaveData> TYPE = new SavedDataType<>(
-      "scoreboard",
+      Identifier.withDefaultNamespace("scoreboard"),
       ScoreboardSaveData::new,
       ScoreboardSaveData.Packed.CODEC.xmap(ScoreboardSaveData::new, ScoreboardSaveData::getData),
       DataFixTypes.SAVED_DATA_SCOREBOARD

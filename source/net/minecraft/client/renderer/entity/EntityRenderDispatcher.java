@@ -19,16 +19,16 @@ import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MapRenderer;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.block.BlockModelResolver;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
@@ -47,9 +47,9 @@ public class EntityRenderDispatcher implements ResourceManagerReloadListener {
    public final TextureManager textureManager;
    public @Nullable Camera camera;
    public Entity crosshairPickEntity;
+   private final BlockModelResolver blockModelResolver;
    private final ItemModelResolver itemModelResolver;
    private final MapRenderer mapRenderer;
-   private final BlockRenderDispatcher blockRenderDispatcher;
    private final ItemInHandRenderer itemInHandRenderer;
    private final AtlasManager atlasManager;
    private final Font font;
@@ -65,9 +65,9 @@ public class EntityRenderDispatcher implements ResourceManagerReloadListener {
    public EntityRenderDispatcher(
       final Minecraft minecraft,
       final TextureManager textureManager,
+      final BlockModelResolver blockModelResolver,
       final ItemModelResolver itemModelResolver,
       final MapRenderer mapRenderer,
-      final BlockRenderDispatcher blockRenderDispatcher,
       final AtlasManager atlasManager,
       final Font font,
       final Options options,
@@ -76,12 +76,12 @@ public class EntityRenderDispatcher implements ResourceManagerReloadListener {
       final PlayerSkinRenderCache playerSkinRenderCache
    ) {
       this.textureManager = textureManager;
+      this.blockModelResolver = blockModelResolver;
       this.itemModelResolver = itemModelResolver;
       this.mapRenderer = mapRenderer;
       this.atlasManager = atlasManager;
       this.playerSkinRenderCache = playerSkinRenderCache;
       this.itemInHandRenderer = new ItemInHandRenderer(minecraft, this, itemModelResolver);
-      this.blockRenderDispatcher = blockRenderDispatcher;
       this.font = font;
       this.options = options;
       this.entityModels = entityModels;
@@ -208,9 +208,9 @@ public class EntityRenderDispatcher implements ResourceManagerReloadListener {
    public void onResourceManagerReload(final ResourceManager resourceManager) {
       EntityRendererProvider.Context context = new EntityRendererProvider.Context(
          this,
+         this.blockModelResolver,
          this.itemModelResolver,
          this.mapRenderer,
-         this.blockRenderDispatcher,
          resourceManager,
          this.entityModels.get(),
          this.equipmentAssets,

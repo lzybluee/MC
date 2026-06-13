@@ -41,6 +41,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.nbt.CompoundTag;
@@ -68,6 +69,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockChangedAckPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundCommandSuggestionsPacket;
 import net.minecraft.network.protocol.game.ClientboundDisguisedChatPacket;
+import net.minecraft.network.protocol.game.ClientboundGameRuleValuesPacket;
 import net.minecraft.network.protocol.game.ClientboundMoveVehiclePacket;
 import net.minecraft.network.protocol.game.ClientboundPlaceGhostRecipePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
@@ -81,6 +83,7 @@ import net.minecraft.network.protocol.game.ClientboundTestInstanceBlockStatus;
 import net.minecraft.network.protocol.game.GameProtocols;
 import net.minecraft.network.protocol.game.ServerGamePacketListener;
 import net.minecraft.network.protocol.game.ServerboundAcceptTeleportationPacket;
+import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.network.protocol.game.ServerboundBlockEntityTagQueryPacket;
 import net.minecraft.network.protocol.game.ServerboundChangeDifficultyPacket;
 import net.minecraft.network.protocol.game.ServerboundChangeGameModePacket;
@@ -126,10 +129,12 @@ import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCommandBlockPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCommandMinecartPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundSetGameRulePacket;
 import net.minecraft.network.protocol.game.ServerboundSetJigsawBlockPacket;
 import net.minecraft.network.protocol.game.ServerboundSetStructureBlockPacket;
 import net.minecraft.network.protocol.game.ServerboundSetTestBlockPacket;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
+import net.minecraft.network.protocol.game.ServerboundSpectateEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundTeleportToEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundTestInstanceBlockActionPacket;
@@ -140,10 +145,12 @@ import net.minecraft.network.protocol.ping.ServerboundPingRequestPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.commands.FetchProfileCommand;
 import net.minecraft.server.commands.GameModeCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.util.FutureChain;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
@@ -154,6 +161,7 @@ import net.minecraft.util.Util;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ExperienceOrb;
@@ -166,7 +174,6 @@ import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.ChatVisiblity;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerModelPart;
 import net.minecraft.world.entity.player.ProfilePublicKey;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
@@ -202,6 +209,7 @@ import net.minecraft.world.level.block.entity.TestBlockEntity;
 import net.minecraft.world.level.block.entity.TestInstanceBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.storage.TagValueOutput;
@@ -729,6 +737,10 @@ public class ServerGamePacketListenerImpl
          if (itemStack != null && !itemStack.isEmpty()) {
             this.tryPickItem(itemStack);
          }
+
+         if (packet.includeData() && this.player.canUseGameMasterBlocks() && entity instanceof Avatar avatar) {
+            FetchProfileCommand.printForAvatar(this.player.createCommandSourceStack(), avatar);
+         }
       }
    }
 
@@ -778,6 +790,38 @@ public class ServerGamePacketListenerImpl
    }
 
    @Override
+   public void handleSetGameRule(final ServerboundSetGameRulePacket packet) {
+      PacketUtils.ensureRunningOnSameThread(packet, this, this.player.level());
+      if (!this.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+         LOGGER.warn("Player {} tried to set game rule values without required permissions", this.player.getGameProfile().name());
+      } else {
+         GameRules gameRules = this.player.level().getGameRules();
+
+         for (ServerboundSetGameRulePacket.Entry entry : packet.entries()) {
+            GameRule<?> rule = BuiltInRegistries.GAME_RULE.getValue(entry.gameRuleKey());
+            if (rule != null) {
+               this.setGameRuleValue(gameRules, rule, entry.value());
+            } else {
+               LOGGER.warn("Received request to set unknown game rule: {}", entry.gameRuleKey());
+            }
+         }
+      }
+   }
+
+   private <T> void setGameRuleValue(final GameRules gameRules, final GameRule<T> rule, final String value) {
+      rule.deserialize(value).result().ifPresent(parsedValue -> {
+         gameRules.set(rule, (T)parsedValue, this.server);
+         this.broadcastGameRuleChangeToOperators(rule, (T)parsedValue);
+      });
+   }
+
+   private <T> void broadcastGameRuleChangeToOperators(final GameRule<T> rule, final T value) {
+      Component message = Component.translatable("commands.gamerule.set", rule.id(), rule.serialize(value));
+      PlayerList playerList = this.server.getPlayerList();
+      playerList.getPlayers().stream().filter(op -> playerList.isOp(op.nameAndId())).forEach(op -> op.sendSystemMessage(message));
+   }
+
+   @Override
    public void handleSetStructureBlock(final ServerboundSetStructureBlockPacket packet) {
       PacketUtils.ensureRunningOnSameThread(packet, this, this.player.level());
       if (this.player.canUseGameMasterBlocks()) {
@@ -801,27 +845,27 @@ public class ServerGamePacketListenerImpl
                String actualStructureName = structure.getStructureName();
                if (packet.getUpdateType() == StructureBlockEntity.UpdateType.SAVE_AREA) {
                   if (structure.saveStructure()) {
-                     this.player.displayClientMessage(Component.translatable("structure_block.save_success", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.save_success", actualStructureName));
                   } else {
-                     this.player.displayClientMessage(Component.translatable("structure_block.save_failure", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.save_failure", actualStructureName));
                   }
                } else if (packet.getUpdateType() == StructureBlockEntity.UpdateType.LOAD_AREA) {
                   if (!structure.isStructureLoadable()) {
-                     this.player.displayClientMessage(Component.translatable("structure_block.load_not_found", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.load_not_found", actualStructureName));
                   } else if (structure.placeStructureIfSameSize(this.player.level())) {
-                     this.player.displayClientMessage(Component.translatable("structure_block.load_success", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.load_success", actualStructureName));
                   } else {
-                     this.player.displayClientMessage(Component.translatable("structure_block.load_prepare", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.load_prepare", actualStructureName));
                   }
                } else if (packet.getUpdateType() == StructureBlockEntity.UpdateType.SCAN_AREA) {
                   if (structure.detectSize()) {
-                     this.player.displayClientMessage(Component.translatable("structure_block.size_success", actualStructureName), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.size_success", actualStructureName));
                   } else {
-                     this.player.displayClientMessage(Component.translatable("structure_block.size_failure"), false);
+                     this.player.sendSystemMessage(Component.translatable("structure_block.size_failure"));
                   }
                }
             } else {
-               this.player.displayClientMessage(Component.translatable("structure_block.invalid_structure_name", packet.getName()), false);
+               this.player.sendSystemMessage(Component.translatable("structure_block.invalid_structure_name", packet.getName()));
             }
 
             structure.setChanged();
@@ -1304,32 +1348,48 @@ public class ServerGamePacketListenerImpl
                if (Math.abs(distance.x()) < 1.0000001 && Math.abs(distance.y()) < 1.0000001 && Math.abs(distance.z()) < 1.0000001) {
                   Direction direction = blockHit.getDirection();
                   this.player.resetLastActionTime();
-                  int maxY = this.player.level().getMaxY();
-                  if (pos.getY() <= maxY) {
-                     if (this.awaitingPositionFromClient == null && level.mayInteract(this.player, pos)) {
+                  int maxY = level.getMaxY();
+                  int minY = level.getMinY();
+                  if (pos.getY() > maxY) {
+                     this.player.sendBuildLimitMessage(true, maxY);
+                  } else if (pos.getY() < minY) {
+                     this.player.sendBuildLimitMessage(false, minY);
+                  } else {
+                     if (this.server.isUnderSpawnProtection(level, pos, this.player)) {
+                        this.player.sendSpawnProtectionMessage(pos);
+                     } else if (this.awaitingPositionFromClient == null && level.mayInteract(this.player, pos)) {
                         InteractionResult interactionResult = this.player.gameMode.useItemOn(this.player, level, itemStack, hand, blockHit);
                         if (interactionResult.consumesAction()) {
-                           CriteriaTriggers.ANY_BLOCK_USE.trigger(this.player, blockHit.getBlockPos(), itemStack.copy());
+                           CriteriaTriggers.ANY_BLOCK_USE.trigger(this.player, blockHit.getBlockPos(), itemStack);
                         }
 
                         if (direction == Direction.UP
                            && !interactionResult.consumesAction()
                            && pos.getY() >= maxY
                            && wasBlockPlacementAttempt(this.player, itemStack)) {
-                           Component component = Component.translatable("build.tooHigh", maxY).withStyle(ChatFormatting.RED);
-                           this.player.sendSystemMessage(component, true);
+                           this.player.sendBuildLimitMessage(true, maxY);
                         } else if (interactionResult instanceof InteractionResult.Success success
                            && success.swingSource() == InteractionResult.SwingSource.SERVER) {
                            this.player.swing(hand, true);
                         }
-                     }
-                  } else {
-                     Component component = Component.translatable("build.tooHigh", maxY).withStyle(ChatFormatting.RED);
-                     this.player.sendSystemMessage(component, true);
-                  }
 
-                  this.send(new ClientboundBlockUpdatePacket(level, pos));
-                  this.send(new ClientboundBlockUpdatePacket(level, pos.relative(direction)));
+                        if (!interactionResult.consumesAction() && wasBlockPlacementAttempt(this.player, itemStack)) {
+                           if (direction == Direction.UP && pos.getY() >= maxY) {
+                              this.player.sendBuildLimitMessage(true, maxY);
+                           } else if (direction == Direction.DOWN && pos.getY() <= minY) {
+                              this.player.sendBuildLimitMessage(false, minY);
+                           }
+                        } else if (interactionResult instanceof InteractionResult.Success success
+                           && success.swingSource() == InteractionResult.SwingSource.SERVER) {
+                           this.player.swing(hand, true);
+                        }
+                     } else {
+                        this.player.sendBuildLimitMessage(true, maxY);
+                     }
+
+                     this.send(new ClientboundBlockUpdatePacket(level, pos));
+                     this.send(new ClientboundBlockUpdatePacket(level, pos.relative(direction)));
+                  }
                } else {
                   LOGGER.warn(
                      "Rejecting UseItemOnPacket from {}: Location {} too far away from hit block {}.",
@@ -1730,66 +1790,75 @@ public class ServerGamePacketListenerImpl
    }
 
    @Override
+   public void handleAttack(final ServerboundAttackPacket packet) {
+      PacketUtils.ensureRunningOnSameThread(packet, this, this.player.level());
+      if (this.hasClientLoaded() && !this.player.isSpectator()) {
+         ServerLevel level = this.player.level();
+         Entity target = level.getEntityOrPart(packet.entityId());
+         this.player.resetLastActionTime();
+         if (target != null && level.getWorldBorder().isWithinBounds(target.blockPosition())) {
+            AABB targetBounds = target.getBoundingBox();
+            ItemStack mainHandItem = this.player.getMainHandItem();
+            if (this.player.isWithinAttackRange(mainHandItem, targetBounds, 3.0)) {
+               if (!mainHandItem.has(DataComponents.PIERCING_WEAPON)) {
+                  if (target instanceof ItemEntity
+                     || target instanceof ExperienceOrb
+                     || target == this.player
+                     || target instanceof AbstractArrow abstractArrow && !abstractArrow.isAttackable()) {
+                     this.disconnect(Component.translatable("multiplayer.disconnect.invalid_entity_attacked"));
+                     LOGGER.warn("Player {} tried to attack an invalid entity", this.player.getPlainTextName());
+                  } else if (mainHandItem.isItemEnabled(level.enabledFeatures())) {
+                     if (!this.player.cannotAttackWithItem(mainHandItem, 5)) {
+                        this.player.attack(target);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   @Override
    public void handleInteract(final ServerboundInteractPacket packet) {
       PacketUtils.ensureRunningOnSameThread(packet, this, this.player.level());
       if (this.hasClientLoaded()) {
-         final ServerLevel level = this.player.level();
-         final Entity target = packet.getTarget(level);
+         ServerLevel level = this.player.level();
+         Entity target = level.getEntityOrPart(packet.entityId());
          this.player.resetLastActionTime();
-         this.player.setShiftKeyDown(packet.isUsingSecondaryAction());
-         if (target != null) {
-            if (!level.getWorldBorder().isWithinBounds(target.blockPosition())) {
-               return;
-            }
-
+         this.player.setShiftKeyDown(packet.usingSecondaryAction());
+         if (target != null && level.getWorldBorder().isWithinBounds(target.blockPosition())) {
             AABB targetBounds = target.getBoundingBox();
-            if (packet.isWithinRange(this.player, targetBounds, 3.0)) {
-               packet.dispatch(
-                  new ServerboundInteractPacket.Handler() {
-                     private void performInteraction(final InteractionHand hand, final ServerGamePacketListenerImpl.EntityInteraction interaction) {
-                        ItemStack tool = ServerGamePacketListenerImpl.this.player.getItemInHand(hand);
-                        if (tool.isItemEnabled(level.enabledFeatures())) {
-                           ItemStack usedItemStack = tool.copy();
-                           if (interaction.run(ServerGamePacketListenerImpl.this.player, target, hand) instanceof InteractionResult.Success success) {
-                              ItemStack awardedForStack = success.wasItemInteraction() ? usedItemStack : ItemStack.EMPTY;
-                              CriteriaTriggers.PLAYER_INTERACTED_WITH_ENTITY.trigger(ServerGamePacketListenerImpl.this.player, awardedForStack, target);
-                              if (success.swingSource() == InteractionResult.SwingSource.SERVER) {
-                                 ServerGamePacketListenerImpl.this.player.swing(hand, true);
-                              }
-                           }
-                        }
-                     }
-
-                     @Override
-                     public void onInteraction(final InteractionHand hand) {
-                        this.performInteraction(hand, Player::interactOn);
-                     }
-
-                     @Override
-                     public void onInteraction(final InteractionHand hand, final Vec3 location) {
-                        this.performInteraction(hand, (player, targetxx, h) -> targetxx.interactAt(player, location, h));
-                     }
-
-                     @Override
-                     public void onAttack() {
-                        if (!(target instanceof ItemEntity)
-                           && !(target instanceof ExperienceOrb)
-                           && target != ServerGamePacketListenerImpl.this.player
-                           && !(target instanceof AbstractArrow abstractArrow && !abstractArrow.isAttackable())) {
-                           ItemStack heldItem = ServerGamePacketListenerImpl.this.player.getItemInHand(InteractionHand.MAIN_HAND);
-                           if (heldItem.isItemEnabled(level.enabledFeatures())) {
-                              if (!ServerGamePacketListenerImpl.this.player.cannotAttackWithItem(heldItem, 5)) {
-                                 ServerGamePacketListenerImpl.this.player.attack(target);
-                              }
-                           }
-                        } else {
-                           ServerGamePacketListenerImpl.this.disconnect(Component.translatable("multiplayer.disconnect.invalid_entity_attacked"));
-                           ServerGamePacketListenerImpl.LOGGER
-                              .warn("Player {} tried to attack an invalid entity", ServerGamePacketListenerImpl.this.player.getPlainTextName());
-                        }
+            if (this.player.isWithinEntityInteractionRange(targetBounds, 3.0)) {
+               InteractionHand hand = packet.hand();
+               Vec3 location = packet.location();
+               ItemStack tool = this.player.getItemInHand(hand);
+               if (tool.isItemEnabled(level.enabledFeatures())) {
+                  ItemStack usedItemStack = tool.copy();
+                  if (this.player.interactOn(target, hand, location) instanceof InteractionResult.Success success) {
+                     ItemStack awardedForStack = success.wasItemInteraction() ? usedItemStack : ItemStack.EMPTY;
+                     CriteriaTriggers.PLAYER_INTERACTED_WITH_ENTITY.trigger(this.player, awardedForStack, target);
+                     if (success.swingSource() == InteractionResult.SwingSource.SERVER) {
+                        this.player.swing(hand, true);
                      }
                   }
-               );
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public void handleSpectateEntity(final ServerboundSpectateEntityPacket packet) {
+      PacketUtils.ensureRunningOnSameThread(packet, this, this.player.level());
+      if (this.hasClientLoaded() && this.player.isSpectator()) {
+         this.player.resetLastActionTime();
+         ServerLevel level = this.player.level();
+         Entity target = level.getEntityOrPart(packet.entityId());
+         if (target != null && level.getWorldBorder().isWithinBounds(target.blockPosition())) {
+            if (this.player.isWithinEntityInteractionRange(target.getBoundingBox(), 3.0)) {
+               if (target.isPickable()) {
+                  this.player.setCamera(target);
+               }
             }
          }
       }
@@ -1824,7 +1893,25 @@ public class ServerGamePacketListenerImpl
             break;
          case REQUEST_STATS:
             this.player.getStats().sendStats(this.player);
+            break;
+         case REQUEST_GAMERULE_VALUES:
+            this.sendGameRuleValues();
       }
+   }
+
+   private void sendGameRuleValues() {
+      if (!this.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+         LOGGER.warn("Player {} tried to request game rule values without required permissions", this.player.getGameProfile().name());
+      } else {
+         GameRules gameRules = this.player.level().getGameRules();
+         Map<ResourceKey<GameRule<?>>, String> values = new HashMap<>();
+         gameRules.availableRules().forEach(rule -> addGameRuleValue(gameRules, values, (GameRule<?>)rule));
+         this.send(new ClientboundGameRuleValuesPacket(values));
+      }
+   }
+
+   private static <T> void addGameRuleValue(final GameRules gameRules, final Map<ResourceKey<GameRule<?>>, String> values, final GameRule<T> rule) {
+      BuiltInRegistries.GAME_RULE.getResourceKey(rule).ifPresent(key -> values.put((ResourceKey<GameRule<?>>)key, rule.serialize(gameRules.get(rule))));
    }
 
    @Override
@@ -1852,7 +1939,7 @@ public class ServerGamePacketListenerImpl
             } else {
                boolean fullResyncNeeded = packet.stateId() != this.player.containerMenu.getStateId();
                this.player.containerMenu.suppressRemoteUpdates();
-               this.player.containerMenu.clicked(slotIndex, packet.buttonNum(), packet.clickType(), this.player);
+               this.player.containerMenu.clicked(slotIndex, packet.buttonNum(), packet.containerInput(), this.player);
                ObjectIterator var4 = Int2ObjectMaps.fastIterable(packet.changedSlots()).iterator();
 
                while (var4.hasNext()) {
@@ -2138,10 +2225,5 @@ public class ServerGamePacketListenerImpl
    private void restartClientLoadTimerAfterRespawn() {
       this.waitingForRespawn = false;
       this.clientLoadedTimeoutTimer = 60;
-   }
-
-   @FunctionalInterface
-   private interface EntityInteraction {
-      InteractionResult run(final ServerPlayer player, final Entity target, final InteractionHand hand);
    }
 }

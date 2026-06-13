@@ -60,7 +60,7 @@ public class DirtPathBlock extends Block {
 
    @Override
    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
-      FarmBlock.turnToDirt(null, state, level, pos);
+      FarmlandBlock.turnToDirt(null, state, level, pos);
    }
 
    @Override

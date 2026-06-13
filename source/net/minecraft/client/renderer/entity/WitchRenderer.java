@@ -11,7 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public class WitchRenderer extends MobRenderer<Witch, WitchRenderState, WitchModel> {
-   private static final Identifier WITCH_LOCATION = Identifier.withDefaultNamespace("textures/entity/witch.png");
+   private static final Identifier WITCH_LOCATION = Identifier.withDefaultNamespace("textures/entity/witch/witch.png");
 
    public WitchRenderer(final EntityRendererProvider.Context context) {
       super(context, new WitchModel(context.bakeLayer(ModelLayers.WITCH)), 0.5F);

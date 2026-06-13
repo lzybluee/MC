@@ -90,6 +90,8 @@ public interface ClientGamePacketListener extends ClientCommonPacketListener, Cl
 
    void handlePlayerAbilities(ClientboundPlayerAbilitiesPacket packet);
 
+   void handleGameRuleValues(ClientboundGameRuleValuesPacket packet);
+
    void handlePlayerInfoRemove(ClientboundPlayerInfoRemovePacket packet);
 
    void handlePlayerInfoUpdate(ClientboundPlayerInfoUpdatePacket packet);
@@ -253,4 +255,6 @@ public interface ClientGamePacketListener extends ClientCommonPacketListener, Cl
    void handleDebugEvent(ClientboundDebugEventPacket packet);
 
    void handleGameTestHighlightPos(ClientboundGameTestHighlightPosPacket packet);
+
+   void handleLowDiskSpaceWarning(ClientboundLowDiskSpaceWarningPacket packet);
 }

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.Objects;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CommonButtons;
 import net.minecraft.client.gui.components.LogoRenderer;
@@ -25,7 +25,7 @@ import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.PanoramaRenderer;
+import net.minecraft.client.renderer.Panorama;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.CommonComponents;
@@ -79,7 +79,7 @@ public class TitleScreen extends Screen {
    public static void registerTextures(final TextureManager textureManager) {
       textureManager.registerForNextReload(LogoRenderer.MINECRAFT_LOGO);
       textureManager.registerForNextReload(LogoRenderer.MINECRAFT_EDITION);
-      textureManager.registerForNextReload(PanoramaRenderer.PANORAMA_OVERLAY);
+      textureManager.registerForNextReload(Panorama.PANORAMA_OVERLAY);
    }
 
    @Override
@@ -118,7 +118,7 @@ public class TitleScreen extends Screen {
       topPos += 36;
       language.setPosition(var10001, topPos);
       this.addRenderableWidget(
-         Button.builder(Component.translatable("menu.options"), button -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options)))
+         Button.builder(Component.translatable("menu.options"), button -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options, false)))
             .bounds(this.width / 2 - 100, topPos, 98, 20)
             .build()
       );
@@ -266,7 +266,7 @@ public class TitleScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.fadeInStart == 0L && this.fading) {
          this.fadeInStart = Util.getMillis();
       }
@@ -284,32 +284,30 @@ public class TitleScreen extends Screen {
          this.fadeWidgets(widgetFade);
       }
 
-      this.renderPanorama(graphics, a);
-      super.render(graphics, mouseX, mouseY, a);
-      this.logoRenderer.renderLogo(graphics, this.width, this.logoRenderer.keepLogoThroughFade() ? 1.0F : widgetFade);
+      this.extractPanorama(graphics, a);
+      super.extractRenderState(graphics, mouseX, mouseY, a);
+      this.logoRenderer.extractRenderState(graphics, this.width, this.logoRenderer.keepLogoThroughFade() ? 1.0F : widgetFade);
       if (this.splash != null && !this.minecraft.options.hideSplashTexts().get()) {
-         this.splash.render(graphics, this.width, this.font, widgetFade);
+         this.splash.extractRenderState(graphics, this.width, this.font, widgetFade);
       }
 
       String versionString = "Minecraft " + SharedConstants.getCurrentVersion().name();
       if (this.minecraft.isDemo()) {
          versionString = versionString + " Demo";
-      } else {
-         versionString = versionString + ("release".equalsIgnoreCase(this.minecraft.getVersionType()) ? "" : "/" + this.minecraft.getVersionType());
       }
 
       if (Minecraft.checkModStatus().shouldReportAsModified()) {
          versionString = versionString + I18n.get("menu.modded");
       }
 
-      graphics.drawString(this.font, versionString, 2, this.height - 10, ARGB.white(widgetFade));
+      graphics.text(this.font, versionString, 2, this.height - 10, ARGB.white(widgetFade));
       if (this.realmsNotificationsEnabled() && widgetFade >= 1.0F) {
-         this.realmsNotificationsScreen.render(graphics, mouseX, mouseY, a);
+         this.realmsNotificationsScreen.extractRenderState(graphics, mouseX, mouseY, a);
       }
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
    }
 
    @Override

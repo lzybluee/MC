@@ -6,7 +6,6 @@ import com.mojang.realmsclient.util.task.LongRunningTask;
 import java.time.Duration;
 import java.util.List;
 import net.minecraft.client.GameNarrator;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.LoadingDotsWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
@@ -71,7 +70,7 @@ public class RealmsLongRunningMcoTaskScreen extends RealmsScreen {
 
    @Override
    public boolean keyPressed(final KeyEvent event) {
-      if (event.key() == 256) {
+      if (event.isEscape()) {
          this.cancel();
          return true;
       } else {
@@ -86,9 +85,7 @@ public class RealmsLongRunningMcoTaskScreen extends RealmsScreen {
       this.loadingDotsWidget = new LoadingDotsWidget(this.font, this.title);
       this.layout.addChild(this.loadingDotsWidget, layoutSettings -> layoutSettings.paddingTop(10).paddingBottom(30));
       this.layout.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.cancel()).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

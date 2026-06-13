@@ -6,18 +6,18 @@ import java.util.Comparator;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollection;
 import net.minecraft.client.renderer.SubmitNodeStorage;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
 public class NameTagFeatureRenderer {
-   public void render(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource, final Font font) {
+   public void renderTranslucent(final SubmitNodeCollection nodeCollection, final MultiBufferSource.BufferSource bufferSource, final Font font) {
       NameTagFeatureRenderer.Storage storage = nodeCollection.getNameTagSubmits();
       storage.nameTagSubmitsSeethrough.sort(Comparator.comparing(SubmitNodeStorage.NameTagSubmit::distanceToCameraSq).reversed());
 
@@ -74,11 +74,13 @@ public class NameTagFeatureRenderer {
             poseStack.scale(0.025F, -0.025F, 0.025F);
             Matrix4f pose = new Matrix4f(poseStack.last().pose());
             float x = -minecraft.font.width(name) / 2.0F;
-            int backgroundColor = (int)(minecraft.options.getBackgroundOpacity(0.25F) * 255.0F) << 24;
+            int backgroundColor = (int)(minecraft.gameRenderer.getGameRenderState().optionsRenderState.getBackgroundOpacity(0.25F) * 255.0F) << 24;
             if (seeThrough) {
                this.nameTagSubmitsNormal
                   .add(
-                     new SubmitNodeStorage.NameTagSubmit(pose, x, offset, name, LightTexture.lightCoordsWithEmission(lightCoords, 2), -1, 0, distanceToCameraSq)
+                     new SubmitNodeStorage.NameTagSubmit(
+                        pose, x, offset, name, LightCoordsUtil.lightCoordsWithEmission(lightCoords, 2), -1, 0, distanceToCameraSq
+                     )
                   );
                this.nameTagSubmitsSeethrough
                   .add(new SubmitNodeStorage.NameTagSubmit(pose, x, offset, name, lightCoords, -2130706433, backgroundColor, distanceToCameraSq));

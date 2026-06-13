@@ -13,6 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.GameEventTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.SpawnUtil;
 import net.minecraft.util.Util;
 import net.minecraft.world.Difficulty;
@@ -150,9 +151,10 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
       SoundEvent sound = (SoundEvent)SOUND_BY_LEVEL.get(this.warningLevel);
       if (sound != null) {
          BlockPos pos = this.getBlockPos();
-         int x = pos.getX() + Mth.randomBetweenInclusive(level.random, -10, 10);
-         int y = pos.getY() + Mth.randomBetweenInclusive(level.random, -10, 10);
-         int z = pos.getZ() + Mth.randomBetweenInclusive(level.random, -10, 10);
+         RandomSource random = level.getRandom();
+         int x = pos.getX() + Mth.randomBetweenInclusive(random, -10, 10);
+         int y = pos.getY() + Mth.randomBetweenInclusive(random, -10, 10);
+         int z = pos.getZ() + Mth.randomBetweenInclusive(random, -10, 10);
          level.playSound(null, x, y, z, sound, SoundSource.HOSTILE, 5.0F, 1.0F);
       }
    }

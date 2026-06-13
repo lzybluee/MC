@@ -198,7 +198,7 @@ public class ServerExplosion implements Explosion {
                   double knockbackPower = (1.0 - dist) * exposure * knockbackMultiplier * (1.0 - knockbackResistance);
                   Vec3 knockback = direction.scale(knockbackPower);
                   entity.push(knockback);
-                  if (entity.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entity instanceof Projectile projectile) {
+                  if (entity.is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entity instanceof Projectile projectile) {
                      projectile.setOwner(this.damageSource.getEntity());
                   } else if (entity instanceof Player player && !player.isSpectator() && (!player.isCreative() || !player.getAbilities().flying)) {
                      this.hitPlayers.put(player, knockback);
@@ -298,15 +298,14 @@ public class ServerExplosion implements Explosion {
       if (this.blockInteraction != Explosion.BlockInteraction.TRIGGER_BLOCK) {
          return false;
       } else {
-         return this.source != null && this.source.getType() == EntityType.BREEZE_WIND_CHARGE ? this.level.getGameRules().get(GameRules.MOB_GRIEFING) : true;
+         return this.source != null && this.source.is(EntityType.BREEZE_WIND_CHARGE) ? this.level.getGameRules().get(GameRules.MOB_GRIEFING) : true;
       }
    }
 
    @Override
    public boolean shouldAffectBlocklikeEntities() {
       boolean mobGriefingEnabled = this.level.getGameRules().get(GameRules.MOB_GRIEFING);
-      boolean isNotWindCharge = this.source == null
-         || this.source.getType() != EntityType.BREEZE_WIND_CHARGE && this.source.getType() != EntityType.WIND_CHARGE;
+      boolean isNotWindCharge = this.source == null || !this.source.is(EntityType.BREEZE_WIND_CHARGE) && !this.source.is(EntityType.WIND_CHARGE);
       return mobGriefingEnabled ? isNotWindCharge : this.blockInteraction.shouldAffectBlocklikeEntities() && isNotWindCharge;
    }
 

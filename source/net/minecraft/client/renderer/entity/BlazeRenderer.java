@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Blaze;
 
 public class BlazeRenderer extends MobRenderer<Blaze, LivingEntityRenderState, BlazeModel> {
-   private static final Identifier BLAZE_LOCATION = Identifier.withDefaultNamespace("textures/entity/blaze.png");
+   private static final Identifier BLAZE_LOCATION = Identifier.withDefaultNamespace("textures/entity/blaze/blaze.png");
 
    public BlazeRenderer(final EntityRendererProvider.Context context) {
       super(context, new BlazeModel(context.bakeLayer(ModelLayers.BLAZE)), 0.5F);

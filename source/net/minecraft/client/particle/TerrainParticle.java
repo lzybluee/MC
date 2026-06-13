@@ -1,9 +1,8 @@
 package net.minecraft.client.particle;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.util.RandomSource;
@@ -34,14 +33,15 @@ public class TerrainParticle extends SingleQuadParticle {
       final BlockState blockState,
       final BlockPos pos
    ) {
-      super(level, x, y, z, xa, ya, za, Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getParticleIcon(blockState));
+      super(level, x, y, z, xa, ya, za, Minecraft.getInstance().getModelManager().getBlockStateModelSet().getParticleMaterial(blockState).sprite());
       this.pos = pos;
       this.gravity = 1.0F;
       this.rCol = 0.6F;
       this.gCol = 0.6F;
       this.bCol = 0.6F;
-      if (!blockState.is(Blocks.GRASS_BLOCK)) {
-         int col = Minecraft.getInstance().getBlockColors().getColor(blockState, level, pos, 0);
+      BlockTintSource tintSource = Minecraft.getInstance().getBlockColors().getTintSource(blockState, 0);
+      if (tintSource != null) {
+         int col = tintSource.colorAsTerrainParticle(blockState, level, pos);
          this.rCol *= (col >> 16 & 0xFF) / 255.0F;
          this.gCol *= (col >> 8 & 0xFF) / 255.0F;
          this.bCol *= (col & 0xFF) / 255.0F;
@@ -50,7 +50,7 @@ public class TerrainParticle extends SingleQuadParticle {
       this.quadSize /= 2.0F;
       this.uo = this.random.nextFloat() * 3.0F;
       this.vo = this.random.nextFloat() * 3.0F;
-      this.layer = this.sprite.atlasLocation().equals(TextureAtlas.LOCATION_BLOCKS) ? SingleQuadParticle.Layer.TERRAIN : SingleQuadParticle.Layer.ITEMS;
+      this.layer = SingleQuadParticle.Layer.bySprite(this.sprite);
    }
 
    @Override
@@ -76,12 +76,6 @@ public class TerrainParticle extends SingleQuadParticle {
    @Override
    protected float getV1() {
       return this.sprite.getV((this.vo + 1.0F) / 4.0F);
-   }
-
-   @Override
-   public int getLightColor(final float a) {
-      int rawPositionColor = super.getLightColor(a);
-      return rawPositionColor == 0 && this.level.hasChunkAt(this.pos) ? LevelRenderer.getLightColor(this.level, this.pos) : rawPositionColor;
    }
 
    private static @Nullable TerrainParticle createTerrainParticle(

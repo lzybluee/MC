@@ -168,7 +168,7 @@ public class HoneycombItem extends Item implements SignApplicator {
    }
 
    @Override
-   public boolean tryApplyToSign(final Level level, final SignBlockEntity sign, final boolean isFrontText, final Player player) {
+   public boolean tryApplyToSign(final Level level, final SignBlockEntity sign, final boolean isFrontText, final ItemStack item, final Player player) {
       if (sign.setWaxed(true)) {
          level.levelEvent(null, 3003, sign.getBlockPos(), 0);
          return true;
@@ -178,7 +178,7 @@ public class HoneycombItem extends Item implements SignApplicator {
    }
 
    @Override
-   public boolean canApplyToSign(final SignText text, final Player player) {
+   public boolean canApplyToSign(final SignText text, final ItemStack item, final Player player) {
       return true;
    }
 }

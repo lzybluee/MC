@@ -29,7 +29,6 @@ public class BreezeEyesLayer extends RenderLayer<BreezeRenderState, BreezeModel>
       final float yRot,
       final float xRot
    ) {
-      submitNodeCollector.order(1)
-         .submitModel(this.model, state, poseStack, BREEZE_EYES, lightCoords, OverlayTexture.NO_OVERLAY, -1, null, state.outlineColor, null);
+      submitNodeCollector.order(1).submitModel(this.model, state, poseStack, BREEZE_EYES, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
    }
 }

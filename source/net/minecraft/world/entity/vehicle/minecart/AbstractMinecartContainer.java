@@ -93,7 +93,7 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       return this.interactWithContainerVehicle(player);
    }
 

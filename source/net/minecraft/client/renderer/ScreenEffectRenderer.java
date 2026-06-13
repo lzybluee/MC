@@ -7,10 +7,11 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.WindowRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.MaterialSet;
 import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.FluidTags;
@@ -28,7 +29,7 @@ import org.jspecify.annotations.Nullable;
 public class ScreenEffectRenderer {
    private static final Identifier UNDERWATER_LOCATION = Identifier.withDefaultNamespace("textures/misc/underwater.png");
    private final Minecraft minecraft;
-   private final MaterialSet materials;
+   private final SpriteGetter sprites;
    private final MultiBufferSource bufferSource;
    public static final int ITEM_ACTIVATION_ANIMATION_LENGTH = 40;
    private @Nullable ItemStack itemActivationItem;
@@ -36,9 +37,9 @@ public class ScreenEffectRenderer {
    private float itemActivationOffX;
    private float itemActivationOffY;
 
-   public ScreenEffectRenderer(final Minecraft minecraft, final MaterialSet materials, final MultiBufferSource bufferSource) {
+   public ScreenEffectRenderer(final Minecraft minecraft, final SpriteGetter sprites, final MultiBufferSource bufferSource) {
       this.minecraft = minecraft;
-      this.materials = materials;
+      this.sprites = sprites;
       this.bufferSource = bufferSource;
    }
 
@@ -51,14 +52,16 @@ public class ScreenEffectRenderer {
       }
    }
 
-   public void renderScreenEffect(final boolean isSleeping, final float partialTicks, final SubmitNodeCollector submitNodeCollector) {
+   public void renderScreenEffect(
+      final boolean isFirstPerson, final boolean isSleeping, final float partialTicks, final SubmitNodeCollector submitNodeCollector, final boolean hideGui
+   ) {
       PoseStack poseStack = new PoseStack();
       Player player = this.minecraft.player;
-      if (this.minecraft.options.getCameraType().isFirstPerson() && !isSleeping) {
+      if (isFirstPerson && !isSleeping) {
          if (!player.noPhysics) {
             BlockState blockState = getViewBlockingState(player);
             if (blockState != null) {
-               renderTex(this.minecraft.getBlockRenderer().getBlockModelShaper().getParticleIcon(blockState), poseStack, this.bufferSource);
+               renderTex(this.minecraft.getModelManager().getBlockStateModelSet().getParticleMaterial(blockState).sprite(), poseStack, this.bufferSource);
             }
          }
 
@@ -68,13 +71,13 @@ public class ScreenEffectRenderer {
             }
 
             if (this.minecraft.player.isOnFire()) {
-               TextureAtlasSprite fireSprite = this.materials.get(ModelBakery.FIRE_1);
+               TextureAtlasSprite fireSprite = this.sprites.get(ModelBakery.FIRE_1);
                renderFire(poseStack, this.bufferSource, fireSprite);
             }
          }
       }
 
-      if (!this.minecraft.options.hideGui) {
+      if (!hideGui) {
          this.renderItemActivationAnimation(poseStack, partialTicks, submitNodeCollector);
       }
    }
@@ -87,7 +90,8 @@ public class ScreenEffectRenderer {
          float tc = scale * ts;
          float smoothScale = 10.25F * tc * ts - 24.95F * ts * ts + 25.5F * tc - 13.8F * ts + 4.0F * scale;
          float piScale = smoothScale * (float) Math.PI;
-         float aspectRatio = (float)this.minecraft.getWindow().getWidth() / this.minecraft.getWindow().getHeight();
+         WindowRenderState windowState = this.minecraft.gameRenderer.getGameRenderState().windowRenderState;
+         float aspectRatio = (float)windowState.width / windowState.height;
          float offX = this.itemActivationOffX * 0.3F * aspectRatio;
          float offY = this.itemActivationOffY * 0.3F;
          poseStack.pushPose();
@@ -155,7 +159,7 @@ public class ScreenEffectRenderer {
 
    private static void renderWater(final Minecraft minecraft, final PoseStack poseStack, final MultiBufferSource bufferSource) {
       BlockPos pos = BlockPos.containing(minecraft.player.getX(), minecraft.player.getEyeY(), minecraft.player.getZ());
-      float br = LightTexture.getBrightness(minecraft.player.level().dimensionType(), minecraft.player.level().getMaxLocalRawBrightness(pos));
+      float br = Lightmap.getBrightness(minecraft.player.level().dimensionType(), minecraft.player.level().getMaxLocalRawBrightness(pos));
       int color = ARGB.colorFromFloat(0.1F, br, br, br);
       float size = 4.0F;
       float x0 = -1.0F;

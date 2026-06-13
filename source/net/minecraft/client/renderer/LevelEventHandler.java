@@ -30,7 +30,6 @@ import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.BoneMealItem;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.JukeboxSong;
 import net.minecraft.world.level.Level;
@@ -79,7 +78,7 @@ public class LevelEventHandler {
    }
 
    public void levelEvent(final int eventType, final BlockPos pos, final int data) {
-      RandomSource random = this.level.random;
+      RandomSource random = this.level.getRandom();
       switch (eventType) {
          case 1000:
             this.level.playLocalSound(pos, SoundEvents.DISPENSER_DISPENSE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
@@ -168,7 +167,7 @@ public class LevelEventHandler {
             this.level.playLocalSound(pos, SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1031:
-            this.level.playLocalSound(pos, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.3F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.3F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1032:
             this.minecraft.getSoundManager().play(SimpleSoundInstance.forLocalAmbience(SoundEvents.PORTAL_TRAVEL, random.nextFloat() * 0.4F + 0.8F, 0.25F));
@@ -183,7 +182,7 @@ public class LevelEventHandler {
             this.level.playLocalSound(pos, SoundEvents.BREWING_STAND_BREW, SoundSource.BLOCKS, 1.0F, 1.0F, false);
             break;
          case 1039:
-            this.level.playLocalSound(pos, SoundEvents.PHANTOM_BITE, SoundSource.HOSTILE, 0.3F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.PHANTOM_BITE, SoundSource.HOSTILE, 0.3F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1040:
             this.level
@@ -198,28 +197,24 @@ public class LevelEventHandler {
                );
             break;
          case 1042:
-            this.level.playLocalSound(pos, SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 1.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.GRINDSTONE_USE, SoundSource.BLOCKS, 1.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1043:
-            this.level.playLocalSound(pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS, 1.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.BOOK_PAGE_TURN, SoundSource.BLOCKS, 1.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1044:
-            this.level.playLocalSound(pos, SoundEvents.SMITHING_TABLE_USE, SoundSource.BLOCKS, 1.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.SMITHING_TABLE_USE, SoundSource.BLOCKS, 1.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1045:
-            this.level.playLocalSound(pos, SoundEvents.POINTED_DRIPSTONE_LAND, SoundSource.BLOCKS, 2.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false);
+            this.level.playLocalSound(pos, SoundEvents.POINTED_DRIPSTONE_LAND, SoundSource.BLOCKS, 2.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1046:
             this.level
-               .playLocalSound(
-                  pos, SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON, SoundSource.BLOCKS, 2.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false
-               );
+               .playLocalSound(pos, SoundEvents.POINTED_DRIPSTONE_DRIP_LAVA_INTO_CAULDRON, SoundSource.BLOCKS, 2.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1047:
             this.level
-               .playLocalSound(
-                  pos, SoundEvents.POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON, SoundSource.BLOCKS, 2.0F, this.level.random.nextFloat() * 0.1F + 0.9F, false
-               );
+               .playLocalSound(pos, SoundEvents.POINTED_DRIPSTONE_DRIP_WATER_INTO_CAULDRON, SoundSource.BLOCKS, 2.0F, random.nextFloat() * 0.1F + 0.9F, false);
             break;
          case 1048:
             this.level
@@ -295,11 +290,12 @@ public class LevelEventHandler {
          case 2002:
          case 2007:
             Vec3 particlePos = Vec3.atBottomCenterOf(pos);
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, Items.SPLASH_POTION);
 
             for (int i = 0; i < 8; i++) {
                this.level
                   .addParticle(
-                     new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.SPLASH_POTION)),
+                     breakParticle,
                      particlePos.x,
                      particlePos.y,
                      particlePos.z,
@@ -334,18 +330,10 @@ public class LevelEventHandler {
             double x = pos.getX() + 0.5;
             double y = pos.getY();
             double z = pos.getZ() + 0.5;
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, Items.ENDER_EYE);
 
             for (int i = 0; i < 8; i++) {
-               this.level
-                  .addParticle(
-                     new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.ENDER_EYE)),
-                     x,
-                     y,
-                     z,
-                     random.nextGaussian() * 0.15,
-                     random.nextDouble() * 0.2,
-                     random.nextGaussian() * 0.15
-                  );
+               this.level.addParticle(breakParticle, x, y, z, random.nextGaussian() * 0.15, random.nextDouble() * 0.2, random.nextGaussian() * 0.15);
             }
 
             for (double angle = 0.0; angle < Math.PI * 2; angle += Math.PI / 20) {
@@ -415,16 +403,11 @@ public class LevelEventHandler {
             this.level.addAlwaysVisibleParticle(ParticleTypes.EXPLOSION_EMITTER, true, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.0, 0.0, 0.0);
             this.level
                .playLocalSound(
-                  pos,
-                  SoundEvents.END_GATEWAY_SPAWN,
-                  SoundSource.BLOCKS,
-                  10.0F,
-                  (1.0F + (this.level.random.nextFloat() - this.level.random.nextFloat()) * 0.2F) * 0.7F,
-                  false
+                  pos, SoundEvents.END_GATEWAY_SPAWN, SoundSource.BLOCKS, 10.0F, (1.0F + (random.nextFloat() - random.nextFloat()) * 0.2F) * 0.7F, false
                );
             break;
          case 3001:
-            this.level.playLocalSound(pos, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 64.0F, 0.8F + this.level.random.nextFloat() * 0.3F, false);
+            this.level.playLocalSound(pos, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 64.0F, 0.8F + random.nextFloat() * 0.3F, false);
             break;
          case 3002:
             if (data >= 0 && data < Direction.Axis.VALUES.length) {
@@ -516,7 +499,7 @@ public class LevelEventHandler {
                      SoundEvents.SCULK_SHRIEKER_SHRIEK,
                      SoundSource.BLOCKS,
                      2.0F,
-                     0.6F + this.level.random.nextFloat() * 0.4F,
+                     0.6F + random.nextFloat() * 0.4F,
                      false
                   );
             }

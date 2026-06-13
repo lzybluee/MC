@@ -8,14 +8,14 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public class LootItemKilledByPlayerCondition implements LootItemCondition {
    private static final LootItemKilledByPlayerCondition INSTANCE = new LootItemKilledByPlayerCondition();
-   public static final MapCodec<LootItemKilledByPlayerCondition> CODEC = MapCodec.unit(INSTANCE);
+   public static final MapCodec<LootItemKilledByPlayerCondition> MAP_CODEC = MapCodec.unit(INSTANCE);
 
    private LootItemKilledByPlayerCondition() {
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.KILLED_BY_PLAYER;
+   public MapCodec<LootItemKilledByPlayerCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override

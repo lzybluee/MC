@@ -39,6 +39,6 @@ public class LongJumpMidJump extends Behavior<Mob> {
       body.setDiscardFriction(false);
       body.setPose(Pose.STANDING);
       body.getBrain().eraseMemory(MemoryModuleType.LONG_JUMP_MID_JUMP);
-      body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.random));
+      body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.getRandom()));
    }
 }

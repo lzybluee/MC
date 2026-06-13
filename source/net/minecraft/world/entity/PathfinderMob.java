@@ -35,7 +35,7 @@ public abstract class PathfinderMob extends Mob {
    }
 
    public boolean isPanicking() {
-      if (this.brain.hasMemoryValue(MemoryModuleType.IS_PANICKING)) {
+      if (!this.brain.isBrainDead() && this.brain.hasMemoryValue(MemoryModuleType.IS_PANICKING)) {
          return this.brain.getMemory(MemoryModuleType.IS_PANICKING).isPresent();
       }
 

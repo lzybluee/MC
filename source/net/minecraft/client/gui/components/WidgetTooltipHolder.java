@@ -2,7 +2,7 @@ package net.minecraft.client.gui.components;
 
 import java.time.Duration;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.inventory.tooltip.BelowOrAboveWidgetTooltipPositioner;
@@ -30,7 +30,12 @@ public class WidgetTooltipHolder {
    }
 
    public void refreshTooltipForNextRenderPass(
-      final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean isHovered, final boolean isFocused, final ScreenRectangle screenRectangle
+      final GuiGraphicsExtractor graphics,
+      final int mouseX,
+      final int mouseY,
+      final boolean isHovered,
+      final boolean isFocused,
+      final ScreenRectangle screenRectangle
    ) {
       if (this.tooltip == null) {
          this.wasDisplayed = false;
@@ -49,10 +54,12 @@ public class WidgetTooltipHolder {
             graphics.setTooltipForNextFrame(
                minecraft.font,
                this.tooltip.toCharSequence(minecraft),
+               this.tooltip.component(),
                this.createTooltipPositioner(screenRectangle, isHovered, isFocused),
                mouseX,
                mouseY,
-               isFocused
+               isFocused,
+               this.tooltip.style()
             );
          }
       }

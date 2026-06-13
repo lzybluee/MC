@@ -6,15 +6,15 @@ import java.util.List;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class EntryGroup extends CompositeEntryBase {
-   public static final MapCodec<EntryGroup> CODEC = createCodec(EntryGroup::new);
+   public static final MapCodec<EntryGroup> MAP_CODEC = createCodec(EntryGroup::new);
 
    EntryGroup(final List<LootPoolEntryContainer> children, final List<LootItemCondition> conditions) {
       super(children, conditions);
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.GROUP;
+   public MapCodec<EntryGroup> codec() {
+      return MAP_CODEC;
    }
 
    @Override

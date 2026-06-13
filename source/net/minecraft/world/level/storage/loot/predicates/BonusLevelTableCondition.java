@@ -9,14 +9,14 @@ import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.context.ContextKey;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record BonusLevelTableCondition(Holder<Enchantment> enchantment, List<Float> values) implements LootItemCondition {
-   public static final MapCodec<BonusLevelTableCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<BonusLevelTableCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Enchantment.CODEC.fieldOf("enchantment").forGetter(BonusLevelTableCondition::enchantment),
             ExtraCodecs.nonEmptyList(Codec.FLOAT.listOf()).fieldOf("chances").forGetter(BonusLevelTableCondition::values)
@@ -25,8 +25,8 @@ public record BonusLevelTableCondition(Holder<Enchantment> enchantment, List<Flo
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.TABLE_BONUS;
+   public MapCodec<BonusLevelTableCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -35,7 +35,7 @@ public record BonusLevelTableCondition(Holder<Enchantment> enchantment, List<Flo
    }
 
    public boolean test(final LootContext context) {
-      ItemStack tool = context.getOptionalParameter(LootContextParams.TOOL);
+      ItemInstance tool = context.getOptionalParameter(LootContextParams.TOOL);
       int level = tool != null ? EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, tool) : 0;
       float chance = this.values.get(Math.min(level, this.values.size() - 1));
       return context.getRandom().nextFloat() < chance;

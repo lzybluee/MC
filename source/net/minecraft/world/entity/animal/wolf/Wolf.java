@@ -70,10 +70,7 @@ import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -95,10 +92,9 @@ public class Wolf extends TamableAnimal implements NeutralMob {
    private static final EntityDataAccessor<Holder<WolfSoundVariant>> DATA_SOUND_VARIANT_ID = SynchedEntityData.defineId(
       Wolf.class, EntityDataSerializers.WOLF_SOUND_VARIANT
    );
-   public static final TargetingConditions.Selector PREY_SELECTOR = (target, level) -> {
-      EntityType<?> type = target.getType();
-      return type == EntityType.SHEEP || type == EntityType.RABBIT || type == EntityType.FOX;
-   };
+   public static final TargetingConditions.Selector PREY_SELECTOR = (target, level) -> target.is(EntityType.SHEEP)
+      || target.is(EntityType.RABBIT)
+      || target.is(EntityType.FOX);
    private static final float START_HEALTH = 8.0F;
    private static final float TAME_HEALTH = 40.0F;
    private static final float ARMOR_REPAIR_UNIT = 0.125F;
@@ -117,7 +113,7 @@ public class Wolf extends TamableAnimal implements NeutralMob {
       super(type, level);
       this.setTame(false, false);
       this.setPathfindingMalus(PathType.POWDER_SNOW, -1.0F);
-      this.setPathfindingMalus(PathType.DANGER_POWDER_SNOW, -1.0F);
+      this.setPathfindingMalus(PathType.ON_TOP_OF_POWDER_SNOW, -1.0F);
    }
 
    @Override
@@ -146,10 +142,11 @@ public class Wolf extends TamableAnimal implements NeutralMob {
 
    public Identifier getTexture() {
       WolfVariant variant = this.getVariant().value();
+      WolfVariant.AssetInfo assetInfo = this.isBaby() ? variant.babyInfo() : variant.adultInfo();
       if (this.isTame()) {
-         return variant.assetInfo().tame().texturePath();
+         return assetInfo.tame().texturePath();
       } else {
-         return this.isAngry() ? variant.assetInfo().angry().texturePath() : variant.assetInfo().wild().texturePath();
+         return this.isAngry() ? assetInfo.angry().texturePath() : assetInfo.wild().texturePath();
       }
    }
 
@@ -163,6 +160,10 @@ public class Wolf extends TamableAnimal implements NeutralMob {
 
    private Holder<WolfSoundVariant> getSoundVariant() {
       return this.entityData.get(DATA_SOUND_VARIANT_ID);
+   }
+
+   private WolfSoundVariant.WolfSoundSet getSoundSet() {
+      return this.isBaby() ? this.getSoundVariant().value().babySounds() : this.getSoundVariant().value().adultSounds();
    }
 
    private void setSoundVariant(final Holder<WolfSoundVariant> soundVariant) {
@@ -221,7 +222,7 @@ public class Wolf extends TamableAnimal implements NeutralMob {
 
    @Override
    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
-      this.playSound(SoundEvents.WOLF_STEP, 0.15F, 1.0F);
+      this.playSound(this.getSoundSet().stepSound().value(), 0.15F, 1.0F);
    }
 
    @Override
@@ -269,24 +270,22 @@ public class Wolf extends TamableAnimal implements NeutralMob {
    @Override
    protected SoundEvent getAmbientSound() {
       if (this.isAngry()) {
-         return this.getSoundVariant().value().growlSound().value();
+         return this.getSoundSet().growlSound().value();
       } else if (this.random.nextInt(3) == 0) {
-         return this.isTame() && this.getHealth() < 20.0F
-            ? this.getSoundVariant().value().whineSound().value()
-            : this.getSoundVariant().value().pantSound().value();
+         return this.isTame() && this.getHealth() < 20.0F ? this.getSoundSet().whineSound().value() : this.getSoundSet().pantSound().value();
       } else {
-         return this.getSoundVariant().value().ambientSound().value();
+         return this.getSoundSet().ambientSound().value();
       }
    }
 
    @Override
    protected SoundEvent getHurtSound(final DamageSource source) {
-      return this.canArmorAbsorb(source) ? SoundEvents.WOLF_ARMOR_DAMAGE : this.getSoundVariant().value().hurtSound().value();
+      return this.canArmorAbsorb(source) ? SoundEvents.WOLF_ARMOR_DAMAGE : this.getSoundSet().hurtSound().value();
    }
 
    @Override
    protected SoundEvent getDeathSound() {
-      return this.getSoundVariant().value().deathSound().value();
+      return this.getSoundSet().deathSound().value();
    }
 
    @Override
@@ -410,15 +409,7 @@ public class Wolf extends TamableAnimal implements NeutralMob {
          if (Crackiness.WOLF_ARMOR.byDamage(damageBefore, maxDamage) != Crackiness.WOLF_ARMOR.byDamage(this.getBodyArmorItem())) {
             this.playSound(SoundEvents.WOLF_ARMOR_CRACK);
             level.sendParticles(
-               new ItemParticleOption(ParticleTypes.ITEM, Items.ARMADILLO_SCUTE.getDefaultInstance()),
-               this.getX(),
-               this.getY() + 1.0,
-               this.getZ(),
-               20,
-               0.2,
-               0.1,
-               0.2,
-               0.1
+               new ItemParticleOption(ParticleTypes.ITEM, Items.ARMADILLO_SCUTE), this.getX(), this.getY() + 1.0, this.getZ(), 20, 0.2, 0.1, 0.2, 0.1
             );
          }
       }
@@ -451,17 +442,13 @@ public class Wolf extends TamableAnimal implements NeutralMob {
    @Override
    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
       ItemStack itemStack = player.getItemInHand(hand);
-      Item item = itemStack.getItem();
       if (this.isTame()) {
          if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
-            this.usePlayerItem(player, hand, itemStack);
-            FoodProperties foodProperties = itemStack.get(DataComponents.FOOD);
-            float nutrition = foodProperties != null ? foodProperties.nutrition() : 1.0F;
-            this.heal(2.0F * nutrition);
+            this.feed(player, hand, itemStack, 2.0F, 2.0F);
             return InteractionResult.SUCCESS;
          }
 
-         if (!(item instanceof DyeItem dyeItem && this.isOwnedBy(player))) {
+         if (!itemStack.is(ItemTags.WOLF_COLLAR_DYES) || !this.isOwnedBy(player)) {
             if (this.isEquippableInSlot(itemStack, EquipmentSlot.BODY) && !this.isWearingBodyArmor() && this.isOwnedBy(player) && !this.isBaby()) {
                this.setBodyArmorItem(itemStack.copyWithCount(1));
                itemStack.consume(1, player);
@@ -493,8 +480,8 @@ public class Wolf extends TamableAnimal implements NeutralMob {
             return interactionResult;
          }
 
-         DyeColor color = dyeItem.getDyeColor();
-         if (color != this.getCollarColor()) {
+         DyeColor color = itemStack.get(DataComponents.DYE);
+         if (color != null && color != this.getCollarColor()) {
             this.setCollarColor(color);
             itemStack.consume(1, player);
             return InteractionResult.SUCCESS;

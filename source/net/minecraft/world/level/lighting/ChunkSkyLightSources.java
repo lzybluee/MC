@@ -138,7 +138,7 @@ public class ChunkSkyLightSources {
    }
 
    private static boolean isEdgeOccluded(final BlockState topState, final BlockState bottomState) {
-      if (bottomState.getLightBlock() != 0) {
+      if (bottomState.getLightDampening() != 0) {
          return true;
       }
 

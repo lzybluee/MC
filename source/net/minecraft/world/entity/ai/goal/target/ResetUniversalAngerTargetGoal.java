@@ -28,7 +28,7 @@ public class ResetUniversalAngerTargetGoal<T extends Mob & NeutralMob> extends G
 
    private boolean wasHurtByPlayer() {
       return this.mob.getLastHurtByMob() != null
-         && this.mob.getLastHurtByMob().getType() == EntityType.PLAYER
+         && this.mob.getLastHurtByMob().is(EntityType.PLAYER)
          && this.mob.getLastHurtByMobTimestamp() > this.lastHurtByPlayerTimestamp;
    }
 

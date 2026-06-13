@@ -37,6 +37,7 @@ public class BreathAirGoal extends Goal {
    @Override
    public void start() {
       this.findAirPosition();
+      this.mob.getNavigation().stop();
    }
 
    private void findAirPosition() {

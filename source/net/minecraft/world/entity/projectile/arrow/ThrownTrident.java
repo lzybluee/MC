@@ -127,7 +127,7 @@ public class ThrownTrident extends AbstractArrow {
 
       this.dealtDamage = true;
       if (entity.hurtOrSimulate(damageSource, dmg)) {
-         if (entity.getType() == EntityType.ENDERMAN) {
+         if (entity.is(EntityType.ENDERMAN)) {
             return;
          }
 

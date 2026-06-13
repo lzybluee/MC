@@ -1,5 +1,7 @@
 package net.minecraft.client.renderer.entity;
 
+import net.minecraft.client.model.animal.wolf.AdultWolfModel;
+import net.minecraft.client.model.animal.wolf.BabyWolfModel;
 import net.minecraft.client.model.animal.wolf.WolfModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.layers.WolfArmorLayer;
@@ -11,7 +13,7 @@ import net.minecraft.world.entity.animal.wolf.Wolf;
 
 public class WolfRenderer extends AgeableMobRenderer<Wolf, WolfRenderState, WolfModel> {
    public WolfRenderer(final EntityRendererProvider.Context context) {
-      super(context, new WolfModel(context.bakeLayer(ModelLayers.WOLF)), new WolfModel(context.bakeLayer(ModelLayers.WOLF_BABY)), 0.5F);
+      super(context, new AdultWolfModel(context.bakeLayer(ModelLayers.WOLF)), new BabyWolfModel(context.bakeLayer(ModelLayers.WOLF_BABY)), 0.5F);
       this.addLayer(new WolfArmorLayer(this, context.getModelSet(), context.getEquipmentRenderer()));
       this.addLayer(new WolfCollarLayer(this));
    }

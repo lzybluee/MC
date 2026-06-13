@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,6 +12,7 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -45,19 +47,12 @@ public class AxolotlAi {
    private static final float SPEED_MULTIPLIER_WHEN_CHASING_IN_WATER = 0.6F;
    private static final float SPEED_MULTIPLIER_WHEN_FOLLOWING_ADULT_IN_WATER = 0.6F;
 
-   protected static Brain<?> makeBrain(final Brain<Axolotl> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initFightActivity(brain);
-      initPlayDeadActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Axolotl>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity(), initPlayDeadActivity());
    }
 
-   private static void initPlayDeadActivity(final Brain<Axolotl> brain) {
-      brain.addActivityAndRemoveMemoriesWhenStopped(
+   protected static ActivityData<Axolotl> initPlayDeadActivity() {
+      return ActivityData.create(
          Activity.PLAY_DEAD,
          ImmutableList.of(Pair.of(0, new PlayDead()), Pair.of(1, EraseMemoryIf.create(BehaviorUtils::isBreeding, MemoryModuleType.PLAY_DEAD_TICKS))),
          ImmutableSet.of(Pair.of(MemoryModuleType.PLAY_DEAD_TICKS, MemoryStatus.VALUE_PRESENT)),
@@ -65,8 +60,8 @@ public class AxolotlAi {
       );
    }
 
-   private static void initFightActivity(final Brain<Axolotl> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   protected static ActivityData<Axolotl> initFightActivity() {
+      return ActivityData.create(
          Activity.FIGHT,
          0,
          ImmutableList.of(
@@ -79,8 +74,8 @@ public class AxolotlAi {
       );
    }
 
-   private static void initCoreActivity(final Brain<Axolotl> brain) {
-      brain.addActivity(
+   protected static ActivityData<Axolotl> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -92,8 +87,8 @@ public class AxolotlAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Axolotl> brain) {
-      brain.addActivity(
+   protected static ActivityData<Axolotl> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),

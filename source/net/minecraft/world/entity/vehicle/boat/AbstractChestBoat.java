@@ -26,6 +26,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractChestBoat extends AbstractBoat implements HasCustomInventoryScreen, ContainerEntity {
@@ -76,8 +77,8 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
-      InteractionResult superInteraction = super.interact(player, hand);
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+      InteractionResult superInteraction = super.interact(player, hand, location);
       if (superInteraction != InteractionResult.PASS) {
          return superInteraction;
       }

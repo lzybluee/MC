@@ -17,7 +17,7 @@ public class SetEntityLookTargetSometimes {
    }
 
    public static BehaviorControl<LivingEntity> create(final EntityType<?> type, final float maxDist, final UniformInt interval) {
-      return create(maxDist, interval, mob -> type.equals(mob.getType()));
+      return create(maxDist, interval, mob -> mob.is(type));
    }
 
    private static BehaviorControl<LivingEntity> create(final float maxDist, final UniformInt interval, final Predicate<LivingEntity> predicate) {
@@ -34,7 +34,7 @@ public class SetEntityLookTargetSometimes {
                      return false;
                   }
 
-                  if (!ticker.tickDownAndCheck(level.random)) {
+                  if (!ticker.tickDownAndCheck(level.getRandom())) {
                      return false;
                   }
 
@@ -50,7 +50,7 @@ public class SetEntityLookTargetSometimes {
       private int ticksUntilNextStart;
 
       public Ticker(final UniformInt interval) {
-         if (interval.getMinValue() <= 1) {
+         if (interval.minInclusive() <= 1) {
             throw new IllegalArgumentException();
          }
 

@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.AtlasManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -150,6 +150,8 @@ public class ParticleResources implements PreparableReloadListener {
       this.register(ParticleTypes.FALLING_DRIPSTONE_LAVA, DripParticle.DripstoneLavaFallProvider::new);
       this.register(ParticleTypes.VIBRATION, VibrationSignalParticle.Provider::new);
       this.register(ParticleTypes.TRAIL, TrailParticle.Provider::new);
+      this.register(ParticleTypes.PAUSE_MOB_GROWTH, SimpleVerticalParticle.PauseMobGrowthProvider::new);
+      this.register(ParticleTypes.RESET_MOB_GROWTH, SimpleVerticalParticle.ResetMobGrowthProvider::new);
       this.register(ParticleTypes.GLOW_SQUID_INK, SquidInkParticle.GlowInkProvider::new);
       this.register(ParticleTypes.GLOW, GlowParticle.GlowSquidProvider::new);
       this.register(ParticleTypes.WAX_ON, GlowParticle.WaxOnProvider::new);

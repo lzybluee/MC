@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.components;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -17,14 +17,23 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
    private boolean showBackground = true;
    private boolean showDecorations = true;
 
-   public AbstractTextAreaWidget(final int x, final int y, final int width, final int height, final Component narration) {
-      super(x, y, width, height, narration);
+   public AbstractTextAreaWidget(
+      final int x, final int y, final int width, final int height, final Component narration, final AbstractScrollArea.ScrollbarSettings scrollbarSettings
+   ) {
+      super(x, y, width, height, narration, scrollbarSettings);
    }
 
    public AbstractTextAreaWidget(
-      final int x, final int y, final int width, final int height, final Component narration, final boolean showBackground, final boolean showDecorations
+      final int x,
+      final int y,
+      final int width,
+      final int height,
+      final Component narration,
+      final AbstractScrollArea.ScrollbarSettings scrollbarSettings,
+      final boolean showBackground,
+      final boolean showDecorations
    ) {
-      this(x, y, width, height, narration);
+      this(x, y, width, height, narration, scrollbarSettings);
       this.showBackground = showBackground;
       this.showDecorations = showDecorations;
    }
@@ -51,26 +60,26 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
    }
 
    @Override
-   public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.visible) {
          if (this.showBackground) {
-            this.renderBackground(graphics);
+            this.extractBackground(graphics);
          }
 
          graphics.enableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
          graphics.pose().pushMatrix();
          graphics.pose().translate(0.0F, (float)(-this.scrollAmount()));
-         this.renderContents(graphics, mouseX, mouseY, a);
+         this.extractContents(graphics, mouseX, mouseY, a);
          graphics.pose().popMatrix();
          graphics.disableScissor();
-         this.renderScrollbar(graphics, mouseX, mouseY);
+         this.extractScrollbar(graphics, mouseX, mouseY);
          if (this.showDecorations) {
-            this.renderDecorations(graphics);
+            this.extractDecorations(graphics);
          }
       }
    }
 
-   protected void renderDecorations(final GuiGraphics graphics) {
+   protected void extractDecorations(final GuiGraphicsExtractor graphics) {
    }
 
    protected int innerPadding() {
@@ -83,7 +92,12 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
 
    @Override
    public boolean isMouseOver(final double mouseX, final double mouseY) {
-      return this.active && this.visible && mouseX >= this.getX() && mouseY >= this.getY() && mouseX < this.getRight() + 6 && mouseY < this.getBottom();
+      return this.active
+         && this.visible
+         && mouseX >= this.getX()
+         && mouseY >= this.getY()
+         && mouseX < this.getRight() + this.scrollbarWidth()
+         && mouseY < this.getBottom();
    }
 
    @Override
@@ -96,11 +110,11 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
       return this.getInnerHeight() + this.totalInnerPadding();
    }
 
-   protected void renderBackground(final GuiGraphics graphics) {
-      this.renderBorder(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+   protected void extractBackground(final GuiGraphicsExtractor graphics) {
+      this.extractBorder(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
    }
 
-   protected void renderBorder(final GuiGraphics graphics, final int x, final int y, final int width, final int height) {
+   protected void extractBorder(final GuiGraphicsExtractor graphics, final int x, final int y, final int width, final int height) {
       Identifier sprite = BACKGROUND_SPRITES.get(this.isActive(), this.isFocused());
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, width, height);
    }
@@ -111,7 +125,7 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
 
    protected abstract int getInnerHeight();
 
-   protected abstract void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a);
+   protected abstract void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a);
 
    protected int getInnerLeft() {
       return this.getX() + this.innerPadding();

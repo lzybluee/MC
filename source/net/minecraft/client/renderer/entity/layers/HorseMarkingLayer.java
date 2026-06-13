@@ -14,18 +14,30 @@ import net.minecraft.world.entity.animal.equine.Markings;
 
 public class HorseMarkingLayer extends RenderLayer<HorseRenderState, HorseModel> {
    private static final Identifier INVISIBLE_TEXTURE = Identifier.withDefaultNamespace("invisible");
-   private static final Map<Markings, Identifier> TEXTURE_BY_MARKINGS = Maps.newEnumMap(
+   private static final Map<Markings, HorseMarkingLayer.HorseMarkingTextures> LOCATION_BY_MARKINGS = Maps.newEnumMap(
       Map.of(
          Markings.NONE,
-         INVISIBLE_TEXTURE,
+         new HorseMarkingLayer.HorseMarkingTextures(INVISIBLE_TEXTURE, INVISIBLE_TEXTURE),
          Markings.WHITE,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_white.png"),
+         new HorseMarkingLayer.HorseMarkingTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_white.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_white_baby.png")
+         ),
          Markings.WHITE_FIELD,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitefield.png"),
+         new HorseMarkingLayer.HorseMarkingTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitefield.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitefield_baby.png")
+         ),
          Markings.WHITE_DOTS,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitedots.png"),
+         new HorseMarkingLayer.HorseMarkingTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitedots.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_whitedots_baby.png")
+         ),
          Markings.BLACK_DOTS,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_blackdots.png")
+         new HorseMarkingLayer.HorseMarkingTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_blackdots.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_markings_blackdots_baby.png")
+         )
       )
    );
 
@@ -41,7 +53,8 @@ public class HorseMarkingLayer extends RenderLayer<HorseRenderState, HorseModel>
       final float yRot,
       final float xRot
    ) {
-      Identifier texture = TEXTURE_BY_MARKINGS.get(state.markings);
+      HorseMarkingLayer.HorseMarkingTextures variant = LOCATION_BY_MARKINGS.get(state.markings);
+      Identifier texture = state.isBaby ? variant.baby : variant.adult;
       if (texture != INVISIBLE_TEXTURE && !state.isInvisible) {
          submitNodeCollector.order(1)
             .submitModel(
@@ -51,11 +64,12 @@ public class HorseMarkingLayer extends RenderLayer<HorseRenderState, HorseModel>
                RenderTypes.entityTranslucent(texture),
                lightCoords,
                LivingEntityRenderer.getOverlayCoords(state, 0.0F),
-               -1,
-               null,
                state.outlineColor,
                null
             );
       }
+   }
+
+   private record HorseMarkingTextures(Identifier adult, Identifier baby) {
    }
 }

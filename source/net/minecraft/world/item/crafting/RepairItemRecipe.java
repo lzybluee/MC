@@ -1,20 +1,26 @@
 package net.minecraft.world.item.crafting;
 
+import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.MapCodec;
+import java.util.Iterator;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class RepairItemRecipe extends CustomRecipe {
-   public RepairItemRecipe(final CraftingBookCategory category) {
-      super(category);
-   }
+   public static final RepairItemRecipe INSTANCE = new RepairItemRecipe();
+   public static final MapCodec<RepairItemRecipe> MAP_CODEC = MapCodec.unit(INSTANCE);
+   public static final StreamCodec<RegistryFriendlyByteBuf, RepairItemRecipe> STREAM_CODEC = StreamCodec.unit(INSTANCE);
+   public static final RecipeSerializer<RepairItemRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
 
    private static @Nullable Pair<ItemStack, ItemStack> getItemsToCombine(final CraftingInput input) {
       if (input.ingredientCount() != 2) {
@@ -51,7 +57,7 @@ public class RepairItemRecipe extends CustomRecipe {
       return getItemsToCombine(input) != null;
    }
 
-   public ItemStack assemble(final CraftingInput input, final HolderLookup.Provider registries) {
+   public ItemStack assemble(final CraftingInput input) {
       Pair<ItemStack, ItemStack> itemsToCombine = getItemsToCombine(input);
       if (itemsToCombine == null) {
          return ItemStack.EMPTY;
@@ -68,20 +74,22 @@ public class RepairItemRecipe extends CustomRecipe {
       itemStack.setDamageValue(Math.max(durability - remaining, 0));
       ItemEnchantments firstEnchants = EnchantmentHelper.getEnchantmentsForCrafting(first);
       ItemEnchantments secondEnchants = EnchantmentHelper.getEnchantmentsForCrafting(second);
-      EnchantmentHelper.updateEnchantments(
-         itemStack,
-         enchantments -> registries.lookupOrThrow(Registries.ENCHANTMENT).listElements().filter(h -> h.is(EnchantmentTags.CURSE)).forEach(enchant -> {
-            int enchantLevel = Math.max(firstEnchants.getLevel(enchant), secondEnchants.getLevel(enchant));
-            if (enchantLevel > 0) {
-               enchantments.upgrade(enchant, enchantLevel);
+      EnchantmentHelper.updateEnchantments(itemStack, newEnchantments -> {
+         Iterator i$ = Sets.union(firstEnchants.keySet(), secondEnchants.keySet()).iterator();
+
+         while (i$.hasNext()) {
+            Holder<Enchantment> enchantment = (Holder<Enchantment>)i$.next();
+            if (enchantment.is(EnchantmentTags.CURSE)) {
+               int enchantLevel = Math.max(firstEnchants.getLevel(enchantment), secondEnchants.getLevel(enchantment));
+               newEnchantments.set(enchantment, enchantLevel);
             }
-         })
-      );
+         }
+      });
       return itemStack;
    }
 
    @Override
    public RecipeSerializer<RepairItemRecipe> getSerializer() {
-      return RecipeSerializer.REPAIR_ITEM;
+      return SERIALIZER;
    }
 }

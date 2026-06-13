@@ -1,11 +1,11 @@
 package net.minecraft.data.info;
 
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -60,10 +60,10 @@ public class BlockListReport implements DataProvider {
                         }
 
                         JsonArray protocol = new JsonArray();
-                        UnmodifiableIterator var13 = definition.getPossibleStates().iterator();
+                        Iterator i$ = definition.getPossibleStates().iterator();
 
-                        while (var13.hasNext()) {
-                           BlockState state = (BlockState)var13.next();
+                        while (i$.hasNext()) {
+                           BlockState state = (BlockState)i$.next();
                            JsonObject stateEntry = new JsonObject();
                            JsonObject properties = new JsonObject();
 

@@ -4,11 +4,13 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import java.util.Optional;
-import java.util.function.LongSupplier;
+import net.minecraft.core.Holder;
 import net.minecraft.util.KeyframeTrack;
 import net.minecraft.util.Util;
 import net.minecraft.world.attribute.EnvironmentAttribute;
 import net.minecraft.world.attribute.modifier.AttributeModifier;
+import net.minecraft.world.clock.ClockManager;
+import net.minecraft.world.clock.WorldClock;
 
 public record AttributeTrack<Value, Argument>(AttributeModifier<Value, Argument> modifier, KeyframeTrack<Argument> argumentTrack) {
    public static <Value> Codec<AttributeTrack<Value, ?>> createCodec(final EnvironmentAttribute<Value> attribute) {
@@ -23,9 +25,9 @@ public record AttributeTrack<Value, Argument>(AttributeModifier<Value, Argument>
    }
 
    public AttributeTrackSampler<Value, Argument> bakeSampler(
-      final EnvironmentAttribute<Value> attribute, final Optional<Integer> periodTicks, final LongSupplier dayTimeGetter
+      final EnvironmentAttribute<Value> attribute, final Holder<WorldClock> clock, final Optional<Integer> periodTicks, final ClockManager clockManager
    ) {
-      return new AttributeTrackSampler<>(periodTicks, this.modifier, this.argumentTrack, this.modifier.argumentKeyframeLerp(attribute), dayTimeGetter);
+      return new AttributeTrackSampler<>(clock, periodTicks, this.modifier, this.argumentTrack, this.modifier.argumentKeyframeLerp(attribute), clockManager);
    }
 
    public static DataResult<AttributeTrack<?, ?>> validatePeriod(final AttributeTrack<?, ?> track, final int periodTicks) {

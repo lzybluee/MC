@@ -9,14 +9,14 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public class ExplosionCondition implements LootItemCondition {
    private static final ExplosionCondition INSTANCE = new ExplosionCondition();
-   public static final MapCodec<ExplosionCondition> CODEC = MapCodec.unit(INSTANCE);
+   public static final MapCodec<ExplosionCondition> MAP_CODEC = MapCodec.unit(INSTANCE);
 
    private ExplosionCondition() {
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.SURVIVES_EXPLOSION;
+   public MapCodec<ExplosionCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override

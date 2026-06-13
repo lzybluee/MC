@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.animal.goat;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -33,8 +32,6 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -56,30 +53,21 @@ import org.jspecify.annotations.Nullable;
 
 public class Goat extends Animal {
    public static final EntityDimensions LONG_JUMPING_DIMENSIONS = EntityDimensions.scalable(0.9F, 1.3F).scale(0.7F);
+   public static final float BABY_DEFAULT_X_HEAD_ROT = 22.5F;
+   public static final float MAX_ADDED_RAMMING_X_HEAD_ROT = 30.0F;
+   private static final float BABY_SCALE = 0.55F;
    private static final int ADULT_ATTACK_DAMAGE = 2;
    private static final int BABY_ATTACK_DAMAGE = 1;
-   protected static final ImmutableList<SensorType<? extends Sensor<? super Goat>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES,
-      SensorType.NEAREST_PLAYERS,
-      SensorType.NEAREST_ITEMS,
-      SensorType.NEAREST_ADULT,
-      SensorType.HURT_BY,
-      SensorType.FOOD_TEMPTATIONS
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.ATE_RECENTLY,
-      MemoryModuleType.BREED_TARGET,
-      MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS,
-      MemoryModuleType.LONG_JUMP_MID_JUMP,
-      MemoryModuleType.TEMPTING_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT,
-      MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-      new MemoryModuleType[]{MemoryModuleType.IS_TEMPTED, MemoryModuleType.RAM_COOLDOWN_TICKS, MemoryModuleType.RAM_TARGET, MemoryModuleType.IS_PANICKING}
+   private static final Brain.Provider<Goat> BRAIN_PROVIDER = Brain.provider(
+      List.of(
+         SensorType.NEAREST_LIVING_ENTITIES,
+         SensorType.NEAREST_PLAYERS,
+         SensorType.NEAREST_ITEMS,
+         SensorType.NEAREST_ADULT,
+         SensorType.HURT_BY,
+         SensorType.FOOD_TEMPTATIONS
+      ),
+      var0 -> GoatAi.getActivities()
    );
    public static final int GOAT_FALL_DAMAGE_REDUCTION = 10;
    public static final double GOAT_SCREAMING_CHANCE = 0.02;
@@ -97,11 +85,11 @@ public class Goat extends Animal {
       super(type, level);
       this.getNavigation().setCanFloat(true);
       this.setPathfindingMalus(PathType.POWDER_SNOW, -1.0F);
-      this.setPathfindingMalus(PathType.DANGER_POWDER_SNOW, -1.0F);
+      this.setPathfindingMalus(PathType.ON_TOP_OF_POWDER_SNOW, -1.0F);
    }
 
    public ItemStack createHorn() {
-      RandomSource random = RandomSource.create(this.getUUID().hashCode());
+      RandomSource random = RandomSource.createThreadLocalInstance(this.getUUID().hashCode());
       TagKey<Instrument> key = this.isScreamingGoat() ? InstrumentTags.SCREAMING_GOAT_HORNS : InstrumentTags.REGULAR_GOAT_HORNS;
       return this.level()
          .registryAccess()
@@ -112,13 +100,8 @@ public class Goat extends Animal {
    }
 
    @Override
-   protected Brain.Provider<Goat> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return GoatAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Goat> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    public static AttributeSupplier.Builder createAttributes() {
@@ -127,13 +110,7 @@ public class Goat extends Animal {
 
    @Override
    protected void ageBoundaryReached() {
-      if (this.isBaby()) {
-         this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(1.0);
-         this.removeHorns();
-      } else {
-         this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(2.0);
-         this.addHorns();
-      }
+      this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(this.isBaby() ? 1.0 : 2.0);
    }
 
    @Override
@@ -178,8 +155,13 @@ public class Goat extends Animal {
    }
 
    @Override
+   public float getAgeScale() {
+      return this.isBaby() ? 0.55F : 1.0F;
+   }
+
+   @Override
    public Brain<Goat> getBrain() {
-      return (Brain<Goat>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -216,7 +198,7 @@ public class Goat extends Animal {
             this.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_EAT : SoundEvents.GOAT_EAT,
             SoundSource.NEUTRAL,
             1.0F,
-            Mth.randomBetween(this.level().random, 0.8F, 1.2F)
+            Mth.randomBetween(this.level().getRandom(), 0.8F, 1.2F)
          );
    }
 
@@ -320,6 +302,10 @@ public class Goat extends Animal {
    }
 
    public boolean dropHorn() {
+      if (this.isBaby()) {
+         return false;
+      }
+
       boolean hasLeft = this.hasLeftHorn();
       boolean hasRight = this.hasRightHorn();
       if (!hasLeft && !hasRight) {
@@ -346,16 +332,6 @@ public class Goat extends Animal {
       return true;
    }
 
-   public void addHorns() {
-      this.entityData.set(DATA_HAS_LEFT_HORN, true);
-      this.entityData.set(DATA_HAS_RIGHT_HORN, true);
-   }
-
-   public void removeHorns() {
-      this.entityData.set(DATA_HAS_LEFT_HORN, false);
-      this.entityData.set(DATA_HAS_RIGHT_HORN, false);
-   }
-
    public boolean isScreamingGoat() {
       return this.entityData.get(DATA_IS_SCREAMING_GOAT);
    }
@@ -365,7 +341,8 @@ public class Goat extends Animal {
    }
 
    public float getRammingXHeadRot() {
-      return this.lowerHeadTick / 20.0F * 30.0F * (float) (Math.PI / 180.0);
+      float maxRammingXHeadRot = this.isBaby() ? 52.5F : 30.0F;
+      return this.lowerHeadTick / 20.0F * maxRammingXHeadRot * (float) (Math.PI / 180.0);
    }
 
    public static boolean checkGoatSpawnRules(

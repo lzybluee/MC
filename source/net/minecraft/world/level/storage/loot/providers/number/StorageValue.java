@@ -12,7 +12,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 public record StorageValue(Identifier storage, NbtPathArgument.NbtPath path) implements NumberProvider {
-   public static final MapCodec<StorageValue> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<StorageValue> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Identifier.CODEC.fieldOf("storage").forGetter(StorageValue::storage), NbtPathArgument.NbtPath.CODEC.fieldOf("path").forGetter(StorageValue::path)
          )
@@ -20,8 +20,8 @@ public record StorageValue(Identifier storage, NbtPathArgument.NbtPath path) imp
    );
 
    @Override
-   public LootNumberProviderType getType() {
-      return NumberProviders.STORAGE;
+   public MapCodec<StorageValue> codec() {
+      return MAP_CODEC;
    }
 
    private Number getNumericTag(final LootContext context, final Number _default) {

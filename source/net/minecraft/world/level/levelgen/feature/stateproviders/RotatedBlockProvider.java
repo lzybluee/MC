@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -26,7 +27,7 @@ public class RotatedBlockProvider extends BlockStateProvider {
    }
 
    @Override
-   public BlockState getState(final RandomSource random, final BlockPos pos) {
+   public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
       Direction.Axis randomAxis = Direction.Axis.getRandom(random);
       return this.block.defaultBlockState().trySetValue(RotatedPillarBlock.AXIS, randomAxis);
    }

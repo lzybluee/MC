@@ -1,6 +1,5 @@
 package net.minecraft.client.gui.screens.multiplayer;
 
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.FittingMultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
@@ -49,9 +48,7 @@ public abstract class WarningScreen extends Screen {
       }
 
       footer.addChild(this.addFooterButtons());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

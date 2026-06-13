@@ -1,19 +1,26 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 
 public class BlastingRecipe extends AbstractCookingRecipe {
+   public static final MapCodec<BlastingRecipe> MAP_CODEC = cookingMapCodec(BlastingRecipe::new, 100);
+   public static final StreamCodec<RegistryFriendlyByteBuf, BlastingRecipe> STREAM_CODEC = cookingStreamCodec(BlastingRecipe::new);
+   public static final RecipeSerializer<BlastingRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+
    public BlastingRecipe(
-      final String group,
-      final CookingBookCategory category,
+      final Recipe.CommonInfo commonInfo,
+      final AbstractCookingRecipe.CookingBookInfo bookInfo,
       final Ingredient ingredient,
-      final ItemStack result,
+      final ItemStackTemplate result,
       final float experience,
       final int cookingTime
    ) {
-      super(group, category, ingredient, result, experience, cookingTime);
+      super(commonInfo, bookInfo, ingredient, result, experience, cookingTime);
    }
 
    @Override
@@ -23,7 +30,7 @@ public class BlastingRecipe extends AbstractCookingRecipe {
 
    @Override
    public RecipeSerializer<BlastingRecipe> getSerializer() {
-      return RecipeSerializer.BLASTING_RECIPE;
+      return SERIALIZER;
    }
 
    @Override

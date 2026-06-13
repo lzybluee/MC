@@ -17,7 +17,8 @@ public class ArmorStandArmorModel extends HumanoidModel<ArmorStandRenderState> {
    }
 
    public static ArmorModelSet<LayerDefinition> createArmorLayerSet(final CubeDeformation innerDeformation, final CubeDeformation outerDeformation) {
-      return createArmorMeshSet(ArmorStandArmorModel::createBaseMesh, innerDeformation, outerDeformation).map(mesh -> LayerDefinition.create(mesh, 64, 32));
+      return createArmorMeshSet(ArmorStandArmorModel::createBaseMesh, ADULT_ARMOR_PARTS_PER_SLOT, innerDeformation, outerDeformation)
+         .map(mesh -> LayerDefinition.create(mesh, 64, 32));
    }
 
    private static MeshDefinition createBaseMesh(final CubeDeformation g) {

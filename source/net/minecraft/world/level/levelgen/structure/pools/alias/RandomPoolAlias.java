@@ -12,7 +12,7 @@ import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 public record RandomPoolAlias(ResourceKey<StructureTemplatePool> alias, WeightedList<ResourceKey<StructureTemplatePool>> targets) implements PoolAliasBinding {
-   static MapCodec<RandomPoolAlias> CODEC = RecordCodecBuilder.mapCodec(
+   static final MapCodec<RandomPoolAlias> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             ResourceKey.codec(Registries.TEMPLATE_POOL).fieldOf("alias").forGetter(RandomPoolAlias::alias),
             WeightedList.nonEmptyCodec(ResourceKey.codec(Registries.TEMPLATE_POOL)).fieldOf("targets").forGetter(RandomPoolAlias::targets)
@@ -24,7 +24,7 @@ public record RandomPoolAlias(ResourceKey<StructureTemplatePool> alias, Weighted
    public void forEachResolved(
       final RandomSource random, final BiConsumer<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> aliasAndTargetConsumer
    ) {
-      this.targets.getRandom(random).ifPresent(target -> aliasAndTargetConsumer.accept(this.alias, (ResourceKey<StructureTemplatePool>)target));
+      aliasAndTargetConsumer.accept(this.alias, this.targets.getRandomOrThrow(random));
    }
 
    @Override

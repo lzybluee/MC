@@ -34,7 +34,7 @@ public class ScheduleCommand {
    );
    private static final SimpleCommandExceptionType ERROR_MACRO = new SimpleCommandExceptionType(Component.translatableEscape("commands.schedule.macro"));
    private static final SuggestionProvider<CommandSourceStack> SUGGEST_SCHEDULE = (c, p) -> SharedSuggestionProvider.suggest(
-      ((CommandSourceStack)c.getSource()).getServer().getWorldData().overworldData().getScheduledEvents().getEventsIds(), p
+      ((CommandSourceStack)c.getSource()).getServer().getScheduledEvents().getEventsIds(), p
    );
 
    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -104,7 +104,7 @@ public class ScheduleCommand {
 
       long tickTime = source.getLevel().getGameTime() + time;
       Identifier callbackId = (Identifier)callback.getFirst();
-      TimerQueue<MinecraftServer> queue = source.getServer().getWorldData().overworldData().getScheduledEvents();
+      TimerQueue<MinecraftServer> queue = source.getServer().getScheduledEvents();
       Optional<CommandFunction<CommandSourceStack>> function = ((Either)callback.getSecond()).left();
       if (function.isPresent()) {
          if (function.get() instanceof MacroFunction) {
@@ -132,7 +132,7 @@ public class ScheduleCommand {
    }
 
    private static int remove(final CommandSourceStack source, final String id) throws CommandSyntaxException {
-      int count = source.getServer().getWorldData().overworldData().getScheduledEvents().remove(id);
+      int count = source.getServer().getScheduledEvents().remove(id);
       if (count == 0) {
          throw ERROR_CANT_REMOVE.create(id);
       }

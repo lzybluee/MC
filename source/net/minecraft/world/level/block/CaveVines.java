@@ -32,7 +32,7 @@ public interface CaveVines {
                sourceEntity,
                (serverlvl, itemStack) -> Block.popResource(serverlvl, pos, itemStack)
             );
-            float pitch = Mth.randomBetween(serverLevel.random, 0.8F, 1.2F);
+            float pitch = Mth.randomBetween(serverLevel.getRandom(), 0.8F, 1.2F);
             serverLevel.playSound(null, pos, SoundEvents.CAVE_VINES_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, pitch);
             BlockState newState = state.setValue(BERRIES, false);
             serverLevel.setBlock(pos, newState, 2);

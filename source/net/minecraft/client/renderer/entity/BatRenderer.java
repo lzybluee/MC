@@ -7,7 +7,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ambient.Bat;
 
 public class BatRenderer extends MobRenderer<Bat, BatRenderState, BatModel> {
-   private static final Identifier BAT_LOCATION = Identifier.withDefaultNamespace("textures/entity/bat.png");
+   private static final Identifier BAT_LOCATION = Identifier.withDefaultNamespace("textures/entity/bat/bat.png");
 
    public BatRenderer(final EntityRendererProvider.Context context) {
       super(context, new BatModel(context.bakeLayer(ModelLayers.BAT)), 0.25F);

@@ -42,7 +42,6 @@ public class StructurePiecesBuilder implements StructurePieceAccessor {
       return dy;
    }
 
-   /** @deprecated */
    public void moveInsideHeights(final RandomSource random, final int lowestAllowed, final int highestAllowed) {
       BoundingBox boundingBox = this.getBoundingBox();
       int heightSpan = highestAllowed - lowestAllowed + 1 - boundingBox.getYSpan();

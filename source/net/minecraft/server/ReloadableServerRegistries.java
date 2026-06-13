@@ -29,8 +29,8 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.ValidationContext;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.slf4j.Logger;
 
 public class ReloadableServerRegistries {
@@ -57,7 +57,7 @@ public class ReloadableServerRegistries {
       );
    }
 
-   private static <T> CompletableFuture<WritableRegistry<?>> scheduleRegistryLoad(
+   private static <T extends Validatable> CompletableFuture<WritableRegistry<?>> scheduleRegistryLoad(
       final LootDataType<T> type, final RegistryOps<JsonElement> ops, final ResourceManager manager, final Executor taskExecutor
    ) {
       return CompletableFuture.supplyAsync(() -> {
@@ -87,8 +87,8 @@ public class ReloadableServerRegistries {
 
    private static void validateLootRegistries(final HolderLookup.Provider fullContextWithNewTags) {
       ProblemReporter.Collector problems = new ProblemReporter.Collector();
-      ValidationContext validationContext = new ValidationContext(problems, LootContextParamSets.ALL_PARAMS, fullContextWithNewTags);
-      LootDataType.values().forEach(lootDataType -> validateRegistry(validationContext, (LootDataType<?>)lootDataType, fullContextWithNewTags));
+      ValidationContextSource contextSource = new ValidationContextSource(problems, fullContextWithNewTags);
+      LootDataType.values().forEach(lootDataType -> validateRegistry(contextSource, (LootDataType<?>)lootDataType, fullContextWithNewTags));
       problems.forEach((id, problem) -> LOGGER.warn("Found loot table element validation problem in {}: {}", id, problem.description()));
    }
 
@@ -98,9 +98,11 @@ public class ReloadableServerRegistries {
       return context.replaceFrom(RegistryLayer.RELOADABLE, new RegistryAccess.ImmutableRegistryAccess(registries).freeze());
    }
 
-   private static <T> void validateRegistry(final ValidationContext validationContext, final LootDataType<T> type, final HolderLookup.Provider registries) {
+   private static <T extends Validatable> void validateRegistry(
+      final ValidationContextSource contextSource, final LootDataType<T> type, final HolderLookup.Provider registries
+   ) {
       HolderLookup<T> registry = registries.lookupOrThrow(type.registryKey());
-      registry.listElements().forEach(element -> type.runValidation(validationContext, element.key(), element.value()));
+      type.runValidation(contextSource, registry);
    }
 
    public static class Holder {

@@ -44,7 +44,7 @@ public class EntityStorage implements EntityPersistentStorage<Entity> {
 
    @Override
    public CompletableFuture<ChunkEntities<Entity>> loadEntities(final ChunkPos pos) {
-      if (this.emptyChunks.contains(pos.toLong())) {
+      if (this.emptyChunks.contains(pos.pack())) {
          return CompletableFuture.completedFuture(emptyChunk(pos));
       }
 
@@ -52,7 +52,7 @@ public class EntityStorage implements EntityPersistentStorage<Entity> {
       this.reportLoadFailureIfPresent(loadFuture, pos);
       return loadFuture.thenApplyAsync(tag -> {
          if (tag.isEmpty()) {
-            this.emptyChunks.add(pos.toLong());
+            this.emptyChunks.add(pos.pack());
             return emptyChunk(pos);
          }
 
@@ -86,7 +86,7 @@ public class EntityStorage implements EntityPersistentStorage<Entity> {
    public void storeEntities(final ChunkEntities<Entity> chunk) {
       ChunkPos pos = chunk.getPos();
       if (chunk.isEmpty()) {
-         if (this.emptyChunks.add(pos.toLong())) {
+         if (this.emptyChunks.add(pos.pack())) {
             this.reportSaveFailureIfPresent(this.simpleRegionStorage.write(pos, IOWorker.STORE_EMPTY), pos);
          }
       } else {
@@ -103,7 +103,7 @@ public class EntityStorage implements EntityPersistentStorage<Entity> {
             chunkTag.put("Entities", entities);
             chunkTag.store("Position", ChunkPos.CODEC, pos);
             this.reportSaveFailureIfPresent(this.simpleRegionStorage.write(pos, chunkTag), pos);
-            this.emptyChunks.remove(pos.toLong());
+            this.emptyChunks.remove(pos.pack());
          }
       }
    }

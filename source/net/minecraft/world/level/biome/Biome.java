@@ -150,7 +150,7 @@ public final class Biome {
       if (level.isInsideBuildHeight(pos.getY()) && level.getBrightness(LightLayer.BLOCK, pos) < 10) {
          BlockState blockState = level.getBlockState(pos);
          FluidState fluidState = level.getFluidState(pos);
-         if (fluidState.getType() == Fluids.WATER && blockState.getBlock() instanceof LiquidBlock) {
+         if (fluidState.is(Fluids.WATER) && blockState.getBlock() instanceof LiquidBlock) {
             if (!checkNeighbors) {
                return true;
             }

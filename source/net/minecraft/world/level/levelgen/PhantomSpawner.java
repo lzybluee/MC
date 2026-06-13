@@ -25,7 +25,7 @@ public class PhantomSpawner implements CustomSpawner {
    public void tick(final ServerLevel level, final boolean spawnEnemies) {
       if (spawnEnemies) {
          if (level.getGameRules().get(GameRules.SPAWN_PHANTOMS)) {
-            RandomSource random = level.random;
+            RandomSource random = level.getRandom();
             this.nextTick--;
             if (this.nextTick <= 0) {
                this.nextTick = this.nextTick + (60 + random.nextInt(60)) * 20;

@@ -126,7 +126,7 @@ public class BeehiveBlock extends BaseEntityBlock {
 
          for (Bee bee : beesToAnger) {
             if (bee.getTarget() == null) {
-               Player angerTarget = Util.getRandom(playersToBeAngryAt, level.random);
+               Player angerTarget = Util.getRandom(playersToBeAngryAt, level.getRandom());
                bee.setTarget(angerTarget);
             }
          }
@@ -228,7 +228,7 @@ public class BeehiveBlock extends BaseEntityBlock {
    }
 
    private void trySpawnDripParticles(final Level level, final BlockPos pos, final BlockState state) {
-      if (state.getFluidState().isEmpty() && !(level.random.nextFloat() < 0.3F)) {
+      if (state.getFluidState().isEmpty() && !(level.getRandom().nextFloat() < 0.3F)) {
          VoxelShape collisionShape = state.getCollisionShape(level, pos);
          double topSideHeight = collisionShape.max(Direction.Axis.Y);
          if (topSideHeight >= 1.0 && !state.is(BlockTags.IMPERMEABLE)) {
@@ -261,7 +261,7 @@ public class BeehiveBlock extends BaseEntityBlock {
 
    private void spawnFluidParticle(final Level level, final double x1, final double x2, final double z1, final double z2, final double y) {
       level.addParticle(
-         ParticleTypes.DRIPPING_HONEY, Mth.lerp(level.random.nextDouble(), x1, x2), y, Mth.lerp(level.random.nextDouble(), z1, z2), 0.0, 0.0, 0.0
+         ParticleTypes.DRIPPING_HONEY, Mth.lerp(level.getRandom().nextDouble(), x1, x2), y, Mth.lerp(level.getRandom().nextDouble(), z1, z2), 0.0, 0.0, 0.0
       );
    }
 

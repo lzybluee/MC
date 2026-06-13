@@ -2,14 +2,13 @@ package net.minecraft.client.gui.screens;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.RenderSystem;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.MipmapStrategy;
 import net.minecraft.client.renderer.texture.ReloadableTexture;
@@ -63,7 +62,7 @@ public class LoadingOverlay extends Overlay {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       int width = graphics.guiWidth();
       int height = graphics.guiHeight();
       long now = Util.getMillis();
@@ -76,9 +75,9 @@ public class LoadingOverlay extends Overlay {
       float logoAlpha;
       if (fadeOutAnim >= 1.0F) {
          if (this.minecraft.screen != null) {
-            this.minecraft.screen.renderWithTooltipAndSubtitles(graphics, 0, 0, a);
+            this.minecraft.screen.extractRenderStateWithTooltipAndSubtitles(graphics, 0, 0, a);
          } else {
-            this.minecraft.gui.renderDeferredSubtitles();
+            this.minecraft.gui.extractDeferredSubtitles();
          }
 
          int alpha = Mth.ceil((1.0F - Mth.clamp(fadeOutAnim - 1.0F, 0.0F, 1.0F)) * 255.0F);
@@ -87,9 +86,9 @@ public class LoadingOverlay extends Overlay {
          logoAlpha = 1.0F - Mth.clamp(fadeOutAnim - 1.0F, 0.0F, 1.0F);
       } else if (this.fadeIn) {
          if (this.minecraft.screen != null && fadeInAnim < 1.0F) {
-            this.minecraft.screen.renderWithTooltipAndSubtitles(graphics, mouseX, mouseY, a);
+            this.minecraft.screen.extractRenderStateWithTooltipAndSubtitles(graphics, mouseX, mouseY, a);
          } else {
-            this.minecraft.gui.renderDeferredSubtitles();
+            this.minecraft.gui.extractDeferredSubtitles();
          }
 
          int alpha = Mth.ceil(Mth.clamp(fadeInAnim, 0.15, 1.0) * 255.0);
@@ -97,8 +96,7 @@ public class LoadingOverlay extends Overlay {
          graphics.fill(0, 0, width, height, replaceAlpha(BRAND_BACKGROUND.getAsInt(), alpha));
          logoAlpha = Mth.clamp(fadeInAnim, 0.0F, 1.0F);
       } else {
-         int col = BRAND_BACKGROUND.getAsInt();
-         RenderSystem.getDevice().createCommandEncoder().clearColorTexture(this.minecraft.getMainRenderTarget().getColorTexture(), col);
+         this.minecraft.gameRenderer.getGameRenderState().guiRenderState.clearColorOverride = BRAND_BACKGROUND.getAsInt();
          logoAlpha = 1.0F;
       }
 
@@ -143,7 +141,7 @@ public class LoadingOverlay extends Overlay {
       float actualProgress = this.reload.getActualProgress();
       this.currentProgress = Mth.clamp(this.currentProgress * 0.95F + actualProgress * 0.050000012F, 0.0F, 1.0F);
       if (fadeOutAnim < 1.0F) {
-         this.drawProgressBar(graphics, width / 2 - logoWidthHalf, barY - 5, width / 2 + logoWidthHalf, barY + 5, 1.0F - Mth.clamp(fadeOutAnim, 0.0F, 1.0F));
+         this.extractProgressBar(graphics, width / 2 - logoWidthHalf, barY - 5, width / 2 + logoWidthHalf, barY + 5, 1.0F - Mth.clamp(fadeOutAnim, 0.0F, 1.0F));
       }
 
       if (fadeOutAnim >= 2.0F) {
@@ -173,7 +171,7 @@ public class LoadingOverlay extends Overlay {
       return !this.fadeIn || this.fadeInStart > -1L && Util.getMillis() - this.fadeInStart >= 1000L;
    }
 
-   private void drawProgressBar(final GuiGraphics graphics, final int x0, final int y0, final int x1, final int y1, final float fade) {
+   private void extractProgressBar(final GuiGraphicsExtractor graphics, final int x0, final int y0, final int x1, final int y1, final float fade) {
       int width = Mth.ceil((x1 - x0 - 2) * this.currentProgress);
       int alpha = Math.round(fade * 255.0F);
       int white = ARGB.color(alpha, 255, 255, 255);

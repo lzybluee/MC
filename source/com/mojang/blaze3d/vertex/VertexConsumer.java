@@ -1,9 +1,7 @@
 package com.mojang.blaze3d.vertex;
 
 import net.minecraft.client.model.geom.builders.UVPair;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.util.ARGB;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import org.joml.Matrix3x2fc;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -61,47 +59,36 @@ public interface VertexConsumer {
       return this.setUv1(packedOverlayCoords & 65535, packedOverlayCoords >> 16 & 65535);
    }
 
-   default void putBulkData(
-      final PoseStack.Pose pose,
-      final BakedQuad quad,
-      final float r,
-      final float g,
-      final float b,
-      final float a,
-      final int lightCoords,
-      final int overlayCoords
-   ) {
-      this.putBulkData(
-         pose, quad, new float[]{1.0F, 1.0F, 1.0F, 1.0F}, r, g, b, a, new int[]{lightCoords, lightCoords, lightCoords, lightCoords}, overlayCoords
-      );
+   default void putBlockBakedQuad(final float x, final float y, final float z, final BakedQuad quad, final QuadInstance instance) {
+      Vector3fc normal = quad.direction().getUnitVec3f();
+      int lightEmission = quad.materialInfo().lightEmission();
+
+      for (int vertex = 0; vertex < 4; vertex++) {
+         Vector3fc pos = quad.position(vertex);
+         long packedUv = quad.packedUV(vertex);
+         int vertexColor = instance.getColor(vertex);
+         int light = instance.getLightCoordsWithEmission(vertex, lightEmission);
+         float u = UVPair.unpackU(packedUv);
+         float v = UVPair.unpackV(packedUv);
+         this.addVertex(pos.x() + x, pos.y() + y, pos.z() + z, vertexColor, u, v, instance.overlayCoords(), light, normal.x(), normal.y(), normal.z());
+      }
    }
 
-   default void putBulkData(
-      final PoseStack.Pose pose,
-      final BakedQuad quad,
-      final float[] brightness,
-      final float r,
-      final float g,
-      final float b,
-      final float a,
-      final int[] lightmapCoord,
-      final int overlayCoords
-   ) {
+   default void putBakedQuad(final PoseStack.Pose pose, final BakedQuad quad, final QuadInstance instance) {
       Vector3fc normalVec = quad.direction().getUnitVec3f();
       Matrix4f matrix = pose.pose();
       Vector3f normal = pose.transformNormal(normalVec, new Vector3f());
-      int lightEmission = quad.lightEmission();
+      int lightEmission = quad.materialInfo().lightEmission();
 
       for (int vertex = 0; vertex < 4; vertex++) {
          Vector3fc position = quad.position(vertex);
          long packedUv = quad.packedUV(vertex);
-         float brightnessForVertex = brightness[vertex];
-         int color = ARGB.colorFromFloat(a, brightnessForVertex * r, brightnessForVertex * g, brightnessForVertex * b);
-         int light = LightTexture.lightCoordsWithEmission(lightmapCoord[vertex], lightEmission);
+         int vertexColor = instance.getColor(vertex);
+         int light = instance.getLightCoordsWithEmission(vertex, lightEmission);
          Vector3f pos = matrix.transformPosition(position, new Vector3f());
          float u = UVPair.unpackU(packedUv);
          float v = UVPair.unpackV(packedUv);
-         this.addVertex(pos.x(), pos.y(), pos.z(), color, u, v, overlayCoords, light, normal.x(), normal.y(), normal.z());
+         this.addVertex(pos.x(), pos.y(), pos.z(), vertexColor, u, v, instance.overlayCoords(), light, normal.x(), normal.y(), normal.z());
       }
    }
 
@@ -109,7 +96,7 @@ public interface VertexConsumer {
       return this.addVertex(position.x(), position.y(), position.z());
    }
 
-   default VertexConsumer addVertex(final PoseStack.Pose pose, final Vector3f position) {
+   default VertexConsumer addVertex(final PoseStack.Pose pose, final Vector3fc position) {
       return this.addVertex(pose, position.x(), position.y(), position.z());
    }
 
@@ -132,7 +119,7 @@ public interface VertexConsumer {
       return this.setNormal(normal.x(), normal.y(), normal.z());
    }
 
-   default VertexConsumer setNormal(final PoseStack.Pose pose, final Vector3f normal) {
+   default VertexConsumer setNormal(final PoseStack.Pose pose, final Vector3fc normal) {
       return this.setNormal(pose, normal.x(), normal.y(), normal.z());
    }
 }

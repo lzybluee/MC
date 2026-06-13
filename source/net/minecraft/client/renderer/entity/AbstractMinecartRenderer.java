@@ -6,28 +6,32 @@ import java.util.Objects;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.object.cart.MinecartModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.state.MinecartRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
 import net.minecraft.world.entity.vehicle.minecart.NewMinecartBehavior;
 import net.minecraft.world.entity.vehicle.minecart.OldMinecartBehavior;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class AbstractMinecartRenderer<T extends AbstractMinecart, S extends MinecartRenderState> extends EntityRenderer<T, S> {
-   private static final Identifier MINECART_LOCATION = Identifier.withDefaultNamespace("textures/entity/minecart.png");
+   private static final Identifier MINECART_LOCATION = Identifier.withDefaultNamespace("textures/entity/minecart/minecart.png");
    private static final float DISPLAY_BLOCK_SCALE = 0.75F;
+   public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
    protected final MinecartModel model;
+   private final BlockModelResolver blockModelResolver;
 
    public AbstractMinecartRenderer(final EntityRendererProvider.Context context, final ModelLayerLocation model) {
       super(context);
       this.shadowRadius = 0.7F;
       this.model = new MinecartModel(context.bakeLayer(model));
+      this.blockModelResolver = context.getBlockModelResolver();
    }
 
    public void submit(final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
@@ -49,20 +53,18 @@ public abstract class AbstractMinecartRenderer<T extends AbstractMinecart, S ext
          poseStack.mulPose(Axis.XP.rotationDegrees(Mth.sin(hurt) * hurt * state.damageTime / 10.0F * state.hurtDir));
       }
 
-      BlockState blockState = state.displayBlockState;
-      if (blockState.getRenderShape() != RenderShape.INVISIBLE) {
+      BlockModelRenderState displayBlockModel = state.displayBlockModel;
+      if (!displayBlockModel.isEmpty()) {
          poseStack.pushPose();
          poseStack.scale(0.75F, 0.75F, 0.75F);
          poseStack.translate(-0.5F, (state.displayOffset - 8) / 16.0F, 0.5F);
          poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
-         this.submitMinecartContents(state, blockState, poseStack, submitNodeCollector, state.lightCoords);
+         this.submitMinecartContents(state, displayBlockModel, poseStack, submitNodeCollector, state.lightCoords);
          poseStack.popPose();
       }
 
       poseStack.scale(-1.0F, -1.0F, 1.0F);
-      submitNodeCollector.submitModel(
-         this.model, state, poseStack, this.model.renderType(MINECART_LOCATION), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null
-      );
+      submitNodeCollector.submitModel(this.model, state, poseStack, MINECART_LOCATION, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
       poseStack.popPose();
    }
 
@@ -111,7 +113,7 @@ public abstract class AbstractMinecartRenderer<T extends AbstractMinecart, S ext
       state.hurtDir = entity.getHurtDir();
       state.damageTime = Math.max(entity.getDamage() - partialTicks, 0.0F);
       state.displayOffset = entity.getDisplayOffset();
-      state.displayBlockState = entity.getDisplayBlockState();
+      this.blockModelResolver.update(state.displayBlockModel, entity.getDisplayBlockState(), BLOCK_DISPLAY_CONTEXT);
    }
 
    private static <T extends AbstractMinecart, S extends MinecartRenderState> void newExtractState(
@@ -152,9 +154,9 @@ public abstract class AbstractMinecartRenderer<T extends AbstractMinecart, S ext
    }
 
    protected void submitMinecartContents(
-      final S state, final BlockState blockState, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords
+      final S state, final BlockModelRenderState blockModel, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords
    ) {
-      submitNodeCollector.submitBlock(poseStack, blockState, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+      blockModel.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
    }
 
    protected AABB getBoundingBoxForCulling(final T entity) {

@@ -10,13 +10,14 @@ import net.minecraft.world.entity.animal.squid.Squid;
 
 public class SquidRenderer<T extends Squid> extends AgeableMobRenderer<T, SquidRenderState, SquidModel> {
    private static final Identifier SQUID_LOCATION = Identifier.withDefaultNamespace("textures/entity/squid/squid.png");
+   private static final Identifier SQUID_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/squid/squid_baby.png");
 
    public SquidRenderer(final EntityRendererProvider.Context context, final SquidModel model, final SquidModel babyModel) {
       super(context, model, babyModel, 0.7F);
    }
 
    public Identifier getTextureLocation(final SquidRenderState state) {
-      return SQUID_LOCATION;
+      return state.isBaby ? SQUID_BABY_LOCATION : SQUID_LOCATION;
    }
 
    public SquidRenderState createRenderState() {

@@ -116,7 +116,7 @@ public class SmithingMenu extends ItemCombinerMenu {
       }
 
       foundRecipe.ifPresentOrElse(recipe -> {
-         ItemStack result = recipe.value().assemble(input, this.level.registryAccess());
+         ItemStack result = recipe.value().assemble(input);
          this.resultSlots.setRecipeUsed((RecipeHolder<?>)recipe);
          this.resultSlots.setItem(0, result);
       }, () -> {

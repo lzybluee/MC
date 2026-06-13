@@ -36,5 +36,5 @@ public record Input(boolean forward, boolean backward, boolean left, boolean rig
          return new Input(forward, backward, left, right, jump, shift, sprint);
       }
    };
-   public static Input EMPTY = new Input(false, false, false, false, false, false, false);
+   public static final Input EMPTY = new Input(false, false, false, false, false, false, false);
 }

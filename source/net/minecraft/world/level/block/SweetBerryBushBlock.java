@@ -82,7 +82,7 @@ public class SweetBerryBushBlock extends VegetationBlock implements Bonemealable
    protected void entityInside(
       final BlockState state, final Level level, final BlockPos pos, final Entity entity, final InsideBlockEffectApplier effectApplier, final boolean isPrecise
    ) {
-      if (entity instanceof LivingEntity && entity.getType() != EntityType.FOX && entity.getType() != EntityType.BEE) {
+      if (entity instanceof LivingEntity && !entity.is(EntityType.FOX) && !entity.is(EntityType.BEE)) {
          entity.makeStuckInBlock(state, new Vec3(0.8F, 0.75, 0.8F));
          if (level instanceof ServerLevel serverLevel && state.getValue(AGE) != 0) {
             Vec3 movement = entity.isClientAuthoritative() ? entity.getKnownMovement() : entity.oldPosition().subtract(entity.position());
@@ -127,7 +127,9 @@ public class SweetBerryBushBlock extends VegetationBlock implements Bonemealable
                player,
                (serverlvl, itemStack) -> Block.popResource(serverlvl, pos, itemStack)
             );
-            serverLevel.playSound(null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, 0.8F + serverLevel.random.nextFloat() * 0.4F);
+            serverLevel.playSound(
+               null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0F, 0.8F + serverLevel.getRandom().nextFloat() * 0.4F
+            );
             BlockState newState = state.setValue(AGE, 1);
             serverLevel.setBlock(pos, newState, 2);
             serverLevel.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, newState));
@@ -146,7 +148,7 @@ public class SweetBerryBushBlock extends VegetationBlock implements Bonemealable
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return state.getValue(AGE) < 3;
+      return state.getValue(AGE) < 3 && level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
    }
 
    @Override

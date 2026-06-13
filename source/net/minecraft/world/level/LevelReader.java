@@ -23,7 +23,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
 
-public interface LevelReader extends BlockAndTintGetter, CollisionGetter, SignalGetter, BiomeManager.NoiseBiomeSource {
+public interface LevelReader extends BlockAndLightGetter, CollisionGetter, SignalGetter, BiomeManager.NoiseBiomeSource {
    @Nullable ChunkAccess getChunk(final int chunkX, final int chunkZ, final ChunkStatus targetStatus, final boolean loadOrGenerate);
 
    @Deprecated
@@ -51,11 +51,6 @@ public interface LevelReader extends BlockAndTintGetter, CollisionGetter, Signal
       int z0 = Mth.floor(box.minZ);
       int z1 = Mth.floor(box.maxZ);
       return this.hasChunksAt(x0, y0, z0, x1, y1, z1) ? this.getBlockStates(box) : Stream.empty();
-   }
-
-   @Override
-   default int getBlockTint(final BlockPos pos, final ColorResolver resolver) {
-      return resolver.getColor(this.getBiome(pos).value(), pos.getX(), pos.getZ());
    }
 
    @Override
@@ -102,7 +97,7 @@ public interface LevelReader extends BlockAndTintGetter, CollisionGetter, Signal
 
       for (BlockPos var4 = scanPoint.below(); var4.getY() > pos.getY(); var4 = var4.below()) {
          BlockState state = this.getBlockState(var4);
-         if (state.getLightBlock() > 0 && !state.liquid()) {
+         if (state.getLightDampening() > 0 && !state.liquid()) {
             return false;
          }
       }
@@ -173,6 +168,10 @@ public interface LevelReader extends BlockAndTintGetter, CollisionGetter, Signal
       return pos.getX() >= -30000000 && pos.getZ() >= -30000000 && pos.getX() < 30000000 && pos.getZ() < 30000000
          ? this.getRawBrightness(pos, skyDarkening)
          : 15;
+   }
+
+   default int getEffectiveSkyBrightness(final BlockPos pos) {
+      return this.getBrightness(LightLayer.SKY, pos) - this.getSkyDarken();
    }
 
    @Deprecated

@@ -1,17 +1,22 @@
 package net.minecraft.world.entity.animal.allay;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Predicate;
+import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Util;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BlockPosTracker;
@@ -31,6 +36,7 @@ import net.minecraft.world.entity.ai.behavior.StayCloseToTarget;
 import net.minecraft.world.entity.ai.behavior.Swim;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 
@@ -48,17 +54,12 @@ public class AllayAi {
    private static final int DISTANCE_TO_WANTED_ITEM = 32;
    private static final int GIVE_ITEM_TIMEOUT_DURATION = 20;
 
-   protected static Brain<?> makeBrain(final Brain<Allay> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Allay>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity());
    }
 
-   private static void initCoreActivity(final Brain<Allay> brain) {
-      brain.addActivity(
+   private static ActivityData<Allay> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -72,24 +73,19 @@ public class AllayAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Allay> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Allay> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
+         0,
          ImmutableList.of(
-            Pair.of(0, GoToWantedItem.create(mob -> true, 1.75F, true, 32)),
-            Pair.of(1, new GoAndGiveItemsToTarget(AllayAi::getItemDepositPosition, 2.25F, 20)),
-            Pair.of(2, StayCloseToTarget.create(AllayAi::getItemDepositPosition, Predicate.not(AllayAi::hasWantedItem), 4, 16, 2.25F)),
-            Pair.of(3, SetEntityLookTargetSometimes.create(6.0F, UniformInt.of(30, 60))),
-            Pair.of(
-               4,
-               new RunOne(
-                  ImmutableList.of(
-                     Pair.of(RandomStroll.fly(1.0F), 2), Pair.of(SetWalkTargetFromLookTarget.create(1.0F, 3), 2), Pair.of(new DoNothing(30, 60), 1)
-                  )
-               )
+            GoToWantedItem.create(mob -> true, 1.75F, true, 32),
+            new GoAndGiveItemsToTarget<>(AllayAi::getItemDepositPosition, 2.25F, 20, AllayAi::onItemThrown),
+            StayCloseToTarget.create(AllayAi::getItemDepositPosition, Predicate.not(AllayAi::hasWantedItem), 4, 16, 2.25F),
+            SetEntityLookTargetSometimes.create(6.0F, UniformInt.of(30, 60)),
+            new RunOne(
+               ImmutableList.of(Pair.of(RandomStroll.fly(1.0F), 2), Pair.of(SetWalkTargetFromLookTarget.create(1.0F, 3), 2), Pair.of(new DoNothing(30, 60), 1))
             )
-         ),
-         ImmutableSet.of()
+         )
       );
    }
 
@@ -157,5 +153,13 @@ public class AllayAi {
       }
 
       return Optional.empty();
+   }
+
+   private static void onItemThrown(final ServerLevel level, final Allay thrower, final ItemStack item, final BlockPos targetPos) {
+      getLikedPlayer(thrower).ifPresent(player -> CriteriaTriggers.ALLAY_DROP_ITEM_ON_BLOCK.trigger(player, targetPos.below(), item));
+      if (level.getGameTime() % 7L == 0L && level.getRandom().nextDouble() < 0.9) {
+         float pitch = Util.<Float>getRandom(Allay.THROW_SOUND_PITCHES, level.getRandom());
+         level.playSound(null, thrower, SoundEvents.ALLAY_THROW, SoundSource.NEUTRAL, 1.0F, pitch);
+      }
    }
 }

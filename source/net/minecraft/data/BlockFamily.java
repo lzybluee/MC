@@ -11,7 +11,8 @@ public class BlockFamily {
    private final Block baseBlock;
    private final Map<BlockFamily.Variant, Block> variants = Maps.newHashMap();
    private boolean generateModel = true;
-   private boolean generateRecipe = true;
+   private boolean generateCraftingRecipe = true;
+   private boolean generateStonecutterRecipe = false;
    private @Nullable String recipeGroupPrefix;
    private @Nullable String recipeUnlockedBy;
 
@@ -35,8 +36,12 @@ public class BlockFamily {
       return this.generateModel;
    }
 
-   public boolean shouldGenerateRecipe() {
-      return this.generateRecipe;
+   public boolean shouldGenerateCraftingRecipe() {
+      return this.generateCraftingRecipe;
+   }
+
+   public boolean shouldGenerateStonecutterRecipe() {
+      return this.generateStonecutterRecipe;
    }
 
    public Optional<String> getRecipeGroupPrefix() {
@@ -75,6 +80,11 @@ public class BlockFamily {
 
       public BlockFamily.Builder cracked(final Block cracked) {
          this.family.variants.put(BlockFamily.Variant.CRACKED, cracked);
+         return this;
+      }
+
+      public BlockFamily.Builder tiles(final Block tiles) {
+         this.family.variants.put(BlockFamily.Variant.TILES, tiles);
          return this;
       }
 
@@ -144,13 +154,28 @@ public class BlockFamily {
          return this;
       }
 
+      public BlockFamily.Builder cobbled(final Block cobble) {
+         this.family.variants.put(BlockFamily.Variant.COBBLED, cobble);
+         return this;
+      }
+
+      public BlockFamily.Builder bricks(final Block bricks) {
+         this.family.variants.put(BlockFamily.Variant.BRICKS, bricks);
+         return this;
+      }
+
       public BlockFamily.Builder dontGenerateModel() {
          this.family.generateModel = false;
          return this;
       }
 
-      public BlockFamily.Builder dontGenerateRecipe() {
-         this.family.generateRecipe = false;
+      public BlockFamily.Builder dontGenerateCraftingRecipe() {
+         this.family.generateCraftingRecipe = false;
+         return this;
+      }
+
+      public BlockFamily.Builder generateStonecutterRecipe() {
+         this.family.generateStonecutterRecipe = true;
          return this;
       }
 
@@ -183,7 +208,10 @@ public class BlockFamily {
       POLISHED("polished"),
       TRAPDOOR("trapdoor"),
       WALL("wall"),
-      WALL_SIGN("wall_sign");
+      WALL_SIGN("wall_sign"),
+      BRICKS("bricks"),
+      COBBLED("cobbled"),
+      TILES("tiles");
 
       private final String recipeGroup;
 

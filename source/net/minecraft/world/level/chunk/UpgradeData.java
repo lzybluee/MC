@@ -174,7 +174,7 @@ public class UpgradeData {
 
                for (Direction direction : directions) {
                   neighbourPos.setWithOffset(pos, direction);
-                  if (SectionPos.blockToSectionCoord(pos.getX()) == chunkPos.x && SectionPos.blockToSectionCoord(pos.getZ()) == chunkPos.z) {
+                  if (SectionPos.blockToSectionCoord(pos.getX()) == chunkPos.x() && SectionPos.blockToSectionCoord(pos.getZ()) == chunkPos.z()) {
                      newState = updateState(newState, direction, level, pos, neighbourPos);
                   }
                }
@@ -186,7 +186,9 @@ public class UpgradeData {
 
       for (int i = 0; i < this.index.length; i++) {
          if (this.index[i] != null) {
-            LOGGER.warn("Discarding update data for section {} for chunk ({} {})", new Object[]{level.getSectionYFromSectionIndex(i), chunkPos.x, chunkPos.z});
+            LOGGER.warn(
+               "Discarding update data for section {} for chunk ({} {})", new Object[]{level.getSectionYFromSectionIndex(i), chunkPos.x(), chunkPos.z()}
+            );
          }
 
          this.index[i] = null;

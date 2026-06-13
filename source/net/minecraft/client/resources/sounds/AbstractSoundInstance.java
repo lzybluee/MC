@@ -21,7 +21,7 @@ public abstract class AbstractSoundInstance implements SoundInstance {
    protected int delay;
    protected SoundInstance.Attenuation attenuation = SoundInstance.Attenuation.LINEAR;
    protected boolean relative;
-   protected RandomSource random;
+   protected final RandomSource random;
 
    protected AbstractSoundInstance(final SoundEvent event, final SoundSource source, final RandomSource random) {
       this(event.location(), source, random);

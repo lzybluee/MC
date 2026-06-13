@@ -4,11 +4,14 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.dialog.DialogConnectionAccess;
 import net.minecraft.client.gui.screens.multiplayer.CodeOfConductScreen;
+import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.Connection;
 import net.minecraft.network.DisconnectionDetails;
@@ -29,6 +32,7 @@ import net.minecraft.network.protocol.configuration.ServerboundAcceptCodeOfCondu
 import net.minecraft.network.protocol.configuration.ServerboundFinishConfigurationPacket;
 import net.minecraft.network.protocol.configuration.ServerboundSelectKnownPacks;
 import net.minecraft.network.protocol.game.GameProtocols;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.repository.KnownPack;
 import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.packs.resources.ResourceProvider;
@@ -146,6 +150,11 @@ public class ClientConfigurationPacketListenerImpl extends ClientCommonPacketLis
          knownPacksProvider -> this.registryDataCollector
             .collectGameRegistries(knownPacksProvider, this.receivedRegistries, this.connection.isMemoryConnection())
       );
+      IntegratedServer localServer = this.minecraft.getSingleplayerServer();
+      if (localServer != null) {
+         registries = filterRegistries(localServer.registryAccess(), registries.listRegistryKeys());
+      }
+
       this.connection
          .setupInboundProtocol(
             GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(registries)),
@@ -178,6 +187,11 @@ public class ClientConfigurationPacketListenerImpl extends ClientCommonPacketLis
                return true;
             }
          }));
+   }
+
+   private static RegistryAccess.Frozen filterRegistries(final RegistryAccess.Frozen original, final Stream<ResourceKey<? extends Registry<?>>> keysToInclude) {
+      List<? extends Registry<?>> filteredRegistries = keysToInclude.map(original::lookupOrThrow).toList();
+      return new RegistryAccess.ImmutableRegistryAccess(filteredRegistries).freeze();
    }
 
    @Override

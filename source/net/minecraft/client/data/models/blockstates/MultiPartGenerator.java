@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.data.models.MultiVariant;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
-import net.minecraft.client.renderer.block.model.multipart.Condition;
-import net.minecraft.client.renderer.block.model.multipart.Selector;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
+import net.minecraft.client.renderer.block.dispatch.multipart.Condition;
+import net.minecraft.client.renderer.block.dispatch.multipart.Selector;
 import net.minecraft.world.level.block.Block;
 
 public class MultiPartGenerator implements BlockModelDefinitionGenerator {
@@ -46,9 +46,10 @@ public class MultiPartGenerator implements BlockModelDefinitionGenerator {
    }
 
    @Override
-   public BlockModelDefinition create() {
-      return new BlockModelDefinition(
-         Optional.empty(), Optional.of(new BlockModelDefinition.MultiPartDefinition(this.parts.stream().map(MultiPartGenerator.Entry::toUnbaked).toList()))
+   public BlockStateModelDispatcher create() {
+      return new BlockStateModelDispatcher(
+         Optional.empty(),
+         Optional.of(new BlockStateModelDispatcher.MultiPartDefinition(this.parts.stream().map(MultiPartGenerator.Entry::toUnbaked).toList()))
       );
    }
 

@@ -13,7 +13,7 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class LootItem extends LootPoolSingletonContainer {
-   public static final MapCodec<LootItem> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<LootItem> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(Item.CODEC.fieldOf("name").forGetter(e -> e.item)).and(singletonFields(i)).apply(i, LootItem::new)
    );
    private final Holder<Item> item;
@@ -26,8 +26,8 @@ public class LootItem extends LootPoolSingletonContainer {
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.ITEM;
+   public MapCodec<LootItem> codec() {
+      return MAP_CODEC;
    }
 
    @Override

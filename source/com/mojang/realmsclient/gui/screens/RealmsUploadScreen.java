@@ -23,8 +23,7 @@ import java.util.Locale;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.client.GameNarrator;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -107,9 +106,7 @@ public class RealmsUploadScreen extends RealmsScreen implements RealmsWorldUploa
          }
       }
 
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -134,7 +131,7 @@ public class RealmsUploadScreen extends RealmsScreen implements RealmsWorldUploa
 
    @Override
    public boolean keyPressed(final KeyEvent event) {
-      if (event.key() == 256) {
+      if (event.isEscape()) {
          if (this.showDots) {
             this.onCancel();
          } else {
@@ -148,51 +145,51 @@ public class RealmsUploadScreen extends RealmsScreen implements RealmsWorldUploa
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int xm, final int ym, final float a) {
-      super.render(graphics, xm, ym, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+      super.extractRenderState(graphics, xm, ym, a);
       if (!this.uploadFinished && this.uploadStatus.uploadStarted() && this.uploadStatus.uploadCompleted() && this.cancelButton != null) {
          this.status = VERIFYING_TEXT;
          this.cancelButton.active = false;
       }
 
-      graphics.drawCenteredString(this.font, this.status, this.width / 2, 50, -1);
+      graphics.centeredText(this.font, this.status, this.width / 2, 50, -1);
       if (this.showDots) {
-         graphics.drawString(this.font, DOTS[this.tickCount / 10 % DOTS.length], this.width / 2 + this.font.width(this.status) / 2 + 5, 50, -1);
+         graphics.text(this.font, DOTS[this.tickCount / 10 % DOTS.length], this.width / 2 + this.font.width(this.status) / 2 + 5, 50, -1);
       }
 
       if (this.uploadStatus.uploadStarted() && !this.cancelled) {
-         this.drawProgressBar(graphics);
-         this.drawUploadSpeed(graphics);
+         this.extractProgressBar(graphics);
+         this.extractUploadSpeed(graphics);
       }
 
       Component[] errorMessages = this.errorMessage;
       if (errorMessages != null) {
          for (int i = 0; i < errorMessages.length; i++) {
-            graphics.drawCenteredString(this.font, errorMessages[i], this.width / 2, 110 + 12 * i, -65536);
+            graphics.centeredText(this.font, errorMessages[i], this.width / 2, 110 + 12 * i, -65536);
          }
       }
    }
 
-   private void drawProgressBar(final GuiGraphics graphics) {
+   private void extractProgressBar(final GuiGraphicsExtractor graphics) {
       double percentage = this.uploadStatus.getPercentage();
       this.progress = String.format(Locale.ROOT, "%.1f", percentage * 100.0);
       int left = (this.width - 200) / 2;
       int right = left + (int)Math.round(200.0 * percentage);
       graphics.fill(left - 1, 79, right + 1, 96, -1);
       graphics.fill(left, 80, right, 95, -8355712);
-      graphics.drawCenteredString(this.font, Component.translatable("mco.upload.percent", this.progress), this.width / 2, 84, -1);
+      graphics.centeredText(this.font, Component.translatable("mco.upload.percent", this.progress), this.width / 2, 84, -1);
    }
 
-   private void drawUploadSpeed(final GuiGraphics graphics) {
-      this.drawUploadSpeed0(graphics, this.uploadStatus.getBytesPerSecond());
+   private void extractUploadSpeed(final GuiGraphicsExtractor graphics) {
+      this.extractUploadSpeed0(graphics, this.uploadStatus.getBytesPerSecond());
    }
 
-   private void drawUploadSpeed0(final GuiGraphics graphics, final long bytesPerSecond) {
+   private void extractUploadSpeed0(final GuiGraphicsExtractor graphics, final long bytesPerSecond) {
       String uploadProgress = this.progress;
       if (bytesPerSecond > 0L && uploadProgress != null) {
          int progressLength = this.font.width(uploadProgress);
          String stringPresentation = "(" + Unit.humanReadable(bytesPerSecond) + "/s)";
-         graphics.drawString(this.font, stringPresentation, this.width / 2 + progressLength / 2 + 15, 84, -1);
+         graphics.text(this.font, stringPresentation, this.width / 2 + progressLength / 2 + 15, 84, -1);
       }
    }
 
@@ -227,7 +224,7 @@ public class RealmsUploadScreen extends RealmsScreen implements RealmsWorldUploa
       RealmsWorldOptions worldOptions = RealmsWorldOptions.createFromSettings(
          this.selectedLevel.getSettings(), this.selectedLevel.levelVersion().minecraftVersionName()
       );
-      RealmsSlot realmsSlot = new RealmsSlot(this.slotId, worldOptions, List.of(RealmsSetting.hardcoreSetting(this.selectedLevel.getSettings().hardcore())));
+      RealmsSlot realmsSlot = new RealmsSlot(this.slotId, worldOptions, List.of(RealmsSetting.hardcoreSetting(this.selectedLevel.isHardcore())));
       RealmsWorldUpload newUpload = new RealmsWorldUpload(worldFolder, realmsSlot, this.minecraft.getUser(), this.realmId, this);
       if (!this.currentUpload.compareAndSet(null, newUpload)) {
          throw new IllegalStateException("Tried to start uploading but was already uploading");

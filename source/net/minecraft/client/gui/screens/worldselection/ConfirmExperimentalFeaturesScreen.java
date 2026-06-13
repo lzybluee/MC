@@ -4,9 +4,8 @@ import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import java.util.Collection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineLabel;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
@@ -61,9 +60,7 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
       );
       helper.addChild(Button.builder(CommonComponents.GUI_PROCEED, button -> this.callback.accept(true)).build());
       helper.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.callback.accept(false)).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.layout.arrangeElements();
       this.repositionElements();
    }
@@ -93,9 +90,7 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
          this.list = this.layout
             .addToContents(new ConfirmExperimentalFeaturesScreen.DetailsScreen.PackList(this.minecraft, ConfirmExperimentalFeaturesScreen.this.enabledPacks));
          this.layout.addToFooter(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build());
-         this.layout.visitWidgets(x$0 -> {
-            AbstractWidget var10000 = this.addRenderableWidget(x$0);
-         });
+         this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
          this.repositionElements();
       }
 
@@ -147,9 +142,9 @@ public class ConfirmExperimentalFeaturesScreen extends Screen {
          }
 
          @Override
-         public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+         public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
             ActiveTextCollector textRenderer = graphics.textRenderer();
-            graphics.drawString(DetailsScreen.this.minecraft.font, this.packId, this.getContentX(), this.getContentY(), -1);
+            graphics.text(DetailsScreen.this.minecraft.font, this.packId, this.getContentX(), this.getContentY(), -1);
             this.splitMessage.visitLines(TextAlignment.LEFT, this.getContentX(), this.getContentY() + 12, 9, textRenderer);
          }
 

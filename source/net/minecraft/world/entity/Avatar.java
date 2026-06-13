@@ -6,10 +6,11 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.player.PlayerModelPart;
+import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public class Avatar extends LivingEntity {
+public abstract class Avatar extends LivingEntity {
    public static final HumanoidArm DEFAULT_MAIN_HAND = HumanoidArm.RIGHT;
    public static final int DEFAULT_MODEL_CUSTOMIZATION = 0;
    public static final float DEFAULT_EYE_HEIGHT = 1.62F;
@@ -65,4 +66,6 @@ public class Avatar extends LivingEntity {
    public EntityDimensions getDefaultDimensions(final Pose pose) {
       return POSES.getOrDefault(pose, STANDING_DIMENSIONS);
    }
+
+   public abstract ResolvableProfile getProfile();
 }

@@ -23,10 +23,9 @@ public class LlamaFollowCaravanGoal extends Goal {
    @Override
    public boolean canUse() {
       if (!this.llama.isLeashed() && !this.llama.inCaravan()) {
-         List<Entity> llamas = this.llama.level().getEntities(this.llama, this.llama.getBoundingBox().inflate(9.0, 4.0, 9.0), e -> {
-            EntityType<?> type = e.getType();
-            return type == EntityType.LLAMA || type == EntityType.TRADER_LLAMA;
-         });
+         List<Entity> llamas = this.llama
+            .level()
+            .getEntities(this.llama, this.llama.getBoundingBox().inflate(9.0, 4.0, 9.0), e -> e.is(EntityType.LLAMA) || e.is(EntityType.TRADER_LLAMA));
          Llama closest = null;
          double closestDistSquare = Double.MAX_VALUE;
 

@@ -1,27 +1,25 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 
 public class SetEnchantmentsFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetEnchantmentsFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetEnchantmentsFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -41,13 +39,14 @@ public class SetEnchantmentsFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetEnchantmentsFunction> getType() {
-      return LootItemFunctions.SET_ENCHANTMENTS;
+   public MapCodec<SetEnchantmentsFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.enchantments.values().stream().flatMap(m -> m.getReferencedContextParams().stream()).collect(ImmutableSet.toImmutableSet());
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      this.enchantments.forEach((enchantment, value) -> value.validate(context.forMapField("enchantments", enchantment.getRegisteredName())));
    }
 
    @Override

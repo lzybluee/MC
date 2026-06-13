@@ -297,7 +297,7 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
 
    public static BlockState extractProduce(final Entity sourceEntity, final BlockState state, final Level level, final BlockPos pos) {
       if (!level.isClientSide()) {
-         Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(level.random, 0.7F);
+         Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(level.getRandom(), 0.7F);
          ItemEntity entity = new ItemEntity(level, itemPos.x(), itemPos.y(), itemPos.z(), new ItemStack(Items.BONE_MEAL));
          entity.setDefaultPickUpDelay();
          level.addFreshEntity(entity);

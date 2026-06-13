@@ -21,7 +21,7 @@ public interface ContainerComponentManipulators {
       }
 
       public Stream<ItemStack> getContents(final ItemContainerContents component) {
-         return component.stream();
+         return component.allItemsCopyStream();
       }
 
       public ItemContainerContents empty() {
@@ -63,11 +63,11 @@ public interface ContainerComponentManipulators {
       }
 
       public Stream<ItemStack> getContents(final ChargedProjectiles component) {
-         return component.getItems().stream();
+         return component.itemCopies().stream();
       }
 
       public ChargedProjectiles setContents(final ChargedProjectiles component, final Stream<ItemStack> newContents) {
-         return ChargedProjectiles.of(newContents.toList());
+         return ChargedProjectiles.ofNonEmpty(newContents.filter(s -> !s.isEmpty()).toList());
       }
    };
    Map<DataComponentType<?>, ContainerComponentManipulator<?>> ALL_MANIPULATORS = Stream.of(CONTAINER, BUNDLE_CONTENTS, CHARGED_PROJECTILES)

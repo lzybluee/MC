@@ -5,13 +5,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
-import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Unit;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.DoNothing;
 import net.minecraft.world.entity.ai.behavior.LookAtTargetSink;
 import net.minecraft.world.entity.ai.behavior.MoveToTargetSink;
@@ -23,7 +24,6 @@ import net.minecraft.world.entity.ai.behavior.Swim;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.ai.sensing.Sensor;
-import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.schedule.Activity;
 
 public class BreezeAi {
@@ -31,60 +31,39 @@ public class BreezeAi {
    public static final float JUMP_CIRCLE_INNER_RADIUS = 4.0F;
    public static final float JUMP_CIRCLE_MIDDLE_RADIUS = 8.0F;
    public static final float JUMP_CIRCLE_OUTER_RADIUS = 24.0F;
-   static final List<SensorType<? extends Sensor<? super Breeze>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.NEAREST_PLAYERS, SensorType.BREEZE_ATTACK_ENTITY_SENSOR
-   );
-   static final List<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_ATTACKABLE,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.ATTACK_TARGET,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.BREEZE_JUMP_COOLDOWN,
-      MemoryModuleType.BREEZE_JUMP_INHALING,
-      MemoryModuleType.BREEZE_SHOOT,
-      MemoryModuleType.BREEZE_SHOOT_CHARGING,
-      MemoryModuleType.BREEZE_SHOOT_RECOVERING,
-      MemoryModuleType.BREEZE_SHOOT_COOLDOWN,
-      new MemoryModuleType[]{
-         MemoryModuleType.BREEZE_JUMP_TARGET,
-         MemoryModuleType.BREEZE_LEAVING_WATER,
-         MemoryModuleType.HURT_BY,
-         MemoryModuleType.HURT_BY_ENTITY,
-         MemoryModuleType.PATH
-      }
-   );
    private static final int TICKS_TO_REMEMBER_SEEN_TARGET = 100;
 
-   protected static Brain<?> makeBrain(final Breeze breeze, final Brain<Breeze> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initFightActivity(breeze, brain);
-      brain.setCoreActivities(Set.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.FIGHT);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Breeze>> getActivities(final Breeze breeze) {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity(breeze));
    }
 
-   private static void initCoreActivity(final Brain<Breeze> brain) {
-      brain.addActivity(Activity.CORE, 0, ImmutableList.of(new Swim(0.8F), new LookAtTargetSink(45, 90)));
+   private static ActivityData<Breeze> initCoreActivity() {
+      return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new Swim(0.8F), new LookAtTargetSink(45, 90)));
    }
 
-   private static void initIdleActivity(final Brain<Breeze> brain) {
-      brain.addActivity(
+   private static ActivityData<Breeze> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
-            Pair.of(0, StartAttacking.create((level, breeze) -> breeze.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))),
-            Pair.of(1, StartAttacking.create((level, breeze) -> breeze.getHurtBy())),
+            Pair.of(0, StartAttacking.create((var0, breeze) -> breeze.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))),
+            Pair.of(
+               1,
+               StartAttacking.create(
+                  (var0, breeze) -> breeze.getBrain()
+                     .getMemory(MemoryModuleType.HURT_BY)
+                     .map(DamageSource::getEntity)
+                     .filter(entity -> entity instanceof LivingEntity)
+                     .map(entity -> (LivingEntity)entity)
+               )
+            ),
             Pair.of(2, new BreezeAi.SlideToTargetSink(20, 40)),
             Pair.of(3, new RunOne(ImmutableList.of(Pair.of(new DoNothing(20, 100), 1), Pair.of(RandomStroll.stroll(0.6F), 2))))
          )
       );
    }
 
-   private static void initFightActivity(final Breeze body, final Brain<Breeze> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Breeze> initFightActivity(final Breeze body) {
+      return ActivityData.create(
          Activity.FIGHT,
          ImmutableList.of(
             Pair.of(0, StopAttackingIfTargetInvalid.create(Sensor.wasEntityAttackableLastNTicks(body, 100).negate()::test)),

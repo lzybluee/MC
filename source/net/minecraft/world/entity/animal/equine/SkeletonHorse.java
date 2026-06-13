@@ -34,8 +34,8 @@ public class SkeletonHorse extends AbstractHorse {
    private static final int DEFAULT_TRAP_TIME = 0;
    private static final EntityDimensions BABY_DIMENSIONS = EntityType.SKELETON_HORSE
       .getDimensions()
-      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.SKELETON_HORSE.getHeight() - 0.03125F, 0.0F))
-      .scale(0.5F);
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.SKELETON_HORSE.getHeight() - 0.25F, 0.0F))
+      .scale(0.7F);
    private boolean isTrap = false;
    private int trapTime = 0;
 
@@ -125,7 +125,7 @@ public class SkeletonHorse extends AbstractHorse {
    @Override
    public void aiStep() {
       super.aiStep();
-      if (this.isTrap() && this.trapTime++ >= 18000) {
+      if (!this.isPersistenceRequired() && this.isTrap() && this.trapTime++ >= 18000) {
          this.discard();
       }
    }
@@ -177,5 +177,10 @@ public class SkeletonHorse extends AbstractHorse {
    @Override
    public boolean canUseSlot(final EquipmentSlot slot) {
       return true;
+   }
+
+   @Override
+   public boolean canAgeUp() {
+      return false;
    }
 }

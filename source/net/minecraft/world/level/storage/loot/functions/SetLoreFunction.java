@@ -1,6 +1,7 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.google.common.collect.ImmutableList;
+import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
@@ -18,7 +19,7 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.Nullable;
 
 public class SetLoreFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetLoreFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetLoreFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -46,13 +47,13 @@ public class SetLoreFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetLoreFunction> getType() {
-      return LootItemFunctions.SET_LORE;
+   public MapCodec<SetLoreFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.resolutionContext.<Set<ContextKey<?>>>map(target -> Set.of(target.contextParam())).orElseGet(Set::of);
+      return (Set<ContextKey<?>>)DataFixUtils.orElse(this.resolutionContext.map(target -> Set.of(target.contextParam())), Set.of());
    }
 
    @Override

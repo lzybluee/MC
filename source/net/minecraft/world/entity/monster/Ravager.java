@@ -45,8 +45,7 @@ import org.jspecify.annotations.Nullable;
 
 public class Ravager extends Raider {
    private static final Predicate<Entity> ROAR_TARGET_WITH_GRIEFING = entity -> !(entity instanceof Ravager) && entity.isAlive();
-   private static final Predicate<Entity> ROAR_TARGET_WITHOUT_GRIEFING = entity -> ROAR_TARGET_WITH_GRIEFING.test(entity)
-      && !entity.getType().equals(EntityType.ARMOR_STAND);
+   private static final Predicate<Entity> ROAR_TARGET_WITHOUT_GRIEFING = entity -> ROAR_TARGET_WITH_GRIEFING.test(entity) && !entity.is(EntityType.ARMOR_STAND);
    private static final Predicate<LivingEntity> ROAR_TARGET_ON_CLIENT = e -> !(e instanceof Ravager) && e.isAlive() && e.isLocalInstanceAuthoritative();
    private static final double BASE_MOVEMENT_SPEED = 0.3;
    private static final double ATTACK_MOVEMENT_SPEED = 0.35;
@@ -85,7 +84,7 @@ public class Ravager extends Raider {
 
    @Override
    protected void updateControlFlags() {
-      boolean noController = !(this.getControllingPassenger() instanceof Mob) || this.getControllingPassenger().getType().is(EntityTypeTags.RAIDERS);
+      boolean noController = !(this.getControllingPassenger() instanceof Mob) || this.getControllingPassenger().is(EntityTypeTags.RAIDERS);
       boolean notInBoat = !(this.getVehicle() instanceof AbstractBoat);
       this.goalSelector.setControlFlag(Goal.Flag.MOVE, noController);
       this.goalSelector.setControlFlag(Goal.Flag.JUMP, noController && notInBoat);

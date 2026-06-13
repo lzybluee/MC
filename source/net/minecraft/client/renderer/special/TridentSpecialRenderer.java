@@ -1,15 +1,17 @@
 package net.minecraft.client.renderer.special;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Transformation;
 import com.mojang.serialization.MapCodec;
 import java.util.function.Consumer;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.projectile.TridentModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.world.item.ItemDisplayContext;
+import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
+   public static final Transformation DEFAULT_TRANSFORMATION = new Transformation(null, null, new Vector3f(1.0F, -1.0F, -1.0F), null);
    private final TridentModel model;
 
    public TridentSpecialRenderer(final TridentModel model) {
@@ -18,7 +20,6 @@ public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
 
    @Override
    public void submit(
-      final ItemDisplayContext type,
       final PoseStack poseStack,
       final SubmitNodeCollector submitNodeCollector,
       final int lightCoords,
@@ -26,22 +27,18 @@ public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
       final boolean hasFoil,
       final int outlineColor
    ) {
-      poseStack.pushPose();
-      poseStack.scale(1.0F, -1.0F, -1.0F);
       submitNodeCollector.submitModelPart(
          this.model.root(), poseStack, this.model.renderType(TridentModel.TEXTURE), lightCoords, overlayCoords, null, false, hasFoil, -1, null, outlineColor
       );
-      poseStack.popPose();
    }
 
    @Override
    public void getExtents(final Consumer<Vector3fc> output) {
       PoseStack poseStack = new PoseStack();
-      poseStack.scale(1.0F, -1.0F, -1.0F);
       this.model.root().getExtentsForGui(poseStack, output);
    }
 
-   public record Unbaked() implements SpecialModelRenderer.Unbaked {
+   public record Unbaked() implements NoDataSpecialModelRenderer.Unbaked {
       public static final MapCodec<TridentSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new TridentSpecialRenderer.Unbaked());
 
       @Override
@@ -49,8 +46,7 @@ public class TridentSpecialRenderer implements NoDataSpecialModelRenderer {
          return MAP_CODEC;
       }
 
-      @Override
-      public SpecialModelRenderer<?> bake(final SpecialModelRenderer.BakingContext context) {
+      public TridentSpecialRenderer bake(final SpecialModelRenderer.BakingContext context) {
          return new TridentSpecialRenderer(new TridentModel(context.entityModelSet().bakeLayer(ModelLayers.TRIDENT)));
       }
    }

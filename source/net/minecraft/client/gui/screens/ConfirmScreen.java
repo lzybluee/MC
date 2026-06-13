@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
 
 public class ConfirmScreen extends Screen {
    private final Component message;
-   protected LinearLayout layout = LinearLayout.vertical().spacing(8);
+   protected final LinearLayout layout = LinearLayout.vertical().spacing(8);
    protected Component yesButtonComponent;
    protected Component noButtonComponent;
    protected @Nullable Button yesButton;
@@ -90,7 +90,7 @@ public class ConfirmScreen extends Screen {
 
    @Override
    public boolean keyPressed(final KeyEvent event) {
-      if (this.delayTicker <= 0 && event.key() == 256) {
+      if (this.delayTicker <= 0 && event.isEscape()) {
          this.callback.accept(false);
          return true;
       } else {

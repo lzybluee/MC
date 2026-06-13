@@ -52,7 +52,7 @@ public interface ServerEntityGetter extends EntityGetter {
       double bestDistance = Double.MAX_VALUE;
       LivingEntity nearestEntity = null;
 
-      for (LivingEntity entity : this.getEntitiesOfClass(LivingEntity.class, bb, e -> e.getType().is(tag))) {
+      for (LivingEntity entity : this.getEntitiesOfClass(LivingEntity.class, bb, e -> e.is(tag))) {
          if (targetConditions.test(this.getLevel(), source, entity)) {
             double distance = entity.distanceToSqr(x, y, z);
             if (distance < bestDistance) {

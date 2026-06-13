@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.ItemBody;
 import net.minecraft.server.dialog.body.PlainMessage;
+import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -58,12 +59,13 @@ public class DialogBodyHandlers {
 
    private static class ItemHandler implements DialogBodyHandler<ItemBody> {
       public LayoutElement createControls(final DialogScreen<?> parent, final ItemBody item) {
+         ItemStack displayStack = item.item().create();
          if (item.description().isPresent()) {
             PlainMessage description = item.description().get();
             LinearLayout layout = LinearLayout.horizontal().spacing(2);
             layout.defaultCellSetting().alignVerticallyMiddle();
             ItemDisplayWidget itemWidget = new ItemDisplayWidget(
-               Minecraft.getInstance(), 0, 0, item.width(), item.height(), CommonComponents.EMPTY, item.item(), item.showDecorations(), item.showTooltip()
+               Minecraft.getInstance(), 0, 0, item.width(), item.height(), CommonComponents.EMPTY, displayStack, item.showDecorations(), item.showTooltip()
             );
             layout.addChild(itemWidget);
             layout.addChild(
@@ -77,7 +79,15 @@ public class DialogBodyHandlers {
             return layout;
          } else {
             return new ItemDisplayWidget(
-               Minecraft.getInstance(), 0, 0, item.width(), item.height(), item.item().getHoverName(), item.item(), item.showDecorations(), item.showTooltip()
+               Minecraft.getInstance(),
+               0,
+               0,
+               item.width(),
+               item.height(),
+               displayStack.getHoverName(),
+               displayStack,
+               item.showDecorations(),
+               item.showTooltip()
             );
          }
       }

@@ -15,7 +15,7 @@ public record BundleHasSelectedItem() implements ConditionalItemModelProperty {
    public boolean get(
       final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable LivingEntity owner, final int seed, final ItemDisplayContext displayContext
    ) {
-      return BundleItem.hasSelectedItem(itemStack);
+      return BundleItem.getSelectedItem(itemStack) != null;
    }
 
    @Override

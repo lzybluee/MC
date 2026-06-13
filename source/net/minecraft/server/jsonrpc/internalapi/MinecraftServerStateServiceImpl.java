@@ -48,7 +48,7 @@ public class MinecraftServerStateServiceImpl implements MinecraftServerStateServ
 
       for (ServerPlayer player : players) {
          if (overlay) {
-            player.sendSystemMessage(message, true);
+            player.sendOverlayMessage(message);
          } else {
             player.sendSystemMessage(message);
          }
@@ -61,7 +61,7 @@ public class MinecraftServerStateServiceImpl implements MinecraftServerStateServ
 
       for (ServerPlayer player : this.server.getPlayerList().getPlayers()) {
          if (overlay) {
-            player.sendSystemMessage(message, true);
+            player.sendOverlayMessage(message);
          } else {
             player.sendSystemMessage(message);
          }

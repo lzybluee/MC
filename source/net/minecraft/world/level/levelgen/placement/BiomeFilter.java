@@ -8,7 +8,7 @@ import net.minecraft.world.level.biome.Biome;
 
 public class BiomeFilter extends PlacementFilter {
    private static final BiomeFilter INSTANCE = new BiomeFilter();
-   public static MapCodec<BiomeFilter> CODEC = MapCodec.unit(() -> INSTANCE);
+   public static final MapCodec<BiomeFilter> CODEC = MapCodec.unit(() -> INSTANCE);
 
    private BiomeFilter() {
    }

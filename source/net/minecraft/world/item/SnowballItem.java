@@ -14,7 +14,7 @@ import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
 import net.minecraft.world.level.Level;
 
 public class SnowballItem extends Item implements ProjectileItem {
-   public static float PROJECTILE_SHOOT_POWER = 1.5F;
+   public static final float PROJECTILE_SHOOT_POWER = 1.5F;
 
    public SnowballItem(final Item.Properties properties) {
       super(properties);
@@ -34,7 +34,7 @@ public class SnowballItem extends Item implements ProjectileItem {
          0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F)
       );
       if (level instanceof ServerLevel serverLevel) {
-         Projectile.spawnProjectileFromRotation(Snowball::new, serverLevel, itemStack, player, 0.0F, PROJECTILE_SHOOT_POWER, 1.0F);
+         Projectile.spawnProjectileFromRotation(Snowball::new, serverLevel, itemStack, player, 0.0F, 1.5F, 1.0F);
       }
 
       player.awardStat(Stats.ITEM_USED.get(this));

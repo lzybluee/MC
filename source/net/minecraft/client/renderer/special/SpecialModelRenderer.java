@@ -6,8 +6,7 @@ import java.util.function.Consumer;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.resources.model.MaterialSet;
-import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 public interface SpecialModelRenderer<T> {
    void submit(
       @Nullable T argument,
-      ItemDisplayContext type,
       PoseStack poseStack,
       SubmitNodeCollector submitNodeCollector,
       int lightCoords,
@@ -31,18 +29,14 @@ public interface SpecialModelRenderer<T> {
    interface BakingContext {
       EntityModelSet entityModelSet();
 
-      MaterialSet materials();
+      SpriteGetter sprites();
 
       PlayerSkinRenderCache playerSkinRenderCache();
-
-      record Simple(EntityModelSet entityModelSet, MaterialSet materials, PlayerSkinRenderCache playerSkinRenderCache)
-         implements SpecialModelRenderer.BakingContext {
-      }
    }
 
-   interface Unbaked {
-      @Nullable SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext context);
+   interface Unbaked<T> {
+      @Nullable SpecialModelRenderer<T> bake(SpecialModelRenderer.BakingContext context);
 
-      MapCodec<? extends SpecialModelRenderer.Unbaked> type();
+      MapCodec<? extends SpecialModelRenderer.Unbaked<T>> type();
    }
 }

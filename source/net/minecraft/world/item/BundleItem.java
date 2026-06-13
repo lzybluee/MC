@@ -1,8 +1,8 @@
 package net.minecraft.world.item;
 
-import java.util.List;
+import com.mojang.serialization.DataResult.Error;
+import com.mojang.serialization.DataResult.Success;
 import java.util.Optional;
-import java.util.stream.Stream;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -25,6 +25,7 @@ import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.math.Fraction;
+import org.jspecify.annotations.Nullable;
 
 public class BundleItem extends Item {
    public static final int MAX_SHOWN_GRID_ITEMS_X = 4;
@@ -41,9 +42,17 @@ public class BundleItem extends Item {
       super(properties);
    }
 
+   private static Fraction getWeightSafe(final BundleContents contents) {
+      return switch (contents.weight()) {
+         case Success<Fraction> success -> (Fraction)success.value();
+         case Error<?> error -> Fraction.ONE;
+         default -> throw new MatchException(null, null);
+      };
+   }
+
    public static float getFullnessDisplay(final ItemStack itemStack) {
       BundleContents contents = itemStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-      return contents.weight().floatValue();
+      return getWeightSafe(contents).floatValue();
    }
 
    @Override
@@ -143,19 +152,19 @@ public class BundleItem extends Item {
    @Override
    public boolean isBarVisible(final ItemStack stack) {
       BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-      return contents.weight().compareTo(Fraction.ZERO) > 0;
+      return getWeightSafe(contents).compareTo(Fraction.ZERO) > 0;
    }
 
    @Override
    public int getBarWidth(final ItemStack stack) {
       BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-      return Math.min(1 + Mth.mulAndTruncate(contents.weight(), 12), 13);
+      return Math.min(1 + Mth.mulAndTruncate(getWeightSafe(contents), 12), 13);
    }
 
    @Override
    public int getBarColor(final ItemStack stack) {
       BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-      return contents.weight().compareTo(Fraction.ONE) >= 0 ? FULL_BAR_COLOR : BAR_COLOR;
+      return getWeightSafe(contents).compareTo(Fraction.ONE) >= 0 ? FULL_BAR_COLOR : BAR_COLOR;
    }
 
    public static void toggleSelectedItem(final ItemStack stack, final int selectedItem) {
@@ -167,19 +176,12 @@ public class BundleItem extends Item {
       }
    }
 
-   public static boolean hasSelectedItem(final ItemStack stack) {
-      BundleContents contents = stack.get(DataComponents.BUNDLE_CONTENTS);
-      return contents != null && contents.getSelectedItem() != -1;
+   public static int getSelectedItemIndex(final ItemStack stack) {
+      return stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).getSelectedItemIndex();
    }
 
-   public static int getSelectedItem(final ItemStack stack) {
-      BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-      return contents.getSelectedItem();
-   }
-
-   public static ItemStack getSelectedItemStack(final ItemStack stack) {
-      BundleContents contents = stack.get(DataComponents.BUNDLE_CONTENTS);
-      return contents != null && contents.getSelectedItem() != -1 ? contents.getItemUnsafe(contents.getSelectedItem()) : ItemStack.EMPTY;
+   public static @Nullable ItemStackTemplate getSelectedItem(final ItemStack stack) {
+      return stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).getSelectedItem();
    }
 
    public static int getNumberOfItemsToShow(final ItemStack stack) {
@@ -248,53 +250,8 @@ public class BundleItem extends Item {
       BundleContents contents = entity.getItem().get(DataComponents.BUNDLE_CONTENTS);
       if (contents != null) {
          entity.getItem().set(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-         ItemUtils.onContainerDestroyed(entity, contents.itemsCopy());
+         ItemUtils.onContainerDestroyed(entity, contents.itemCopyStream());
       }
-   }
-
-   public static List<BundleItem> getAllBundleItemColors() {
-      return Stream.of(
-            Items.BUNDLE,
-            Items.WHITE_BUNDLE,
-            Items.ORANGE_BUNDLE,
-            Items.MAGENTA_BUNDLE,
-            Items.LIGHT_BLUE_BUNDLE,
-            Items.YELLOW_BUNDLE,
-            Items.LIME_BUNDLE,
-            Items.PINK_BUNDLE,
-            Items.GRAY_BUNDLE,
-            Items.LIGHT_GRAY_BUNDLE,
-            Items.CYAN_BUNDLE,
-            Items.BLACK_BUNDLE,
-            Items.BROWN_BUNDLE,
-            Items.GREEN_BUNDLE,
-            Items.RED_BUNDLE,
-            Items.BLUE_BUNDLE,
-            Items.PURPLE_BUNDLE
-         )
-         .map(item -> (BundleItem)item)
-         .toList();
-   }
-
-   public static Item getByColor(final DyeColor color) {
-      return switch (color) {
-         case WHITE -> Items.WHITE_BUNDLE;
-         case ORANGE -> Items.ORANGE_BUNDLE;
-         case MAGENTA -> Items.MAGENTA_BUNDLE;
-         case LIGHT_BLUE -> Items.LIGHT_BLUE_BUNDLE;
-         case YELLOW -> Items.YELLOW_BUNDLE;
-         case LIME -> Items.LIME_BUNDLE;
-         case PINK -> Items.PINK_BUNDLE;
-         case GRAY -> Items.GRAY_BUNDLE;
-         case LIGHT_GRAY -> Items.LIGHT_GRAY_BUNDLE;
-         case CYAN -> Items.CYAN_BUNDLE;
-         case BLUE -> Items.BLUE_BUNDLE;
-         case BROWN -> Items.BROWN_BUNDLE;
-         case GREEN -> Items.GREEN_BUNDLE;
-         case RED -> Items.RED_BUNDLE;
-         case BLACK -> Items.BLACK_BUNDLE;
-         case PURPLE -> Items.PURPLE_BUNDLE;
-      };
    }
 
    private static void playRemoveOneSound(final Entity entity) {

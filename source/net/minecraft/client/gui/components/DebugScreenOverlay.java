@@ -7,6 +7,7 @@ import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
@@ -24,12 +25,11 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.debug.DebugScreenDisplayer;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.gui.components.debug.DebugScreenEntry;
@@ -41,6 +41,7 @@ import net.minecraft.client.gui.components.debugchart.ProfilerPieChart;
 import net.minecraft.client.gui.components.debugchart.TpsDebugChart;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -79,6 +80,7 @@ public class DebugScreenOverlay {
    private boolean renderProfilerChart;
    private boolean renderFpsCharts;
    private boolean renderNetworkCharts;
+   private boolean renderLightmapTexture;
    private final LocalSampleLogger frameTimeLogger = new LocalSampleLogger(1);
    private final LocalSampleLogger tickTimeLogger = new LocalSampleLogger(TpsDebugDimensions.values().length);
    private final LocalSampleLogger pingLogger = new LocalSampleLogger(1);
@@ -127,7 +129,7 @@ public class DebugScreenOverlay {
       this.clientChunk = null;
    }
 
-   public void render(final GuiGraphics graphics) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics) {
       Options options = this.minecraft.options;
       if (this.minecraft.isGameLoadFinished() && (!options.hideGui || this.minecraft.screen != null)) {
          Collection<Identifier> visibleEntries = this.minecraft.debugEntries.getCurrentlyEnabled();
@@ -138,7 +140,7 @@ public class DebugScreenOverlay {
             ChunkPos chunkPos;
             if (this.minecraft.getCameraEntity() != null && this.minecraft.level != null) {
                BlockPos feetPos = this.minecraft.getCameraEntity().blockPosition();
-               chunkPos = new ChunkPos(feetPos);
+               chunkPos = ChunkPos.containing(feetPos);
             } else {
                chunkPos = null;
             }
@@ -226,42 +228,37 @@ public class DebugScreenOverlay {
                leftLines.add("");
                boolean hasServer = this.minecraft.getSingleplayerServer() != null;
                KeyMapping keyDebugModifier = options.keyDebugModifier;
-               String modifierBind = keyDebugModifier.getTranslatedKeyMessage().getString();
-               String bindOutputPrefix = "[" + (keyDebugModifier.isUnbound() ? "" : modifierBind + "+");
-               String profilerBind = bindOutputPrefix + options.keyDebugPofilingChart.getTranslatedKeyMessage().getString() + "]";
-               String fpsBind = bindOutputPrefix + options.keyDebugFpsCharts.getTranslatedKeyMessage().getString() + "]";
-               String networkBind = bindOutputPrefix + options.keyDebugNetworkCharts.getTranslatedKeyMessage().getString() + "]";
                leftLines.add(
                   "Debug charts: "
-                     + profilerBind
-                     + " Profiler "
-                     + (this.renderProfilerChart ? "visible" : "hidden")
+                     + formatChart(keyDebugModifier, options.keyDebugPofilingChart, "Profiler", this.renderProfilerChart)
                      + "; "
-                     + fpsBind
-                     + " "
-                     + (hasServer ? "FPS + TPS " : "FPS ")
-                     + (this.renderFpsCharts ? "visible" : "hidden")
-                     + "; "
-                     + networkBind
-                     + " "
-                     + (!this.minecraft.isLocalServer() ? "Bandwidth + Ping" : "Ping")
-                     + (this.renderNetworkCharts ? " visible" : " hidden")
+                     + formatChart(keyDebugModifier, options.keyDebugFpsCharts, hasServer ? "FPS + TPS" : "FPS", this.renderFpsCharts)
+                     + ";"
                );
-               String optionsBind = bindOutputPrefix + options.keyDebugDebugOptions.getTranslatedKeyMessage().getString() + "]";
-               leftLines.add("To edit: press " + optionsBind);
+               leftLines.add(
+                  formatChart(
+                        keyDebugModifier,
+                        options.keyDebugNetworkCharts,
+                        !this.minecraft.isLocalServer() ? "Bandwidth + Ping" : "Ping",
+                        this.renderNetworkCharts
+                     )
+                     + "; "
+                     + formatChart(keyDebugModifier, options.keyDebugLightmapTexture, "Lightmap", this.renderLightmapTexture)
+               );
+               leftLines.add("To edit: press " + formatKeybind(keyDebugModifier, options.keyDebugDebugOptions));
             }
 
-            this.renderLines(graphics, leftLines, true);
-            this.renderLines(graphics, rightLines, false);
+            this.extractLines(graphics, leftLines, true);
+            this.extractLines(graphics, rightLines, false);
             graphics.nextStratum();
             this.profilerPieChart.setBottomOffset(10);
             if (this.showFpsCharts()) {
                int scaledWidth = graphics.guiWidth();
                int maxWidth = scaledWidth / 2;
-               this.fpsChart.drawChart(graphics, 0, this.fpsChart.getWidth(maxWidth));
+               this.fpsChart.extractRenderState(graphics, 0, this.fpsChart.getWidth(maxWidth));
                if (this.tickTimeLogger.size() > 0) {
                   int width = this.tpsChart.getWidth(maxWidth);
-                  this.tpsChart.drawChart(graphics, scaledWidth - width, width);
+                  this.tpsChart.extractRenderState(graphics, scaledWidth - width, width);
                }
 
                this.profilerPieChart.setBottomOffset(this.tpsChart.getFullHeight());
@@ -271,12 +268,23 @@ public class DebugScreenOverlay {
                int scaledWidth = graphics.guiWidth();
                int maxWidth = scaledWidth / 2;
                if (!this.minecraft.isLocalServer()) {
-                  this.bandwidthChart.drawChart(graphics, 0, this.bandwidthChart.getWidth(maxWidth));
+                  this.bandwidthChart.extractRenderState(graphics, 0, this.bandwidthChart.getWidth(maxWidth));
                }
 
                int width = this.pingChart.getWidth(maxWidth);
-               this.pingChart.drawChart(graphics, scaledWidth - width, width);
+               this.pingChart.extractRenderState(graphics, scaledWidth - width, width);
                this.profilerPieChart.setBottomOffset(this.pingChart.getFullHeight());
+            }
+
+            if (this.showLightmapTexture()) {
+               GpuTextureView lightmapTextureView = this.minecraft.gameRenderer.levelLightmap();
+               int displaySize = 64;
+               int x = graphics.guiWidth() - 64 - 2;
+               int y = graphics.guiHeight() - 64 - 2;
+               graphics.fill(x - 1, y - 1, x + 64 + 1, y + 64 + 1, -16777216);
+               graphics.blit(
+                  lightmapTextureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST), x, y, x + 64, y + 64, 0.0F, 1.0F, 1.0F, 0.0F
+               );
             }
 
             if (this.minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_CHUNKS_ON_SERVER)) {
@@ -284,12 +292,12 @@ public class DebugScreenOverlay {
                if (singleplayerServer != null && this.minecraft.player != null) {
                   ChunkLoadStatusView statusView = singleplayerServer.createChunkLoadStatusView(16 + ChunkLevel.RADIUS_AROUND_FULL_CHUNK);
                   statusView.moveTo(this.minecraft.player.level().dimension(), this.minecraft.player.chunkPosition());
-                  LevelLoadingScreen.renderChunks(graphics, graphics.guiWidth() / 2, graphics.guiHeight() / 2, 4, 1, statusView);
+                  LevelLoadingScreen.extractChunksForRendering(graphics, graphics.guiWidth() / 2, graphics.guiHeight() / 2, 4, 1, statusView);
                }
             }
 
             try (Zone ignored = profiler.zone("profilerPie")) {
-               this.profilerPieChart.render(graphics);
+               this.profilerPieChart.extractRenderState(graphics);
             }
 
             profiler.pop();
@@ -297,7 +305,18 @@ public class DebugScreenOverlay {
       }
    }
 
-   private void renderLines(final GuiGraphics graphics, final List<String> lines, final boolean alignLeft) {
+   private static String formatChart(final KeyMapping keyDebugModifier, final KeyMapping keybind, final String name, final boolean status) {
+      return formatKeybind(keyDebugModifier, keybind) + " " + name + " " + (status ? "visible" : "hidden");
+   }
+
+   private static String formatKeybind(final KeyMapping keyDebugModifier, final KeyMapping keybind) {
+      return "["
+         + (keyDebugModifier.isUnbound() ? "" : keyDebugModifier.getTranslatedKeyMessage().getString() + "+")
+         + keybind.getTranslatedKeyMessage().getString()
+         + "]";
+   }
+
+   private void extractLines(final GuiGraphicsExtractor graphics, final List<String> lines, final boolean alignLeft) {
       int height = 9;
 
       for (int i = 0; i < lines.size(); i++) {
@@ -316,7 +335,7 @@ public class DebugScreenOverlay {
             int width = this.font.width(line);
             int left = alignLeft ? 2 : graphics.guiWidth() - 2 - width;
             int top = 2 + height * i;
-            graphics.drawString(this.font, line, left, top, -2039584, false);
+            graphics.text(this.font, line, left, top, -2039584, false);
          }
       }
    }
@@ -348,7 +367,7 @@ public class DebugScreenOverlay {
             }
 
             this.serverChunk = level.getChunkSource()
-               .getChunkFuture(this.lastPos.x, this.lastPos.z, ChunkStatus.FULL, false)
+               .getChunkFuture(this.lastPos.x(), this.lastPos.z(), ChunkStatus.FULL, false)
                .thenApply(chunkResult -> (LevelChunk)chunkResult.orElse(null));
          }
 
@@ -361,7 +380,7 @@ public class DebugScreenOverlay {
    private @Nullable LevelChunk getClientChunk() {
       if (this.minecraft.level != null && this.lastPos != null) {
          if (this.clientChunk == null) {
-            this.clientChunk = this.minecraft.level.getChunk(this.lastPos.x, this.lastPos.z);
+            this.clientChunk = this.minecraft.level.getChunk(this.lastPos.x(), this.lastPos.z());
          }
 
          return this.clientChunk;
@@ -387,11 +406,16 @@ public class DebugScreenOverlay {
       return this.minecraft.debugEntries.isOverlayVisible() && this.renderFpsCharts;
    }
 
+   public boolean showLightmapTexture() {
+      return this.minecraft.debugEntries.isOverlayVisible() && this.renderLightmapTexture;
+   }
+
    public void toggleNetworkCharts() {
       this.renderNetworkCharts = !this.minecraft.debugEntries.isOverlayVisible() || !this.renderNetworkCharts;
       if (this.renderNetworkCharts) {
          this.minecraft.debugEntries.setOverlayVisible(true);
          this.renderFpsCharts = false;
+         this.renderLightmapTexture = false;
       }
    }
 
@@ -399,6 +423,16 @@ public class DebugScreenOverlay {
       this.renderFpsCharts = !this.minecraft.debugEntries.isOverlayVisible() || !this.renderFpsCharts;
       if (this.renderFpsCharts) {
          this.minecraft.debugEntries.setOverlayVisible(true);
+         this.renderNetworkCharts = false;
+         this.renderLightmapTexture = false;
+      }
+   }
+
+   public void toggleLightmapTexture() {
+      this.renderLightmapTexture = !this.minecraft.debugEntries.isOverlayVisible() || !this.renderLightmapTexture;
+      if (this.renderLightmapTexture) {
+         this.minecraft.debugEntries.setOverlayVisible(true);
+         this.renderFpsCharts = false;
          this.renderNetworkCharts = false;
       }
    }
@@ -443,15 +477,16 @@ public class DebugScreenOverlay {
       this.bandwidthLogger.reset();
    }
 
-   public void render3dCrosshair(final Camera camera) {
+   public void render3dCrosshair(final CameraRenderState cameraState, final int guiScale) {
       Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
       modelViewStack.pushMatrix();
       modelViewStack.translate(0.0F, 0.0F, -1.0F);
-      modelViewStack.rotateX(camera.xRot() * (float) (Math.PI / 180.0));
-      modelViewStack.rotateY(camera.yRot() * (float) (Math.PI / 180.0));
-      float crosshairScale = 0.01F * this.minecraft.getWindow().getGuiScale();
+      modelViewStack.rotateX(cameraState.xRot * (float) (Math.PI / 180.0));
+      modelViewStack.rotateY(cameraState.yRot * (float) (Math.PI / 180.0));
+      float crosshairScale = 0.01F * guiScale;
       modelViewStack.scale(-crosshairScale, crosshairScale, -crosshairScale);
-      RenderPipeline renderPipeline = RenderPipelines.LINES;
+      RenderPipeline renderPipelineOutline = RenderPipelines.LINES;
+      RenderPipeline renderPipelineFill = RenderPipelines.LINES_DEPTH_BIAS;
       RenderTarget mainRenderTarget = Minecraft.getInstance().getMainRenderTarget();
       GpuTextureView colorTexture = mainRenderTarget.getColorTextureView();
       GpuTextureView depthTexture = mainRenderTarget.getDepthTextureView();
@@ -462,12 +497,14 @@ public class DebugScreenOverlay {
       try (RenderPass renderPass = RenderSystem.getDevice()
             .createCommandEncoder()
             .createRenderPass(() -> "3d crosshair", colorTexture, OptionalInt.empty(), depthTexture, OptionalDouble.empty())) {
-         renderPass.setPipeline(renderPipeline);
+         renderPass.setPipeline(renderPipelineOutline);
          RenderSystem.bindDefaultUniforms(renderPass);
          renderPass.setVertexBuffer(0, this.crosshairBuffer);
          renderPass.setIndexBuffer(indexBuffer, this.crosshairIndicies.type());
          renderPass.setUniform("DynamicTransforms", dynamicTransform);
-         renderPass.drawIndexed(0, 0, 36, 1);
+         renderPass.drawIndexed(0, 0, 18, 1);
+         renderPass.setPipeline(renderPipelineFill);
+         renderPass.drawIndexed(0, 18, 18, 1);
       }
 
       modelViewStack.popMatrix();

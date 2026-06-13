@@ -12,7 +12,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetCustomDataFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetCustomDataFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetCustomDataFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i).and(TagParser.LENIENT_CODEC.fieldOf("tag").forGetter(f -> f.tag)).apply(i, SetCustomDataFunction::new)
    );
    private final CompoundTag tag;
@@ -23,8 +23,8 @@ public class SetCustomDataFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetCustomDataFunction> getType() {
-      return LootItemFunctions.SET_CUSTOM_DATA;
+   public MapCodec<SetCustomDataFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override

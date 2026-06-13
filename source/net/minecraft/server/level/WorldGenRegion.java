@@ -11,7 +11,6 @@ import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
@@ -29,7 +28,6 @@ import net.minecraft.world.attribute.EnvironmentAttributeReader;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.WorldGenLevel;
@@ -179,11 +177,6 @@ public class WorldGenRegion implements WorldGenLevel {
    }
 
    @Override
-   public float getShade(final Direction direction, final boolean shade) {
-      return 1.0F;
-   }
-
-   @Override
    public LevelLightEngine getLightEngine() {
       return this.level.getLightEngine();
    }
@@ -191,16 +184,7 @@ public class WorldGenRegion implements WorldGenLevel {
    @Override
    public boolean destroyBlock(final BlockPos pos, final boolean dropResources, final @Nullable Entity breaker, final int updateLimit) {
       BlockState blockState = this.getBlockState(pos);
-      if (blockState.isAir()) {
-         return false;
-      }
-
-      if (dropResources) {
-         BlockEntity blockEntity = blockState.hasBlockEntity() ? this.getBlockEntity(pos) : null;
-         Block.dropResources(blockState, this.level, pos, blockEntity, breaker, ItemStack.EMPTY);
-      }
-
-      return this.setBlock(pos, Blocks.AIR.defaultBlockState(), 3, updateLimit);
+      return blockState.isAir() ? false : this.setBlock(pos, Blocks.AIR.defaultBlockState(), 3, updateLimit);
    }
 
    @Override
@@ -242,8 +226,8 @@ public class WorldGenRegion implements WorldGenLevel {
       int chunkX = SectionPos.blockToSectionCoord(pos.getX());
       int chunkZ = SectionPos.blockToSectionCoord(pos.getZ());
       ChunkPos centerPos = this.getCenter();
-      int distanceX = Math.abs(centerPos.x - chunkX);
-      int distanceZ = Math.abs(centerPos.z - chunkZ);
+      int distanceX = Math.abs(centerPos.x() - chunkX);
+      int distanceZ = Math.abs(centerPos.z() - chunkZ);
       if (distanceX <= this.generatingStep.blockStateWriteRadius() && distanceZ <= this.generatingStep.blockStateWriteRadius()) {
          if (this.center.isUpgrading()) {
             LevelHeightAccessor levelHeightAccessor = this.center.getHeightAccessorForGeneration();
@@ -301,8 +285,11 @@ public class WorldGenRegion implements WorldGenLevel {
          chunk.removeBlockEntity(pos);
       }
 
-      if (blockState.hasPostProcess(this, pos) && (updateFlags & 16) == 0) {
-         this.markPosForPostprocessing(pos);
+      if ((updateFlags & 16) == 0) {
+         BlockPos postProcessPos = blockState.getPostProcessPos(this, pos);
+         if (postProcessPos != null) {
+            this.markPosForPostprocessing(postProcessPos);
+         }
       }
 
       return true;
@@ -361,7 +348,7 @@ public class WorldGenRegion implements WorldGenLevel {
       if (!this.hasChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()))) {
          throw new RuntimeException("We are asking a region for a chunk out of bound");
       } else {
-         return new DifficultyInstance(this.level.getDifficulty(), this.level.getDayTime(), 0L, this.level.getMoonBrightness(pos));
+         return new DifficultyInstance(this.level.getDifficulty(), this.level.getOverworldClockTime(), 0L, this.level.getMoonBrightness(pos));
       }
    }
 

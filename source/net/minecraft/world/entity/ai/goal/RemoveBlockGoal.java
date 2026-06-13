@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -78,20 +77,18 @@ public class RemoveBlockGoal extends MoveToBlockGoal {
          if (this.ticksSinceReachedGoal > 0) {
             Vec3 movement = this.removerMob.getDeltaMovement();
             this.removerMob.setDeltaMovement(movement.x, 0.3, movement.z);
-            if (!level.isClientSide()) {
-               double v = 0.08;
-               ((ServerLevel)level)
-                  .sendParticles(
-                     new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.EGG)),
-                     eatPos.getX() + 0.5,
-                     eatPos.getY() + 0.7,
-                     eatPos.getZ() + 0.5,
-                     3,
-                     (random.nextFloat() - 0.5) * 0.08,
-                     (random.nextFloat() - 0.5) * 0.08,
-                     (random.nextFloat() - 0.5) * 0.08,
-                     0.15F
-                  );
+            if (level instanceof ServerLevel serverLevel) {
+               serverLevel.sendParticles(
+                  new ItemParticleOption(ParticleTypes.ITEM, Items.EGG),
+                  eatPos.getX() + 0.5,
+                  eatPos.getY() + 0.7,
+                  eatPos.getZ() + 0.5,
+                  3,
+                  (random.nextFloat() - 0.5) * 0.08,
+                  (random.nextFloat() - 0.5) * 0.08,
+                  (random.nextFloat() - 0.5) * 0.08,
+                  0.15F
+               );
             }
          }
 

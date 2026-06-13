@@ -74,7 +74,7 @@ public class TargetingConditions {
             return false;
          }
       } else {
-         if (this.isCombat && (!targeter.canAttack(target) || !targeter.canAttackType(target.getType()) || targeter.isAlliedTo(target))) {
+         if (this.isCombat && (!targeter.canAttack(target) || targeter.isAlliedTo(target))) {
             return false;
          }
 

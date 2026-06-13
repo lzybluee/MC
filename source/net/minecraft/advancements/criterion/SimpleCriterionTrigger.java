@@ -13,6 +13,8 @@ import net.minecraft.advancements.CriterionTriggerInstance;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 
 public abstract class SimpleCriterionTrigger<T extends SimpleCriterionTrigger.SimpleInstance> implements CriterionTrigger<T> {
    private final Map<PlayerAdvancements, Set<CriterionTrigger.Listener<T>>> players = Maps.newIdentityHashMap();
@@ -69,8 +71,8 @@ public abstract class SimpleCriterionTrigger<T extends SimpleCriterionTrigger.Si
 
    public interface SimpleInstance extends CriterionTriggerInstance {
       @Override
-      default void validate(final CriterionValidator validator) {
-         validator.validateEntity(this.player(), "player");
+      default void validate(final ValidationContextSource validator) {
+         Validatable.validate(validator.entityContext(), "player", this.player());
       }
 
       Optional<ContextAwarePredicate> player();

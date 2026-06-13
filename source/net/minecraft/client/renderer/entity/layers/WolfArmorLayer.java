@@ -3,6 +3,7 @@ package net.minecraft.client.renderer.entity.layers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.Map;
 import net.minecraft.client.model.Model;
+import net.minecraft.client.model.animal.wolf.AdultWolfModel;
 import net.minecraft.client.model.animal.wolf.WolfModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -20,7 +21,6 @@ import net.minecraft.world.item.equipment.Equippable;
 
 public class WolfArmorLayer extends RenderLayer<WolfRenderState, WolfModel> {
    private final WolfModel adultModel;
-   private final WolfModel babyModel;
    private final EquipmentLayerRenderer equipmentRenderer;
    private static final Map<Crackiness.Level, Identifier> ARMOR_CRACK_LOCATIONS = Map.of(
       Crackiness.Level.LOW,
@@ -35,8 +35,7 @@ public class WolfArmorLayer extends RenderLayer<WolfRenderState, WolfModel> {
       final RenderLayerParent<WolfRenderState, WolfModel> renderer, final EntityModelSet modelSet, final EquipmentLayerRenderer equipmentRenderer
    ) {
       super(renderer);
-      this.adultModel = new WolfModel(modelSet.bakeLayer(ModelLayers.WOLF_ARMOR));
-      this.babyModel = new WolfModel(modelSet.bakeLayer(ModelLayers.WOLF_BABY_ARMOR));
+      this.adultModel = new AdultWolfModel(modelSet.bakeLayer(ModelLayers.WOLF_ARMOR));
       this.equipmentRenderer = equipmentRenderer;
    }
 
@@ -50,13 +49,12 @@ public class WolfArmorLayer extends RenderLayer<WolfRenderState, WolfModel> {
    ) {
       ItemStack armorItem = state.bodyArmorItem;
       Equippable equippable = armorItem.get(DataComponents.EQUIPPABLE);
-      if (equippable != null && !equippable.assetId().isEmpty()) {
-         WolfModel model = state.isBaby ? this.babyModel : this.adultModel;
+      if (equippable != null && !equippable.assetId().isEmpty() && !state.isBaby) {
          this.equipmentRenderer
             .renderLayers(
                EquipmentClientInfo.LayerType.WOLF_BODY,
                equippable.assetId().get(),
-               model,
+               this.adultModel,
                state,
                armorItem,
                poseStack,
@@ -64,7 +62,7 @@ public class WolfArmorLayer extends RenderLayer<WolfRenderState, WolfModel> {
                lightCoords,
                state.outlineColor
             );
-         this.maybeRenderCracks(poseStack, submitNodeCollector, lightCoords, armorItem, model, state);
+         this.maybeRenderCracks(poseStack, submitNodeCollector, lightCoords, armorItem, this.adultModel, state);
       }
    }
 

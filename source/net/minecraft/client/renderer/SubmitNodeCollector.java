@@ -4,7 +4,7 @@ import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.feature.ParticleFeatureRenderer;
-import net.minecraft.client.renderer.state.QuadParticleRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
 import org.jspecify.annotations.Nullable;
 
@@ -16,14 +16,15 @@ public interface SubmitNodeCollector extends OrderedSubmitNodeCollector {
    }
 
    interface ParticleGroupRenderer {
-      QuadParticleRenderState.@Nullable PreparedBuffers prepare(ParticleFeatureRenderer.ParticleBufferCache buffer);
+      boolean isEmpty();
+
+      QuadParticleRenderState.@Nullable PreparedBuffers prepare(ParticleFeatureRenderer.ParticleBufferCache buffer, boolean translucent);
 
       void render(
          QuadParticleRenderState.PreparedBuffers buffers,
          ParticleFeatureRenderer.ParticleBufferCache bufferCache,
          RenderPass renderPass,
-         TextureManager textureManager,
-         boolean isTranslucent
+         TextureManager textureManager
       );
    }
 }

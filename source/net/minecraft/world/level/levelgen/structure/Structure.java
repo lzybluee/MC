@@ -246,7 +246,7 @@ public abstract class Structure {
 
       private static WorldgenRandom makeRandom(final long seed, final ChunkPos chunkPos) {
          WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(0L));
-         random.setLargeFeatureSeed(seed, chunkPos.x, chunkPos.z);
+         random.setLargeFeatureSeed(seed, chunkPos.x(), chunkPos.z());
          return random;
       }
    }
@@ -269,7 +269,7 @@ public abstract class Structure {
       HolderSet<Biome> biomes, Map<MobCategory, StructureSpawnOverride> spawnOverrides, GenerationStep.Decoration step, TerrainAdjustment terrainAdaptation
    ) {
       private static final Structure.StructureSettings DEFAULT = new Structure.StructureSettings(
-         HolderSet.direct(), Map.of(), GenerationStep.Decoration.SURFACE_STRUCTURES, TerrainAdjustment.NONE
+         HolderSet.empty(), Map.of(), GenerationStep.Decoration.SURFACE_STRUCTURES, TerrainAdjustment.NONE
       );
       public static final MapCodec<Structure.StructureSettings> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(

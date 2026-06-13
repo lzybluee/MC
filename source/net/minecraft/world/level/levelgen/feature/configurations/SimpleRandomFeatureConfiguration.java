@@ -2,6 +2,7 @@ package net.minecraft.world.level.levelgen.feature.configurations;
 
 import com.mojang.serialization.Codec;
 import java.util.stream.Stream;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
@@ -19,7 +20,7 @@ public class SimpleRandomFeatureConfiguration implements FeatureConfiguration {
    }
 
    @Override
-   public Stream<ConfiguredFeature<?, ?>> getFeatures() {
+   public Stream<Holder<ConfiguredFeature<?, ?>>> getSubFeatures() {
       return this.features.stream().flatMap(f -> f.value().getFeatures());
    }
 }

@@ -69,7 +69,7 @@ public abstract class AbstractSchoolingFish extends AbstractFish {
    @Override
    public void tick() {
       super.tick();
-      if (this.hasFollowers() && this.level().random.nextInt(200) == 1) {
+      if (this.hasFollowers() && this.level().getRandom().nextInt(200) == 1) {
          List<? extends AbstractFish> neighbors = this.level()
             .getEntitiesOfClass((Class<? extends AbstractFish>)this.getClass(), this.getBoundingBox().inflate(8.0, 8.0, 8.0));
          if (neighbors.size() <= 1) {

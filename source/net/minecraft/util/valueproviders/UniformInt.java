@@ -7,9 +7,11 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 
-public class UniformInt extends IntProvider {
-   public static final MapCodec<UniformInt> CODEC = RecordCodecBuilder.mapCodec(
-         i -> i.group(Codec.INT.fieldOf("min_inclusive").forGetter(u -> u.minInclusive), Codec.INT.fieldOf("max_inclusive").forGetter(u -> u.maxInclusive))
+public record UniformInt(int minInclusive, int maxInclusive) implements IntProvider {
+   public static final MapCodec<UniformInt> MAP_CODEC = RecordCodecBuilder.mapCodec(
+         i -> i.group(
+               Codec.INT.fieldOf("min_inclusive").forGetter(UniformInt::minInclusive), Codec.INT.fieldOf("max_inclusive").forGetter(UniformInt::maxInclusive)
+            )
             .apply(i, UniformInt::new)
       )
       .validate(
@@ -17,13 +19,6 @@ public class UniformInt extends IntProvider {
             ? DataResult.error(() -> "Max must be at least min, min_inclusive: " + u.minInclusive + ", max_inclusive: " + u.maxInclusive)
             : DataResult.success(u)
       );
-   private final int minInclusive;
-   private final int maxInclusive;
-
-   private UniformInt(final int minInclusive, final int maxInclusive) {
-      this.minInclusive = minInclusive;
-      this.maxInclusive = maxInclusive;
-   }
 
    public static UniformInt of(final int minInclusive, final int maxInclusive) {
       return new UniformInt(minInclusive, maxInclusive);
@@ -35,18 +30,8 @@ public class UniformInt extends IntProvider {
    }
 
    @Override
-   public int getMinValue() {
-      return this.minInclusive;
-   }
-
-   @Override
-   public int getMaxValue() {
-      return this.maxInclusive;
-   }
-
-   @Override
-   public IntProviderType<?> getType() {
-      return IntProviderType.UNIFORM;
+   public MapCodec<UniformInt> codec() {
+      return MAP_CODEC;
    }
 
    @Override

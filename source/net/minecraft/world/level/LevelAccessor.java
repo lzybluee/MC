@@ -23,7 +23,7 @@ import net.minecraft.world.ticks.ScheduledTick;
 import net.minecraft.world.ticks.TickPriority;
 import org.jspecify.annotations.Nullable;
 
-public interface LevelAccessor extends CommonLevelAccessor, LevelReader, ScheduledTickAccess {
+public interface LevelAccessor extends CommonLevelAccessor, ScheduledTickAccess {
    long nextSubTickCount();
 
    @Override

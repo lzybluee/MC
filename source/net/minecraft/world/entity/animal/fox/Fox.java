@@ -83,6 +83,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -105,6 +106,7 @@ import org.jspecify.annotations.Nullable;
 public class Fox extends Animal {
    private static final EntityDataAccessor<Integer> DATA_TYPE_ID = SynchedEntityData.defineId(Fox.class, EntityDataSerializers.INT);
    private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Fox.class, EntityDataSerializers.BYTE);
+   private static final float BABY_SCALE = 0.6F;
    private static final int FLAG_SITTING = 1;
    public static final int FLAG_CROUCHING = 4;
    public static final int FLAG_INTERESTED = 8;
@@ -125,7 +127,7 @@ public class Fox extends Animal {
    private static final Predicate<Entity> STALKABLE_PREY = entity -> entity instanceof Chicken || entity instanceof Rabbit;
    private static final Predicate<Entity> AVOID_PLAYERS = entity -> !entity.isDiscrete() && EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity);
    private static final int MIN_TICKS_BEFORE_EAT = 600;
-   private static final EntityDimensions BABY_DIMENSIONS = EntityType.FOX.getDimensions().scale(0.5F).withEyeHeight(0.2975F);
+   private static final EntityDimensions BABY_DIMENSIONS = EntityType.FOX.getDimensions().scale(0.6F).withEyeHeight(0.2975F);
    private static final Codec<List<EntityReference<LivingEntity>>> TRUSTED_LIST_CODEC = EntityReference.codec().listOf();
    private static final boolean DEFAULT_SLEEPING = false;
    private static final boolean DEFAULT_SITTING = false;
@@ -137,14 +139,15 @@ public class Fox extends Animal {
    private float interestedAngleO;
    private float crouchAmount;
    private float crouchAmountO;
+   private static final float MAX_CROUCH_AMOUNT = 5.0F;
    private int ticksSinceEaten;
 
    public Fox(final EntityType<? extends Fox> type, final Level level) {
       super(type, level);
       this.lookControl = new Fox.FoxLookControl();
       this.moveControl = new Fox.FoxMoveControl();
-      this.setPathfindingMalus(PathType.DANGER_OTHER, 0.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_OTHER, 0.0F);
+      this.setPathfindingMalus(PathType.DAMAGING_IN_NEIGHBOR, 0.0F);
+      this.setPathfindingMalus(PathType.DAMAGING, 0.0F);
       this.setCanPickUpLoot(true);
       this.getNavigation().setRequiredPathLength(32.0F);
    }
@@ -277,13 +280,15 @@ public class Fox extends Animal {
       if (id == 45) {
          ItemStack mouthItem = this.getItemBySlot(EquipmentSlot.MAINHAND);
          if (!mouthItem.isEmpty()) {
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(mouthItem));
+
             for (int i = 0; i < 8; i++) {
                Vec3 direction = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, 0.0)
                   .xRot(-this.getXRot() * (float) (Math.PI / 180.0))
                   .yRot(-this.getYRot() * (float) (Math.PI / 180.0));
                this.level()
                   .addParticle(
-                     new ItemParticleOption(ParticleTypes.ITEM, mouthItem),
+                     breakParticle,
                      this.getX() + this.getLookAngle().x / 2.0,
                      this.getY(),
                      this.getZ() + this.getLookAngle().z / 2.0,
@@ -552,7 +557,7 @@ public class Fox extends Animal {
             this.setSitting(false);
          }
 
-         if (this.isFaceplanted() && this.level().random.nextFloat() < 0.2F) {
+         if (this.isFaceplanted() && this.level().getRandom().nextFloat() < 0.2F) {
             BlockPos pos = this.blockPosition();
             BlockState state = this.level().getBlockState(pos);
             this.level().levelEvent(2001, pos, Block.getId(state));
@@ -569,8 +574,8 @@ public class Fox extends Animal {
       this.crouchAmountO = this.crouchAmount;
       if (this.isCrouching()) {
          this.crouchAmount += 0.2F;
-         if (this.crouchAmount > 3.0F) {
-            this.crouchAmount = 3.0F;
+         if (this.crouchAmount > 5.0F) {
+            this.crouchAmount = 5.0F;
          }
       } else {
          this.crouchAmount = 0.0F;
@@ -596,7 +601,7 @@ public class Fox extends Animal {
    }
 
    public boolean isFullyCrouched() {
-      return this.crouchAmount == 3.0F;
+      return this.crouchAmount == 5.0F;
    }
 
    public void setIsCrouching(final boolean isCrouching) {
@@ -951,7 +956,7 @@ public class Fox extends Animal {
       private void pickSweetBerries(final BlockState state) {
          int age = state.getValue(SweetBerryBushBlock.AGE);
          state.setValue(SweetBerryBushBlock.AGE, 1);
-         int count = 1 + Fox.this.level().random.nextInt(2) + (age == 3 ? 1 : 0);
+         int count = 1 + Fox.this.level().getRandom().nextInt(2) + (age == 3 ? 1 : 0);
          ItemStack heldItem = Fox.this.getItemBySlot(EquipmentSlot.MAINHAND);
          if (heldItem.isEmpty()) {
             Fox.this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.SWEET_BERRIES));
@@ -1194,8 +1199,13 @@ public class Fox extends Animal {
                Fox.this.setXRot(Mth.rotLerp(0.2F, Fox.this.getXRot(), 0.0F));
             } else {
                double direction = movement.horizontalDistance();
-               double rotation = Math.signum(-movement.y) * Math.acos(direction / movement.length()) * 180.0F / (float)Math.PI;
-               Fox.this.setXRot((float)rotation);
+               float upwardsBias = Fox.this.jumping && movement.y > 0.0 ? 6.5F : 1.0F;
+               double biasedY = movement.y * upwardsBias;
+               double len = Math.sqrt(direction * direction + biasedY * biasedY);
+               if (len > 1.0E-5F) {
+                  double rotation = Math.signum(-biasedY) * Math.acos(direction / len) * 180.0F / (float)Math.PI;
+                  Fox.this.setXRot((float)rotation);
+               }
             }
          }
 
@@ -1485,7 +1495,7 @@ public class Fox extends Animal {
       SNOW(1, "snow");
 
       public static final Fox.Variant DEFAULT = RED;
-      public static final StringRepresentable.EnumCodec<Fox.Variant> CODEC = StringRepresentable.fromEnum(Fox.Variant::values);
+      public static final Codec<Fox.Variant> CODEC = StringRepresentable.fromEnum(Fox.Variant::values);
       private static final IntFunction<Fox.Variant> BY_ID = ByIdMap.continuous(Fox.Variant::getId, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
       public static final StreamCodec<ByteBuf, Fox.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, Fox.Variant::getId);
       private final int id;

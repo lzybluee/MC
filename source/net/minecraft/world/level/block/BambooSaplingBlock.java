@@ -45,7 +45,7 @@ public class BambooSaplingBlock extends Block implements BonemealableBlock {
 
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
-      return level.getBlockState(pos.below()).is(BlockTags.BAMBOO_PLANTABLE_ON);
+      return level.getBlockState(pos.below()).is(BlockTags.SUPPORTS_BAMBOO);
    }
 
    @Override
@@ -75,7 +75,7 @@ public class BambooSaplingBlock extends Block implements BonemealableBlock {
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return level.getBlockState(pos.above()).isAir();
+      return level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
    }
 
    @Override

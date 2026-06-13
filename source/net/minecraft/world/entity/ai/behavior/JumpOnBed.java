@@ -36,7 +36,7 @@ public class JumpOnBed extends Behavior<Mob> {
       this.getNearestBed(body).ifPresent(targetBed -> {
          this.targetBed = targetBed;
          this.remainingTimeToReachBed = 100;
-         this.remainingJumps = 3 + level.random.nextInt(4);
+         this.remainingJumps = 3 + level.getRandom().nextInt(4);
          this.remainingCooldownUntilNextJump = 0;
          this.startWalkingTowardsBed(body, targetBed);
       });

@@ -49,11 +49,11 @@ public class GiveCommand {
    }
 
    private static int giveItem(final CommandSourceStack source, final ItemInput input, final Collection<ServerPlayer> players, final int count) throws CommandSyntaxException {
-      ItemStack displayItemStack = input.createItemStack(1, false);
-      int maxStackSize = displayItemStack.getMaxStackSize();
+      ItemStack prototypeItemStack = input.createItemStack(1);
+      int maxStackSize = prototypeItemStack.getMaxStackSize();
       int maxAllowedCount = maxStackSize * 100;
       if (count > maxAllowedCount) {
-         source.sendFailure(Component.translatable("commands.give.failed.toomanyitems", maxAllowedCount, displayItemStack.getDisplayName()));
+         source.sendFailure(Component.translatable("commands.give.failed.toomanyitems", maxAllowedCount, prototypeItemStack.getDisplayName()));
          return 0;
       }
 
@@ -63,10 +63,10 @@ public class GiveCommand {
          while (remaining > 0) {
             int size = Math.min(maxStackSize, remaining);
             remaining -= size;
-            ItemStack itemStack = input.createItemStack(size, false);
-            boolean added = player.getInventory().add(itemStack);
-            if (added && itemStack.isEmpty()) {
-               ItemEntity drop = player.drop(displayItemStack, false);
+            ItemStack copyToDrop = prototypeItemStack.copyWithCount(size);
+            boolean added = player.getInventory().add(copyToDrop);
+            if (added && copyToDrop.isEmpty()) {
+               ItemEntity drop = player.drop(prototypeItemStack.copy(), false);
                if (drop != null) {
                   drop.makeFakeItem();
                }
@@ -84,7 +84,7 @@ public class GiveCommand {
                   );
                player.containerMenu.broadcastChanges();
             } else {
-               ItemEntity drop = player.drop(itemStack, false);
+               ItemEntity drop = player.drop(copyToDrop, false);
                if (drop != null) {
                   drop.setNoPickUpDelay();
                   drop.setTarget(player.getUUID());
@@ -95,11 +95,11 @@ public class GiveCommand {
 
       if (players.size() == 1) {
          source.sendSuccess(
-            () -> Component.translatable("commands.give.success.single", count, displayItemStack.getDisplayName(), players.iterator().next().getDisplayName()),
+            () -> Component.translatable("commands.give.success.single", count, prototypeItemStack.getDisplayName(), players.iterator().next().getDisplayName()),
             true
          );
       } else {
-         source.sendSuccess(() -> Component.translatable("commands.give.success.single", count, displayItemStack.getDisplayName(), players.size()), true);
+         source.sendSuccess(() -> Component.translatable("commands.give.success.single", count, prototypeItemStack.getDisplayName(), players.size()), true);
       }
 
       return players.size();

@@ -68,7 +68,8 @@ public class ZombieVillagerModel<S extends ZombieVillagerRenderState> extends Hu
    }
 
    public static ArmorModelSet<LayerDefinition> createArmorLayerSet(final CubeDeformation innerDeformation, final CubeDeformation outerDeformation) {
-      return createArmorMeshSet(ZombieVillagerModel::createBaseArmorMesh, innerDeformation, outerDeformation).map(mesh -> LayerDefinition.create(mesh, 64, 32));
+      return createArmorMeshSet(ZombieVillagerModel::createBaseArmorMesh, ADULT_ARMOR_PARTS_PER_SLOT, innerDeformation, outerDeformation)
+         .map(mesh -> LayerDefinition.create(mesh, 64, 32));
    }
 
    private static MeshDefinition createBaseArmorMesh(final CubeDeformation g) {

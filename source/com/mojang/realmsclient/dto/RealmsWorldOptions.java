@@ -67,7 +67,9 @@ public class RealmsWorldOptions extends ValueObject implements ReflectionBasedSe
    }
 
    public static RealmsWorldOptions createFromSettings(final LevelSettings settings, final String worldVersion) {
-      return createDefaultsWith(settings.gameType(), settings.difficulty(), settings.hardcore(), worldVersion, settings.levelName());
+      return createDefaultsWith(
+         settings.gameType(), settings.difficultySettings().difficulty(), settings.difficultySettings().hardcore(), worldVersion, settings.levelName()
+      );
    }
 
    public static RealmsWorldOptions createEmptyDefaults() {

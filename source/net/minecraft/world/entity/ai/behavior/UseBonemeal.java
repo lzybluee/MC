@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -47,6 +48,7 @@ public class UseBonemeal extends Behavior<Villager> {
 
    private Optional<BlockPos> pickNextTarget(final ServerLevel level, final Villager body) {
       BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();
+      RandomSource random = level.getRandom();
       Optional<BlockPos> result = Optional.empty();
       int count = 0;
 
@@ -55,7 +57,7 @@ public class UseBonemeal extends Behavior<Villager> {
             for (int z = -1; z <= 1; z++) {
                mutPos.setWithOffset(body.blockPosition(), x, y, z);
                if (this.validPos(mutPos, level)) {
-                  if (level.random.nextInt(++count) == 0) {
+                  if (random.nextInt(++count) == 0) {
                      result = Optional.of(mutPos.immutable());
                   }
                }

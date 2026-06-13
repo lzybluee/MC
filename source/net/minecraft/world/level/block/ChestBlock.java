@@ -225,10 +225,7 @@ public class ChestBlock extends AbstractChestBlock<ChestBlockEntity> implements 
          type = this.getChestType(context.getLevel(), context.getClickedPos(), facingDirection);
       }
 
-      return this.defaultBlockState()
-         .setValue(FACING, facingDirection)
-         .setValue(TYPE, type)
-         .setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+      return this.defaultBlockState().setValue(FACING, facingDirection).setValue(TYPE, type).setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
    }
 
    protected ChestType getChestType(final Level level, final BlockPos pos, final Direction facingDirection) {

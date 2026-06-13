@@ -25,12 +25,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.timeline.Timeline;
 
 public class ResourceArgument<T> implements ArgumentType<Holder.Reference<T>> {
    private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012");
@@ -98,6 +100,14 @@ public class ResourceArgument<T> implements ArgumentType<Holder.Reference<T>> {
 
    public static Holder.Reference<Enchantment> getEnchantment(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
       return getResource(context, name, Registries.ENCHANTMENT);
+   }
+
+   public static Holder.Reference<WorldClock> getClock(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+      return getResource(context, name, Registries.WORLD_CLOCK);
+   }
+
+   public static Holder.Reference<Timeline> getTimeline(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+      return getResource(context, name, Registries.TIMELINE);
    }
 
    public Holder.Reference<T> parse(final StringReader reader) throws CommandSyntaxException {

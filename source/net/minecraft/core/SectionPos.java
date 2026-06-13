@@ -46,7 +46,7 @@ public class SectionPos extends Vec3i {
    }
 
    public static SectionPos of(final ChunkPos pos, final int sectionY) {
-      return new SectionPos(pos.x, sectionY, pos.z);
+      return new SectionPos(pos.x(), sectionY, pos.z());
    }
 
    public static SectionPos of(final EntityAccess entity) {
@@ -193,7 +193,7 @@ public class SectionPos extends Vec3i {
    }
 
    public static long sectionToChunk(final long sectionNode) {
-      return ChunkPos.asLong(x(sectionNode), z(sectionNode));
+      return ChunkPos.pack(x(sectionNode), z(sectionNode));
    }
 
    public BlockPos origin() {
@@ -240,8 +240,8 @@ public class SectionPos extends Vec3i {
    }
 
    public static Stream<SectionPos> aroundChunk(final ChunkPos center, final int radius, final int minSection, final int maxSection) {
-      int x = center.x;
-      int z = center.z;
+      int x = center.x();
+      int z = center.z();
       return betweenClosedStream(x - radius, minSection, z - radius, x + radius, maxSection, z + radius);
    }
 

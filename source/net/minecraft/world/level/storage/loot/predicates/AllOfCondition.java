@@ -6,7 +6,7 @@ import java.util.List;
 import net.minecraft.util.Util;
 
 public class AllOfCondition extends CompositeLootItemCondition {
-   public static final MapCodec<AllOfCondition> CODEC = createCodec(AllOfCondition::new);
+   public static final MapCodec<AllOfCondition> MAP_CODEC = createCodec(AllOfCondition::new);
    public static final Codec<AllOfCondition> INLINE_CODEC = createInlineCodec(AllOfCondition::new);
 
    private AllOfCondition(final List<LootItemCondition> terms) {
@@ -18,8 +18,8 @@ public class AllOfCondition extends CompositeLootItemCondition {
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.ALL_OF;
+   public MapCodec<AllOfCondition> codec() {
+      return MAP_CODEC;
    }
 
    public static AllOfCondition.Builder allOf(final LootItemCondition.Builder... terms) {

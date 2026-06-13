@@ -1,8 +1,8 @@
 package net.minecraft.client.gui.screens.options;
 
+import net.minecraft.client.NarratorStatus;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.OptionsList;
@@ -29,9 +29,7 @@ public abstract class OptionsSubScreen extends Screen {
       this.addTitle();
       this.addContents();
       this.addFooter();
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -42,8 +40,8 @@ public abstract class OptionsSubScreen extends Screen {
    protected void addContents() {
       this.list = this.layout.addToContents(new OptionsList(this.minecraft, this.width, this));
       this.addOptions();
-      if (this.list.findOption(this.options.narrator()) instanceof CycleButton cycleButton) {
-         this.narratorButton = cycleButton;
+      if (this.list.findOption(this.options.narrator()) instanceof CycleButton<?> cycleButton) {
+         this.narratorButton = (CycleButton<NarratorStatus>)cycleButton;
          this.narratorButton.active = this.minecraft.getNarrator().isActive();
       }
    }

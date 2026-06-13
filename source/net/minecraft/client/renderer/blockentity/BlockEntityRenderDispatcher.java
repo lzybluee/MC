@@ -7,19 +7,17 @@ import java.util.function.Supplier;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
-import net.minecraft.client.Camera;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.block.BlockModelResolver;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -32,30 +30,27 @@ public class BlockEntityRenderDispatcher implements ResourceManagerReloadListene
    private final Font font;
    private final Supplier<EntityModelSet> entityModelSet;
    private Vec3 cameraPos;
-   private final BlockRenderDispatcher blockRenderDispatcher;
+   private final BlockModelResolver blockModelResolver;
    private final ItemModelResolver itemModelResolver;
-   private final ItemRenderer itemRenderer;
    private final EntityRenderDispatcher entityRenderer;
-   private final MaterialSet materials;
+   private final SpriteGetter sprites;
    private final PlayerSkinRenderCache playerSkinRenderCache;
 
    public BlockEntityRenderDispatcher(
       final Font font,
       final Supplier<EntityModelSet> entityModelSet,
-      final BlockRenderDispatcher blockRenderDispatcher,
+      final BlockModelResolver blockModelResolver,
       final ItemModelResolver itemModelResolver,
-      final ItemRenderer itemRenderer,
       final EntityRenderDispatcher entityRenderer,
-      final MaterialSet materials,
+      final SpriteGetter sprites,
       final PlayerSkinRenderCache playerSkinRenderCache
    ) {
-      this.itemRenderer = itemRenderer;
+      this.blockModelResolver = blockModelResolver;
       this.itemModelResolver = itemModelResolver;
       this.entityRenderer = entityRenderer;
       this.font = font;
       this.entityModelSet = entityModelSet;
-      this.blockRenderDispatcher = blockRenderDispatcher;
-      this.materials = materials;
+      this.sprites = sprites;
       this.playerSkinRenderCache = playerSkinRenderCache;
    }
 
@@ -67,8 +62,8 @@ public class BlockEntityRenderDispatcher implements ResourceManagerReloadListene
       return (BlockEntityRenderer<E, S>)this.renderers.get(state.blockEntityType);
    }
 
-   public void prepare(final Camera camera) {
-      this.cameraPos = camera.position();
+   public void prepare(final Vec3 cameraPos) {
+      this.cameraPos = cameraPos;
    }
 
    public <E extends BlockEntity, S extends BlockEntityRenderState> @Nullable S tryExtractRenderState(
@@ -113,13 +108,12 @@ public class BlockEntityRenderDispatcher implements ResourceManagerReloadListene
    public void onResourceManagerReload(final ResourceManager resourceManager) {
       BlockEntityRendererProvider.Context context = new BlockEntityRendererProvider.Context(
          this,
-         this.blockRenderDispatcher,
+         this.blockModelResolver,
          this.itemModelResolver,
-         this.itemRenderer,
          this.entityRenderer,
          this.entityModelSet.get(),
          this.font,
-         this.materials,
+         this.sprites,
          this.playerSkinRenderCache
       );
       this.renderers = BlockEntityRenderers.createEntityRenderers(context);

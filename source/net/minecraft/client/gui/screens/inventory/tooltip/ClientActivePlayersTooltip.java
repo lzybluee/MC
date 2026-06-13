@@ -2,8 +2,8 @@ package net.minecraft.client.gui.screens.inventory.tooltip;
 
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 
@@ -40,12 +40,12 @@ public class ClientActivePlayersTooltip implements ClientTooltipComponent {
    }
 
    @Override
-   public void renderImage(final Font font, final int x, final int y, final int w, final int h, final GuiGraphics graphics) {
+   public void extractImage(final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics) {
       for (int i = 0; i < this.activePlayers.size(); i++) {
          PlayerSkinRenderCache.RenderInfo activePlayer = this.activePlayers.get(i);
          int y1 = y + 2 + i * 12;
-         PlayerFaceRenderer.draw(graphics, activePlayer.playerSkin(), x + 2, y1, 10);
-         graphics.drawString(font, getName(activePlayer), x + 10 + 4, y1 + 2, -1);
+         PlayerFaceExtractor.extractRenderState(graphics, activePlayer.playerSkin(), x + 2, y1, 10);
+         graphics.text(font, getName(activePlayer), x + 10 + 4, y1 + 2, -1);
       }
    }
 

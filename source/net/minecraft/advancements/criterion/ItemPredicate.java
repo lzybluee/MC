@@ -10,10 +10,10 @@ import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.level.ItemLike;
 
-public record ItemPredicate(Optional<HolderSet<Item>> items, MinMaxBounds.Ints count, DataComponentMatchers components) implements Predicate<ItemStack> {
+public record ItemPredicate(Optional<HolderSet<Item>> items, MinMaxBounds.Ints count, DataComponentMatchers components) implements Predicate<ItemInstance> {
    public static final Codec<ItemPredicate> CODEC = RecordCodecBuilder.create(
       i -> i.group(
             RegistryCodecs.homogeneousList(Registries.ITEM).optionalFieldOf("items").forGetter(ItemPredicate::items),
@@ -23,11 +23,11 @@ public record ItemPredicate(Optional<HolderSet<Item>> items, MinMaxBounds.Ints c
          .apply(i, ItemPredicate::new)
    );
 
-   public boolean test(final ItemStack itemStack) {
+   public boolean test(final ItemInstance itemStack) {
       if (this.items.isPresent() && !itemStack.is(this.items.get())) {
          return false;
       } else {
-         return !this.count.matches(itemStack.getCount()) ? false : this.components.test(itemStack);
+         return !this.count.matches(itemStack.count()) ? false : this.components.test(itemStack);
       }
    }
 

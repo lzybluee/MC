@@ -1,21 +1,16 @@
 package net.minecraft.client.model.animal.panda;
 
-import java.util.Set;
-import net.minecraft.client.model.BabyModelTransform;
 import net.minecraft.client.model.QuadrupedModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.PandaRenderState;
 import net.minecraft.util.Mth;
 
 public class PandaModel extends QuadrupedModel<PandaRenderState> {
-   public static final MeshTransformer BABY_TRANSFORMER = new BabyModelTransform(true, 23.0F, 4.8F, 2.7F, 3.0F, 49.0F, Set.of("head"));
-
    public PandaModel(final ModelPart root) {
       super(root);
    }
@@ -72,12 +67,7 @@ public class PandaModel extends QuadrupedModel<PandaRenderState> {
       }
 
       if (state.sitAmount > 0.0F) {
-         this.body.xRot = Mth.rotLerpRad(state.sitAmount, this.body.xRot, 1.7407963F);
-         this.head.xRot = Mth.rotLerpRad(state.sitAmount, this.head.xRot, (float) (Math.PI / 2));
-         this.rightFrontLeg.zRot = -0.27079642F;
-         this.leftFrontLeg.zRot = 0.27079642F;
-         this.rightHindLeg.zRot = 0.5707964F;
-         this.leftHindLeg.zRot = -0.5707964F;
+         this.animateSitting(state);
          if (state.isEating) {
             this.head.xRot = (float) (Math.PI / 2) + 0.2F * Mth.sin(state.ageInTicks * 0.6F);
             this.rightFrontLeg.xRot = -0.4F - 0.2F * Mth.sin(state.ageInTicks * 0.6F);
@@ -111,5 +101,14 @@ public class PandaModel extends QuadrupedModel<PandaRenderState> {
          this.rightFrontLeg.xRot = 0.5F * Mth.sin(state.ageInTicks * 0.5F);
          this.leftFrontLeg.xRot = -0.5F * Mth.sin(state.ageInTicks * 0.5F);
       }
+   }
+
+   protected void animateSitting(PandaRenderState state) {
+      this.body.xRot = Mth.rotLerpRad(state.sitAmount, this.body.xRot, 1.7407963F);
+      this.head.xRot = Mth.rotLerpRad(state.sitAmount, this.head.xRot, (float) (Math.PI / 2));
+      this.rightFrontLeg.zRot = -0.27079642F;
+      this.leftFrontLeg.zRot = 0.27079642F;
+      this.rightHindLeg.zRot = 0.5707964F;
+      this.leftHindLeg.zRot = -0.5707964F;
    }
 }

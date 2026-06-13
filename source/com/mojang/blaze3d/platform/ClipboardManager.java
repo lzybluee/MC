@@ -1,11 +1,11 @@
 package com.mojang.blaze3d.platform;
 
+import com.mojang.blaze3d.GLFWErrorScope;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import net.minecraft.util.StringDecomposer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWErrorCallbackI;
 import org.lwjgl.system.MemoryUtil;
 
@@ -14,15 +14,10 @@ public class ClipboardManager {
    private final ByteBuffer clipboardScratchBuffer = BufferUtils.createByteBuffer(8192);
 
    public String getClipboard(final Window window, final GLFWErrorCallbackI errorCallback) {
-      GLFWErrorCallback prevCallback = GLFW.glfwSetErrorCallback(errorCallback);
-      String clipboard = GLFW.glfwGetClipboardString(window.handle());
-      clipboard = clipboard != null ? StringDecomposer.filterBrokenSurrogates(clipboard) : "";
-      GLFWErrorCallback oldCallback = GLFW.glfwSetErrorCallback(prevCallback);
-      if (oldCallback != null) {
-         oldCallback.free();
+      try (GLFWErrorScope ignored = new GLFWErrorScope(errorCallback)) {
+         String clipboard = GLFW.glfwGetClipboardString(window.handle());
+         return clipboard != null ? StringDecomposer.filterBrokenSurrogates(clipboard) : "";
       }
-
-      return clipboard;
    }
 
    private static void pushClipboard(final Window window, final ByteBuffer buffer, final byte[] data) {

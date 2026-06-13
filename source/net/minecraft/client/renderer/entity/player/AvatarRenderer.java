@@ -25,7 +25,7 @@ import net.minecraft.client.renderer.entity.layers.SpinAttackEffectLayer;
 import net.minecraft.client.renderer.entity.layers.WingsLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
@@ -150,24 +150,12 @@ public class AvatarRenderer<AvatarlikeEntity extends Avatar & ClientAvatarEntity
       poseStack.scale(0.9375F, 0.9375F, 0.9375F);
    }
 
-   protected void submitNameTag(
+   protected void submitNameDisplay(
       final AvatarRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
    ) {
       poseStack.pushPose();
       int offset = state.showExtraEars ? -10 : 0;
-      if (state.scoreText != null) {
-         submitNodeCollector.submitNameTag(
-            poseStack, state.nameTagAttachment, offset, state.scoreText, !state.isDiscrete, state.lightCoords, state.distanceToCameraSq, camera
-         );
-         poseStack.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
-      }
-
-      if (state.nameTag != null) {
-         submitNodeCollector.submitNameTag(
-            poseStack, state.nameTagAttachment, offset, state.nameTag, !state.isDiscrete, state.lightCoords, state.distanceToCameraSq, camera
-         );
-      }
-
+      this.submitNameDisplay(state, poseStack, submitNodeCollector, camera, offset);
       poseStack.popPose();
    }
 
@@ -193,12 +181,6 @@ public class AvatarRenderer<AvatarlikeEntity extends Avatar & ClientAvatarEntity
       state.showCape = entity.isModelPartShown(PlayerModelPart.CAPE);
       this.extractFlightData(entity, state, partialTicks);
       this.extractCapeState(entity, state, partialTicks);
-      if (state.distanceToCameraSq < 100.0) {
-         state.scoreText = entity.belowNameDisplay();
-      } else {
-         state.scoreText = null;
-      }
-
       state.parrotOnLeftShoulder = entity.getParrotVariantOnShoulder(true);
       state.parrotOnRightShoulder = entity.getParrotVariantOnShoulder(false);
       state.id = entity.getId();

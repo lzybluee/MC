@@ -23,7 +23,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public class WallSignBlock extends SignBlock {
+public class WallSignBlock extends SignBlock implements PlainSignBlock {
    public static final MapCodec<WallSignBlock> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(WoodType.CODEC.fieldOf("wood_type").forGetter(SignBlock::type), propertiesCodec()).apply(i, WallSignBlock::new)
    );
@@ -63,7 +63,7 @@ public class WallSignBlock extends SignBlock {
             Direction facing = direction.getOpposite();
             state = state.setValue(FACING, facing);
             if (state.canSurvive(level, pos)) {
-               return state.setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+               return state.setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
             }
          }
       }
@@ -110,5 +110,10 @@ public class WallSignBlock extends SignBlock {
    @Override
    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
       builder.add(FACING, WATERLOGGED);
+   }
+
+   @Override
+   public PlainSignBlock.Attachment attachmentPoint(final BlockState state) {
+      return PlainSignBlock.Attachment.WALL;
    }
 }

@@ -3,8 +3,6 @@ package com.mojang.blaze3d.opengl;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.mojang.blaze3d.platform.DebugMemoryUntracker;
-import com.mojang.blaze3d.platform.GLX;
 import com.mojang.logging.LogUtils;
 import java.util.HexFormat;
 import java.util.List;
@@ -135,7 +133,7 @@ public class GlDebug {
             KHRDebug.glDebugMessageControl(4352, 4352, DEBUG_LEVELS.get(i), (int[])null, isEnabled);
          }
 
-         KHRDebug.glDebugMessageCallback(GLX.make(GLDebugMessageCallback.create(debug::printDebugLog), DebugMemoryUntracker::untrack), 0L);
+         KHRDebug.glDebugMessageCallback(GLDebugMessageCallback.create(debug::printDebugLog), 0L);
          return debug;
       } else if (caps.GL_ARB_debug_output && GlDevice.USE_GL_ARB_debug_output) {
          GlDebug debug = new GlDebug();
@@ -149,7 +147,7 @@ public class GlDebug {
             ARBDebugOutput.glDebugMessageControlARB(4352, 4352, DEBUG_LEVELS_ARB.get(i), (int[])null, isEnabled);
          }
 
-         ARBDebugOutput.glDebugMessageCallbackARB(GLX.make(GLDebugMessageARBCallback.create(debug::printDebugLog), DebugMemoryUntracker::untrack), 0L);
+         ARBDebugOutput.glDebugMessageCallbackARB(GLDebugMessageARBCallback.create(debug::printDebugLog), 0L);
          return debug;
       } else {
          return null;

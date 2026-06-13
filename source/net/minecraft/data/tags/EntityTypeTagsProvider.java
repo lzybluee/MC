@@ -252,5 +252,6 @@ public class EntityTypeTagsProvider extends IntrinsicHolderTagsProvider<EntityTy
       this.tag(EntityTypeTags.NAUTILUS_HOSTILES).add(EntityType.PUFFERFISH);
       this.tag(EntityTypeTags.CAN_FLOAT_WHILE_RIDDEN)
          .add(EntityType.HORSE, EntityType.ZOMBIE_HORSE, EntityType.MULE, EntityType.DONKEY, EntityType.CAMEL, EntityType.CAMEL_HUSK);
+      this.tag(EntityTypeTags.CANNOT_BE_AGE_LOCKED).add(EntityType.ZOMBIE_HORSE, EntityType.SKELETON_HORSE, EntityType.VILLAGER);
    }
 }

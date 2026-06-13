@@ -19,16 +19,10 @@ public class RenderBuffers {
    public RenderBuffers(final int maxSectionBuilders) {
       this.sectionBufferPool = SectionBufferBuilderPool.allocate(maxSectionBuilders);
       SequencedMap<RenderType, ByteBufferBuilder> fixedBuffers = Util.make(new Object2ObjectLinkedOpenHashMap(), map -> {
-         map.put(Sheets.solidBlockSheet(), this.fixedBufferPack.buffer(ChunkSectionLayer.SOLID));
-         map.put(Sheets.cutoutBlockSheet(), this.fixedBufferPack.buffer(ChunkSectionLayer.CUTOUT));
-         map.put(Sheets.translucentItemSheet(), this.fixedBufferPack.buffer(ChunkSectionLayer.TRANSLUCENT));
-         put(map, Sheets.translucentBlockItemSheet());
-         put(map, Sheets.shieldSheet());
-         put(map, Sheets.bedSheet());
-         put(map, Sheets.shulkerBoxSheet());
-         put(map, Sheets.signSheet());
-         put(map, Sheets.hangingSignSheet());
-         map.put(Sheets.chestSheet(), new ByteBufferBuilder(786432));
+         map.put(Sheets.cutoutBlockItemSheet(), this.fixedBufferPack.buffer(ChunkSectionLayer.CUTOUT));
+         map.put(Sheets.translucentBlockItemSheet(), this.fixedBufferPack.buffer(ChunkSectionLayer.TRANSLUCENT));
+         put(map, Sheets.cutoutItemSheet());
+         put(map, Sheets.translucentItemSheet());
          put(map, RenderTypes.armorEntityGlint());
          put(map, RenderTypes.glint());
          put(map, RenderTypes.glintTranslucent());

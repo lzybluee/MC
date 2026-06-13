@@ -10,7 +10,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetComponentsFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetComponentsFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetComponentsFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i).and(DataComponentPatch.CODEC.fieldOf("components").forGetter(f -> f.components)).apply(i, SetComponentsFunction::new)
    );
    private final DataComponentPatch components;
@@ -21,8 +21,8 @@ public class SetComponentsFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetComponentsFunction> getType() {
-      return LootItemFunctions.SET_COMPONENTS;
+   public MapCodec<SetComponentsFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override

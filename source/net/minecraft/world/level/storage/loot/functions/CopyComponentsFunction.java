@@ -31,7 +31,7 @@ public class CopyComponentsFunction extends LootItemConditionalFunction {
          .anyBlockEntity(CopyComponentsFunction.BlockEntitySource::new)
          .anyItemStack(CopyComponentsFunction.DirectSource::new)
    );
-   public static final MapCodec<CopyComponentsFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<CopyComponentsFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -64,8 +64,8 @@ public class CopyComponentsFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<CopyComponentsFunction> getType() {
-      return LootItemFunctions.COPY_COMPONENTS;
+   public MapCodec<CopyComponentsFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override

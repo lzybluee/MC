@@ -3,6 +3,7 @@ package net.minecraft.world.entity.animal.armadillo;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
@@ -12,7 +13,7 @@ import net.minecraft.util.TimeUtil;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -32,8 +33,6 @@ import net.minecraft.world.entity.ai.behavior.Swim;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
-import net.minecraft.world.entity.ai.sensing.Sensor;
-import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.schedule.Activity;
 
 public class ArmadilloAi {
@@ -45,24 +44,6 @@ public class ArmadilloAi {
    private static final double DEFAULT_CLOSE_ENOUGH_DIST = 2.0;
    private static final double BABY_CLOSE_ENOUGH_DIST = 1.0;
    private static final UniformInt ADULT_FOLLOW_RANGE = UniformInt.of(5, 16);
-   private static final ImmutableList<SensorType<? extends Sensor<? super Armadillo>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT, SensorType.ARMADILLO_SCARE_DETECTED
-   );
-   private static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.IS_PANICKING,
-      MemoryModuleType.HURT_BY,
-      MemoryModuleType.HURT_BY_ENTITY,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.TEMPTING_PLAYER,
-      MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-      MemoryModuleType.GAZE_COOLDOWN_TICKS,
-      MemoryModuleType.IS_TEMPTED,
-      new MemoryModuleType[]{MemoryModuleType.BREED_TARGET, MemoryModuleType.NEAREST_VISIBLE_ADULT, MemoryModuleType.DANGER_DETECTED_RECENTLY}
-   );
    private static final OneShot<Armadillo> ARMADILLO_ROLLING_OUT = BehaviorBuilder.create(
       i -> i.group(i.absent(MemoryModuleType.DANGER_DETECTED_RECENTLY)).apply(i, location -> (level, body, timestamp) -> {
          if (body.isScared()) {
@@ -74,22 +55,12 @@ public class ArmadilloAi {
       })
    );
 
-   public static Brain.Provider<Armadillo> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
+   protected static List<ActivityData<Armadillo>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initScaredActivity());
    }
 
-   protected static Brain<?> makeBrain(final Brain<Armadillo> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initScaredActivity(brain);
-      brain.setCoreActivities(Set.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
-   }
-
-   private static void initCoreActivity(final Brain<Armadillo> brain) {
-      brain.addActivity(
+   private static ActivityData<Armadillo> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -109,8 +80,8 @@ public class ArmadilloAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Armadillo> brain) {
-      brain.addActivity(
+   private static ActivityData<Armadillo> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
@@ -138,8 +109,8 @@ public class ArmadilloAi {
       );
    }
 
-   private static void initScaredActivity(final Brain<Armadillo> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Armadillo> initScaredActivity() {
+      return ActivityData.create(
          Activity.PANIC,
          ImmutableList.of(Pair.of(0, new ArmadilloAi.ArmadilloBallUp())),
          Set.of(

@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
@@ -64,7 +66,7 @@ public class BubbleColumnBlock extends Block implements BucketPickup {
 
    @Override
    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
-      updateColumn(level, pos, state, level.getBlockState(pos.below()));
+      updateColumn(this, level, pos, state, level.getBlockState(pos.below()));
    }
 
    @Override
@@ -72,17 +74,19 @@ public class BubbleColumnBlock extends Block implements BucketPickup {
       return Fluids.WATER.getSource(false);
    }
 
-   public static void updateColumn(final LevelAccessor level, final BlockPos origin, final BlockState belowState) {
-      updateColumn(level, origin, level.getBlockState(origin), belowState);
+   public static void updateColumn(final Block bubbleColumn, final LevelAccessor level, final BlockPos occupyAt, final BlockState belowState) {
+      updateColumn(bubbleColumn, level, occupyAt, level.getBlockState(occupyAt), belowState);
    }
 
-   public static void updateColumn(final LevelAccessor level, final BlockPos origin, final BlockState originState, final BlockState belowState) {
-      if (canExistIn(originState)) {
-         BlockState columnState = getColumnState(belowState);
-         level.setBlock(origin, columnState, 2);
-         BlockPos.MutableBlockPos pos = origin.mutable().move(Direction.UP);
+   public static void updateColumn(
+      final Block bubbleColumn, final LevelAccessor level, final BlockPos occupyAt, final BlockState occupyState, final BlockState belowState
+   ) {
+      if (canOccupy(bubbleColumn, occupyState)) {
+         BlockState columnState = getColumnState(bubbleColumn, belowState, occupyState);
+         level.setBlock(occupyAt, columnState, 2);
+         BlockPos.MutableBlockPos pos = occupyAt.mutable().move(Direction.UP);
 
-         while (canExistIn(level.getBlockState(pos))) {
+         while (canOccupy(bubbleColumn, level.getBlockState(pos))) {
             if (!level.setBlock(pos, columnState, 2)) {
                return;
             }
@@ -92,17 +96,27 @@ public class BubbleColumnBlock extends Block implements BucketPickup {
       }
    }
 
-   private static boolean canExistIn(final BlockState state) {
-      return state.is(Blocks.BUBBLE_COLUMN) || state.is(Blocks.WATER) && state.getFluidState().getAmount() >= 8 && state.getFluidState().isSource();
+   private static boolean canOccupy(final Block bubbleColumn, final BlockState occupyState) {
+      if (occupyState.is(bubbleColumn)) {
+         return true;
+      }
+
+      FluidState occupyFluid = occupyState.getFluidState();
+      return occupyFluid.is(FluidTags.BUBBLE_COLUMN_CAN_OCCUPY)
+         && occupyState.getBlock() instanceof LiquidBlock
+         && occupyFluid.isSource()
+         && occupyFluid.getAmount() >= 8;
    }
 
-   private static BlockState getColumnState(final BlockState belowState) {
-      if (belowState.is(Blocks.BUBBLE_COLUMN)) {
+   private static BlockState getColumnState(final Block bubbleColumn, final BlockState belowState, final BlockState occupyState) {
+      if (belowState.is(bubbleColumn)) {
          return belowState;
-      } else if (belowState.is(Blocks.SOUL_SAND)) {
-         return Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(DRAG_DOWN, false);
+      } else if (belowState.is(BlockTags.ENABLES_BUBBLE_COLUMN_PUSH_UP)) {
+         return bubbleColumn.defaultBlockState().setValue(DRAG_DOWN, false);
+      } else if (belowState.is(BlockTags.ENABLES_BUBBLE_COLUMN_DRAG_DOWN)) {
+         return bubbleColumn.defaultBlockState().setValue(DRAG_DOWN, true);
       } else {
-         return belowState.is(Blocks.MAGMA_BLOCK) ? Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(DRAG_DOWN, true) : Blocks.WATER.defaultBlockState();
+         return occupyState.is(bubbleColumn) ? Blocks.WATER.defaultBlockState() : occupyState;
       }
    }
 
@@ -157,7 +171,7 @@ public class BubbleColumnBlock extends Block implements BucketPickup {
       ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
       if (!state.canSurvive(level, pos)
          || directionToNeighbour == Direction.DOWN
-         || directionToNeighbour == Direction.UP && !neighbourState.is(Blocks.BUBBLE_COLUMN) && canExistIn(neighbourState)) {
+         || directionToNeighbour == Direction.UP && !neighbourState.is(this) && canOccupy(this, neighbourState)) {
          ticks.scheduleTick(pos, this, 5);
       }
 
@@ -167,7 +181,7 @@ public class BubbleColumnBlock extends Block implements BucketPickup {
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockState belowState = level.getBlockState(pos.below());
-      return belowState.is(Blocks.BUBBLE_COLUMN) || belowState.is(Blocks.MAGMA_BLOCK) || belowState.is(Blocks.SOUL_SAND);
+      return belowState.is(this) || belowState.is(BlockTags.ENABLES_BUBBLE_COLUMN_PUSH_UP) || belowState.is(BlockTags.ENABLES_BUBBLE_COLUMN_DRAG_DOWN);
    }
 
    @Override

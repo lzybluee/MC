@@ -17,7 +17,7 @@ public class StopBeingAngryIfTargetDead {
                   Optional.ofNullable(level.getEntity(i.get(angryAt)))
                      .map(entity -> entity instanceof LivingEntity livingEntity ? livingEntity : null)
                      .filter(LivingEntity::isDeadOrDying)
-                     .filter(angerTarget -> angerTarget.getType() != EntityType.PLAYER || level.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS))
+                     .filter(angerTarget -> !angerTarget.is(EntityType.PLAYER) || level.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS))
                      .ifPresent(angerTarget -> angryAt.erase());
                   return true;
                }

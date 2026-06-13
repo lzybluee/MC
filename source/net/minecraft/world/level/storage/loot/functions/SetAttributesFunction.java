@@ -1,6 +1,5 @@
 package net.minecraft.world.level.storage.loot.functions;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -14,19 +13,21 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootContextUser;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 
 public class SetAttributesFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetAttributesFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetAttributesFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -46,13 +47,14 @@ public class SetAttributesFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetAttributesFunction> getType() {
-      return LootItemFunctions.SET_ATTRIBUTES;
+   public MapCodec<SetAttributesFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.modifiers.stream().flatMap(m -> m.amount.getReferencedContextParams().stream()).collect(ImmutableSet.toImmutableSet());
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      Validatable.validate(context, "modifiers", this.modifiers);
    }
 
    @Override
@@ -118,7 +120,7 @@ public class SetAttributesFunction extends LootItemConditionalFunction {
 
    private record Modifier(
       Identifier id, Holder<Attribute> attribute, AttributeModifier.Operation operation, NumberProvider amount, List<EquipmentSlotGroup> slots
-   ) {
+   ) implements LootContextUser {
       private static final Codec<List<EquipmentSlotGroup>> SLOTS_CODEC = ExtraCodecs.nonEmptyList(ExtraCodecs.compactListCodec(EquipmentSlotGroup.CODEC));
       public static final Codec<SetAttributesFunction.Modifier> CODEC = RecordCodecBuilder.create(
          i -> i.group(
@@ -130,6 +132,12 @@ public class SetAttributesFunction extends LootItemConditionalFunction {
             )
             .apply(i, SetAttributesFunction.Modifier::new)
       );
+
+      @Override
+      public void validate(final ValidationContext context) {
+         LootContextUser.super.validate(context);
+         Validatable.validate(context, "amount", this.amount);
+      }
    }
 
    public static class ModifierBuilder {

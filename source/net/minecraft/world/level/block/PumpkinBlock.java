@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -58,9 +59,8 @@ public class PumpkinBlock extends Block {
                ItemEntity entity = new ItemEntity(
                   level, pos.getX() + 0.5 + direction.getStepX() * 0.65, pos.getY() + 0.1, pos.getZ() + 0.5 + direction.getStepZ() * 0.65, pumpkinSeeds
                );
-               entity.setDeltaMovement(
-                  0.05 * direction.getStepX() + level.random.nextDouble() * 0.02, 0.05, 0.05 * direction.getStepZ() + level.random.nextDouble() * 0.02
-               );
+               RandomSource random = level.getRandom();
+               entity.setDeltaMovement(0.05 * direction.getStepX() + random.nextDouble() * 0.02, 0.05, 0.05 * direction.getStepZ() + random.nextDouble() * 0.02);
                level.addFreshEntity(entity);
             }
          );

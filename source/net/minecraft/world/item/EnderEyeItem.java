@@ -98,7 +98,7 @@ public class EnderEyeItem extends Item {
             CriteriaTriggers.USED_ENDER_EYE.trigger(serverPlayer, nearestMapFeature);
          }
 
-         float pitch = Mth.lerp(level.random.nextFloat(), 0.33F, 0.5F);
+         float pitch = Mth.lerp(level.getRandom().nextFloat(), 0.33F, 0.5F);
          level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_EYE_LAUNCH, SoundSource.NEUTRAL, 1.0F, pitch);
          itemStack.consume(1, player);
          player.awardStat(Stats.ITEM_USED.get(this));

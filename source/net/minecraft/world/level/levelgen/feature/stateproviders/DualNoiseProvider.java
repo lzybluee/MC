@@ -10,6 +10,7 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.InclusiveRange;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.LegacyRandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
@@ -52,7 +53,7 @@ public class DualNoiseProvider extends NoiseProvider {
    }
 
    @Override
-   public BlockState getState(final RandomSource random, final BlockPos pos) {
+   public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
       double varietyNoise = this.getSlowNoiseValue(pos);
       int localVariety = (int)Mth.clampedMap(varietyNoise, -1.0, 1.0, this.variety.minInclusive().intValue(), this.variety.maxInclusive() + 1);
       List<BlockState> possibleStates = Lists.newArrayListWithCapacity(localVariety);

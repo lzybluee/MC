@@ -1,7 +1,9 @@
 package net.minecraft.world.entity.ai.behavior;
 
+import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 public class DoNothing implements BehaviorControl<LivingEntity> {
    private final int minDuration;
@@ -17,6 +19,11 @@ public class DoNothing implements BehaviorControl<LivingEntity> {
    @Override
    public Behavior.Status getStatus() {
       return this.status;
+   }
+
+   @Override
+   public Set<MemoryModuleType<?>> getRequiredMemories() {
+      return Set.of();
    }
 
    @Override

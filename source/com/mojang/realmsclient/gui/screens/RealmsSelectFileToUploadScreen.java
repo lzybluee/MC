@@ -2,7 +2,6 @@ package com.mojang.realmsclient.gui.screens;
 
 import com.mojang.logging.LogUtils;
 import com.mojang.realmsclient.util.task.RealmCreationTask;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -77,9 +76,8 @@ public class RealmsSelectFileToUploadScreen extends RealmsScreen {
       );
       footer.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build());
       this.updateButtonState(null);
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      RealmsSelectFileToUploadScreen var3 = this;
+      this.layout.visitWidgets(x$0 -> var3.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -105,11 +103,6 @@ public class RealmsSelectFileToUploadScreen extends RealmsScreen {
 
    private void upload(final WorldSelectionList.WorldListEntry worldListEntry) {
       this.minecraft.setScreen(new RealmsUploadScreen(this.realmCreationTask, this.realmId, this.slotId, this.lastScreen, worldListEntry.getLevelSummary()));
-   }
-
-   @Override
-   public Component getNarrationMessage() {
-      return CommonComponents.joinForNarration(this.getTitle(), this.createLabelNarration());
    }
 
    @Override

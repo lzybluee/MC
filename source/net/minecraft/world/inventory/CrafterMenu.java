@@ -107,9 +107,7 @@ public class CrafterMenu extends AbstractContainerMenu implements ContainerListe
       if (this.player instanceof ServerPlayer serverPlayer) {
          ServerLevel level = serverPlayer.level();
          CraftingInput craftInput = this.container.asCraftInput();
-         ItemStack result = CrafterBlock.getPotentialResults(level, craftInput)
-            .map(recipe -> recipe.value().assemble(craftInput, level.registryAccess()))
-            .orElse(ItemStack.EMPTY);
+         ItemStack result = CrafterBlock.getPotentialResults(level, craftInput).map(recipe -> recipe.value().assemble(craftInput)).orElse(ItemStack.EMPTY);
          this.resultContainer.setItem(0, result);
       }
    }

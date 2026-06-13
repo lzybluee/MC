@@ -251,15 +251,15 @@ public class ProtoChunk extends ChunkAccess {
    }
 
    public static BlockPos unpackOffsetCoordinates(final short packedCoord, final int sectionY, final ChunkPos chunkPos) {
-      int posX = SectionPos.sectionToBlockCoord(chunkPos.x, packedCoord & 15);
+      int posX = SectionPos.sectionToBlockCoord(chunkPos.x(), packedCoord & 15);
       int posY = SectionPos.sectionToBlockCoord(sectionY, packedCoord >>> 4 & 15);
-      int posZ = SectionPos.sectionToBlockCoord(chunkPos.z, packedCoord >>> 8 & 15);
+      int posZ = SectionPos.sectionToBlockCoord(chunkPos.z(), packedCoord >>> 8 & 15);
       return new BlockPos(posX, posY, posZ);
    }
 
    @Override
    public void markPosForPostprocessing(final BlockPos blockPos) {
-      if (!this.isOutsideBuildHeight(blockPos)) {
+      if (this.isInsideBuildHeight(blockPos)) {
          ChunkAccess.getOrCreateOffsetList(this.postProcessing, this.getSectionIndex(blockPos.getY())).add(packOffsetCoordinates(blockPos));
       }
    }

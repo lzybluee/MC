@@ -39,6 +39,7 @@ public class GameRuleRegistryFix extends DataFix {
 
                   return gameRules.remove("spawnChunkRadius")
                      .remove("entitiesWithPassengersCanUsePortals")
+                     .remove("gameLoopFunction")
                      .remove("doFireTick")
                      .remove("allowFireTicksAwayFromPlayer")
                      .renameAndFixField("allowEnteringNetherUsingPortals", "minecraft:allow_entering_nether_using_portals", GameRuleRegistryFix::convertBoolean)

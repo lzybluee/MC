@@ -6,10 +6,8 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.GpuFence;
 import com.mojang.blaze3d.buffers.Std140SizeCalculator;
-import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.blaze3d.platform.BackendOptions;
 import com.mojang.blaze3d.platform.GLX;
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.shaders.ShaderSource;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -39,7 +37,6 @@ public class RenderSystem {
    public static final int PROJECTION_MATRIX_UBO_SIZE = new Std140SizeCalculator().putMat4f().get();
    private static @Nullable Thread renderThread;
    private static @Nullable GpuDevice DEVICE;
-   private static double lastDrawTime = Double.MIN_VALUE;
    private static final RenderSystem.AutoStorageIndexBuffer sharedSequential = new RenderSystem.AutoStorageIndexBuffer(1, 1, IntConsumer::accept);
    private static final RenderSystem.AutoStorageIndexBuffer sharedSequentialQuad = new RenderSystem.AutoStorageIndexBuffer(4, 6, (c, i) -> {
       c.accept(i);
@@ -73,7 +70,7 @@ public class RenderSystem {
    private static @Nullable GpuBuffer globalSettingsUniform;
    private static @Nullable DynamicUniforms dynamicUniforms;
    private static final ScissorState scissorStateForRenderTypeDraws = new ScissorState();
-   private static SamplerCache samplerCache = new SamplerCache();
+   private static final SamplerCache samplerCache = new SamplerCache();
 
    public static SamplerCache getSamplerCache() {
       return samplerCache;
@@ -101,7 +98,7 @@ public class RenderSystem {
       return new IllegalStateException("Rendersystem called from wrong thread");
    }
 
-   private static void pollEvents() {
+   public static void pollEvents() {
       pollEventsWaitStart.set(Util.getMillis());
       pollingEvents.set(true);
       GLFW.glfwPollEvents();
@@ -112,28 +109,15 @@ public class RenderSystem {
       return pollingEvents.get() && Util.getMillis() - pollEventsWaitStart.get() > 200L;
    }
 
-   public static void flipFrame(final Window window, final @Nullable TracyFrameCapture tracyFrameCapture) {
-      pollEvents();
+   public static void flipFrame(final @Nullable TracyFrameCapture tracyFrameCapture) {
       Tesselator.getInstance().clear();
-      GLFW.glfwSwapBuffers(window.handle());
+      getDevice().presentFrame();
       if (tracyFrameCapture != null) {
          tracyFrameCapture.endFrame();
       }
 
       dynamicUniforms.reset();
       Minecraft.getInstance().levelRenderer.endFrame();
-      pollEvents();
-   }
-
-   public static void limitDisplayFPS(final int framerateLimit) {
-      double targetTime = lastDrawTime + 1.0 / framerateLimit;
-
-      double drawTime;
-      for (drawTime = GLFW.glfwGetTime(); drawTime < targetTime; drawTime = GLFW.glfwGetTime()) {
-         GLFW.glfwWaitEventsTimeout(targetTime - drawTime);
-      }
-
-      lastDrawTime = drawTime;
    }
 
    public static void setShaderFog(final GpuBufferSlice fog) {
@@ -172,14 +156,16 @@ public class RenderSystem {
       return apiDescription;
    }
 
-   public static TimeSource.NanoTimeSource initBackendSystem() {
-      return GLX._initGlfw()::getAsLong;
+   public static TimeSource.NanoTimeSource initBackendSystem(final BackendOptions options) {
+      return GLX._initGlfw(options)::getAsLong;
    }
 
-   public static void initRenderer(
-      final long windowHandle, final int logVerbosity, final boolean synchronousLogs, final ShaderSource shaderSource, final boolean wantsDebugLabels
-   ) {
-      DEVICE = new GlDevice(windowHandle, logVerbosity, synchronousLogs, shaderSource, wantsDebugLabels);
+   public static void initRenderer(final GpuDevice device) {
+      if (DEVICE != null) {
+         throw new IllegalStateException("RenderSystem.DEVICE already initialized");
+      }
+
+      DEVICE = device;
       apiDescription = getDevice().getImplementationInformation();
       dynamicUniforms = new DynamicUniforms();
       samplerCache.initialize();

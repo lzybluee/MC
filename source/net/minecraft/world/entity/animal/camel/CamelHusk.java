@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class CamelHusk extends Camel {
@@ -36,9 +37,9 @@ public class CamelHusk extends Camel {
    }
 
    @Override
-   public InteractionResult interact(final Player player, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
       this.setPersistenceRequired();
-      return super.interact(player, hand);
+      return super.interact(player, hand, location);
    }
 
    @Override
@@ -68,6 +69,11 @@ public class CamelHusk extends Camel {
 
    @Override
    public boolean canFallInLove() {
+      return false;
+   }
+
+   @Override
+   public boolean isBaby() {
       return false;
    }
 

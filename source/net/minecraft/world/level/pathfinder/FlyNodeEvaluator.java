@@ -291,10 +291,10 @@ public class FlyNodeEvaluator extends WalkNodeEvaluator {
       if (blockPathType == PathType.OPEN && y >= context.level().getMinY() + 1) {
          BlockPos belowPos = new BlockPos(x, y - 1, z);
          PathType belowType = context.getPathTypeFromState(belowPos.getX(), belowPos.getY(), belowPos.getZ());
-         if (belowType == PathType.DAMAGE_FIRE || belowType == PathType.LAVA) {
-            blockPathType = PathType.DAMAGE_FIRE;
-         } else if (belowType == PathType.DAMAGE_OTHER) {
-            blockPathType = PathType.DAMAGE_OTHER;
+         if (belowType == PathType.FIRE || belowType == PathType.LAVA) {
+            blockPathType = PathType.FIRE;
+         } else if (belowType == PathType.DAMAGING) {
+            blockPathType = PathType.DAMAGING;
          } else if (belowType == PathType.COCOA) {
             blockPathType = PathType.COCOA;
          } else if (belowType == PathType.FENCE) {

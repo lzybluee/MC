@@ -18,8 +18,8 @@ import net.minecraft.data.info.BiomeParametersDumpReport;
 import net.minecraft.data.info.BlockListReport;
 import net.minecraft.data.info.CommandsReport;
 import net.minecraft.data.info.DatapackStructureReport;
-import net.minecraft.data.info.ItemListReport;
 import net.minecraft.data.info.PacketReport;
+import net.minecraft.data.info.RegistryComponentsReport;
 import net.minecraft.data.info.RegistryDumpReport;
 import net.minecraft.data.loot.packs.TradeRebalanceLootTableProvider;
 import net.minecraft.data.loot.packs.VanillaLootTableProvider;
@@ -36,19 +36,23 @@ import net.minecraft.data.tags.BiomeTagsProvider;
 import net.minecraft.data.tags.DamageTypeTagsProvider;
 import net.minecraft.data.tags.DialogTagsProvider;
 import net.minecraft.data.tags.EntityTypeTagsProvider;
+import net.minecraft.data.tags.FeatureTagsProvider;
 import net.minecraft.data.tags.FlatLevelGeneratorPresetTagsProvider;
 import net.minecraft.data.tags.FluidTagsProvider;
 import net.minecraft.data.tags.GameEventTagsProvider;
 import net.minecraft.data.tags.InstrumentTagsProvider;
 import net.minecraft.data.tags.PaintingVariantTagsProvider;
 import net.minecraft.data.tags.PoiTypeTagsProvider;
+import net.minecraft.data.tags.PotionTagsProvider;
 import net.minecraft.data.tags.StructureTagsProvider;
 import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.data.tags.TimelineTagsProvider;
 import net.minecraft.data.tags.TradeRebalanceEnchantmentTagsProvider;
+import net.minecraft.data.tags.TradeRebalanceTradeTagsProvider;
 import net.minecraft.data.tags.VanillaBlockTagsProvider;
 import net.minecraft.data.tags.VanillaEnchantmentTagsProvider;
 import net.minecraft.data.tags.VanillaItemTagsProvider;
+import net.minecraft.data.tags.VillagerTradesTagsProvider;
 import net.minecraft.data.tags.WorldPresetTagsProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.jsonrpc.dataprovider.JsonRpcApiSchema;
@@ -82,8 +86,9 @@ public class Main {
          boolean dev = allOptions || optionSet.has(devOption);
          boolean reports = allOptions || optionSet.has(reportsOption);
          Collection<Path> input = optionSet.valuesOf(inputOption).stream().map(x$0 -> Paths.get(x$0)).toList();
-         DataGenerator generator = new DataGenerator(output, SharedConstants.getCurrentVersion(), true);
-         addServerProviders(generator, input, server, dev, reports);
+         DataGenerator generator = new DataGenerator.Cached(output, SharedConstants.getCurrentVersion(), true);
+         addServerDefinitionProviders(generator, server, reports);
+         addServerConverters(generator, input, server, dev);
          generator.run();
          Util.shutdownExecutors();
       } else {
@@ -97,11 +102,14 @@ public class Main {
       return output -> target.apply(output, registries);
    }
 
-   public static void addServerProviders(
-      final DataGenerator generator, final Collection<Path> input, final boolean server, final boolean dev, final boolean reports
-   ) {
+   public static void addServerConverters(final DataGenerator generator, final Collection<Path> input, final boolean server, final boolean dev) {
       DataGenerator.PackGenerator commonVanillaPack = generator.getVanillaPack(server);
       commonVanillaPack.addProvider(o -> new SnbtToNbt(o, input).addFilter(new StructureUpdater()));
+      DataGenerator.PackGenerator devVanillaPack = generator.getVanillaPack(dev);
+      devVanillaPack.addProvider(o -> new NbtToSnbt(o, input));
+   }
+
+   public static void addServerDefinitionProviders(final DataGenerator generator, final boolean server, final boolean reports) {
       CompletableFuture<HolderLookup.Provider> vanillaRegistries = CompletableFuture.supplyAsync(VanillaRegistries::createLookup, Util.backgroundExecutor());
       DataGenerator.PackGenerator serverVanillaPack = generator.getVanillaPack(server);
       serverVanillaPack.addProvider(bindRegistries(RegistriesDatapackGenerator::new, vanillaRegistries));
@@ -127,11 +135,12 @@ public class Main {
       serverVanillaPack.addProvider(bindRegistries(WorldPresetTagsProvider::new, vanillaRegistries));
       serverVanillaPack.addProvider(bindRegistries(VanillaEnchantmentTagsProvider::new, vanillaRegistries));
       serverVanillaPack.addProvider(bindRegistries(TimelineTagsProvider::new, vanillaRegistries));
-      serverVanillaPack = generator.getVanillaPack(dev);
-      serverVanillaPack.addProvider(o -> new NbtToSnbt(o, input));
+      serverVanillaPack.addProvider(bindRegistries(PotionTagsProvider::new, vanillaRegistries));
+      serverVanillaPack.addProvider(bindRegistries(VillagerTradesTagsProvider::new, vanillaRegistries));
+      serverVanillaPack.addProvider(bindRegistries(FeatureTagsProvider::new, vanillaRegistries));
       serverVanillaPack = generator.getVanillaPack(reports);
       serverVanillaPack.addProvider(bindRegistries(BiomeParametersDumpReport::new, vanillaRegistries));
-      serverVanillaPack.addProvider(bindRegistries(ItemListReport::new, vanillaRegistries));
+      serverVanillaPack.addProvider(bindRegistries(RegistryComponentsReport::new, vanillaRegistries));
       serverVanillaPack.addProvider(bindRegistries(BlockListReport::new, vanillaRegistries));
       serverVanillaPack.addProvider(bindRegistries(CommandsReport::new, vanillaRegistries));
       serverVanillaPack.addProvider(RegistryDumpReport::new);
@@ -147,8 +156,10 @@ public class Main {
             o, Component.translatable("dataPack.trade_rebalance.description"), FeatureFlagSet.of(FeatureFlags.TRADE_REBALANCE)
          )
       );
-      tradeRebalancePack.addProvider(bindRegistries(TradeRebalanceLootTableProvider::create, vanillaRegistries));
-      tradeRebalancePack.addProvider(bindRegistries(TradeRebalanceEnchantmentTagsProvider::new, vanillaRegistries));
+      CompletableFuture<HolderLookup.Provider> patchedRegistries = tradeRebalanceRegistries.thenApply(RegistrySetBuilder.PatchedRegistries::full);
+      tradeRebalancePack.addProvider(bindRegistries(TradeRebalanceLootTableProvider::create, patchedRegistries));
+      tradeRebalancePack.addProvider(bindRegistries(TradeRebalanceEnchantmentTagsProvider::new, patchedRegistries));
+      tradeRebalancePack.addProvider(bindRegistries(TradeRebalanceTradeTagsProvider::new, patchedRegistries));
       serverVanillaPack = generator.getBuiltinDatapack(server, "redstone_experiments");
       serverVanillaPack.addProvider(
          o -> PackMetadataGenerator.forFeaturePack(

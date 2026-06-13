@@ -248,7 +248,7 @@ public class PointedDripstoneBlock extends Block implements SimpleWaterloggedBlo
       return this.defaultBlockState()
          .setValue(TIP_DIRECTION, tipDirection)
          .setValue(THICKNESS, thickness)
-         .setValue(WATERLOGGED, level.getFluidState(pos).getType() == Fluids.WATER);
+         .setValue(WATERLOGGED, level.getFluidState(pos).is(Fluids.WATER));
    }
 
    @Override
@@ -370,7 +370,7 @@ public class PointedDripstoneBlock extends Block implements SimpleWaterloggedBlo
          .defaultBlockState()
          .setValue(TIP_DIRECTION, direction)
          .setValue(THICKNESS, thickness)
-         .setValue(WATERLOGGED, level.getFluidState(pos).getType() == Fluids.WATER);
+         .setValue(WATERLOGGED, level.getFluidState(pos).is(Fluids.WATER));
       level.setBlock(pos, state, 3);
    }
 
@@ -560,7 +560,8 @@ public class PointedDripstoneBlock extends Block implements SimpleWaterloggedBlo
    }
 
    private static boolean canGrow(final BlockState rootState, final BlockState aboveState) {
-      return rootState.is(Blocks.DRIPSTONE_BLOCK) && aboveState.is(Blocks.WATER) && aboveState.getFluidState().isSource();
+      FluidState fluidState = aboveState.getFluidState();
+      return rootState.is(Blocks.DRIPSTONE_BLOCK) && fluidState.is(Fluids.WATER) && fluidState.isSource();
    }
 
    private static ParticleOptions getDripParticle(final Level level, final Fluid fluidAbove, final BlockPos posAbove) {

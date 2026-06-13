@@ -1,13 +1,14 @@
 package net.minecraft.world.entity.monster.piglin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.behavior.DoNothing;
@@ -41,14 +42,8 @@ public class PiglinBruteAi {
    private static final int HOME_TOO_FAR_DISTANCE = 100;
    private static final int HOME_STROLL_AROUND_DISTANCE = 5;
 
-   protected static Brain<?> makeBrain(final PiglinBrute piglin, final Brain<PiglinBrute> brain) {
-      initCoreActivity(piglin, brain);
-      initIdleActivity(piglin, brain);
-      initFightActivity(piglin, brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   public static List<ActivityData<PiglinBrute>> getActivities(final PiglinBrute piglin) {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity(piglin));
    }
 
    protected static void initMemories(final PiglinBrute body) {
@@ -56,16 +51,16 @@ public class PiglinBruteAi {
       body.getBrain().setMemory(MemoryModuleType.HOME, currentGlobalPos);
    }
 
-   private static void initCoreActivity(final PiglinBrute body, final Brain<PiglinBrute> brain) {
-      brain.addActivity(
+   private static ActivityData<PiglinBrute> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink(), InteractWithDoor.create(), StopBeingAngryIfTargetDead.create())
       );
    }
 
-   private static void initIdleActivity(final PiglinBrute body, final Brain<PiglinBrute> brain) {
-      brain.addActivity(
+   private static ActivityData<PiglinBrute> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          10,
          ImmutableList.of(
@@ -77,8 +72,8 @@ public class PiglinBruteAi {
       );
    }
 
-   private static void initFightActivity(final PiglinBrute body, final Brain<PiglinBrute> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   private static ActivityData<PiglinBrute> initFightActivity(final PiglinBrute body) {
+      return ActivityData.create(
          Activity.FIGHT,
          10,
          ImmutableList.of(
@@ -153,7 +148,7 @@ public class PiglinBruteAi {
    }
 
    protected static void maybePlayActivitySound(final PiglinBrute body) {
-      if (body.level().random.nextFloat() < 0.0125) {
+      if (body.level().getRandom().nextFloat() < 0.0125) {
          playActivitySound(body);
       }
    }

@@ -76,10 +76,10 @@ public class SnowLayerBlock extends Block {
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockState belowState = level.getBlockState(pos.below());
-      if (belowState.is(BlockTags.SNOW_LAYER_CANNOT_SURVIVE_ON)) {
+      if (belowState.is(BlockTags.CANNOT_SUPPORT_SNOW_LAYER)) {
          return false;
       } else {
-         return belowState.is(BlockTags.SNOW_LAYER_CAN_SURVIVE_ON)
+         return belowState.is(BlockTags.SUPPORT_OVERRIDE_SNOW_LAYER)
             ? true
             : Block.isFaceFull(belowState.getCollisionShape(level, pos.below()), Direction.UP) || belowState.is(this) && belowState.getValue(LAYERS) == 8;
       }

@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -55,7 +55,7 @@ public class ShareToLanScreen extends Screen {
             message = Component.translatable("commands.publish.failed");
          }
 
-         this.minecraft.gui.getChat().addMessage(message);
+         this.minecraft.gui.getChat().addClientSystemMessage(message);
          this.minecraft.getNarrator().saySystemQueued(message);
          this.minecraft.updateTitle();
       }).bounds(this.width / 2 - 155, this.height - 28, 150, 20).build();
@@ -106,10 +106,10 @@ public class ShareToLanScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
-      graphics.drawCenteredString(this.font, this.title, this.width / 2, 50, -1);
-      graphics.drawCenteredString(this.font, INFO_TEXT, this.width / 2, 82, -1);
-      graphics.drawCenteredString(this.font, PORT_INFO_TEXT, this.width / 2, 142, -1);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
+      graphics.centeredText(this.font, this.title, this.width / 2, 50, -1);
+      graphics.centeredText(this.font, INFO_TEXT, this.width / 2, 82, -1);
+      graphics.centeredText(this.font, PORT_INFO_TEXT, this.width / 2, 142, -1);
    }
 }

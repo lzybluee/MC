@@ -34,7 +34,7 @@ public class HurtByTargetGoal extends TargetGoal {
       int timestamp = this.mob.getLastHurtByMobTimestamp();
       LivingEntity lastHurtByMob = this.mob.getLastHurtByMob();
       if (timestamp != this.timestamp && lastHurtByMob != null) {
-         if (lastHurtByMob.getType() == EntityType.PLAYER && getServerLevel(this.mob).getGameRules().get(GameRules.UNIVERSAL_ANGER)) {
+         if (lastHurtByMob.is(EntityType.PLAYER) && getServerLevel(this.mob).getGameRules().get(GameRules.UNIVERSAL_ANGER)) {
             return false;
          }
 

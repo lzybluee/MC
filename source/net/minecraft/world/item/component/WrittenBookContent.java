@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponents;
@@ -20,13 +19,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.network.Filterable;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.StringUtil;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -40,7 +39,6 @@ public record WrittenBookContent(Filterable<String> title, String author, int ge
    public static final int TITLE_LENGTH = 16;
    public static final int TITLE_MAX_LENGTH = 32;
    public static final int MAX_GENERATION = 3;
-   public static final int MAX_CRAFTABLE_GENERATION = 2;
    public static final Codec<Component> CONTENT_CODEC = ComponentSerialization.flatRestrictedCodec(32767);
    public static final Codec<List<Filterable<Component>>> PAGES_CODEC = pagesCodec(CONTENT_CODEC);
    public static final Codec<WrittenBookContent> CODEC = RecordCodecBuilder.create(
@@ -87,14 +85,14 @@ public record WrittenBookContent(Filterable<String> title, String author, int ge
       return pageCodec(contentCodec).listOf();
    }
 
-   public @Nullable WrittenBookContent tryCraftCopy() {
-      return this.generation >= 2 ? null : new WrittenBookContent(this.title, this.author, this.generation + 1, this.pages, this.resolved);
+   public WrittenBookContent craftCopy() {
+      return new WrittenBookContent(this.title, this.author, this.generation + 1, this.pages, this.resolved);
    }
 
-   public static boolean resolveForItem(final ItemStack itemStack, final CommandSourceStack source, final @Nullable Player player) {
+   public static boolean resolveForItem(final ItemStack itemStack, final ResolutionContext context, final HolderLookup.Provider registries) {
       WrittenBookContent content = itemStack.get(DataComponents.WRITTEN_BOOK_CONTENT);
       if (content != null && !content.resolved()) {
-         WrittenBookContent resolvedContent = content.resolve(source, player);
+         WrittenBookContent resolvedContent = content.resolve(context, registries);
          if (resolvedContent != null) {
             itemStack.set(DataComponents.WRITTEN_BOOK_CONTENT, resolvedContent);
             return true;
@@ -106,7 +104,7 @@ public record WrittenBookContent(Filterable<String> title, String author, int ge
       return false;
    }
 
-   public @Nullable WrittenBookContent resolve(final CommandSourceStack source, final @Nullable Player player) {
+   public @Nullable WrittenBookContent resolve(final ResolutionContext context, final HolderLookup.Provider registries) {
       if (this.resolved) {
          return null;
       }
@@ -114,7 +112,7 @@ public record WrittenBookContent(Filterable<String> title, String author, int ge
       Builder<Filterable<Component>> newPages = ImmutableList.builderWithExpectedSize(this.pages.size());
 
       for (Filterable<Component> page : this.pages) {
-         Optional<Filterable<Component>> resolvedPage = resolvePage(source, player, page);
+         Optional<Filterable<Component>> resolvedPage = resolvePage(context, registries, page);
          if (resolvedPage.isEmpty()) {
             return null;
          }
@@ -129,11 +127,13 @@ public record WrittenBookContent(Filterable<String> title, String author, int ge
       return new WrittenBookContent(this.title, this.author, this.generation, this.pages, true);
    }
 
-   private static Optional<Filterable<Component>> resolvePage(final CommandSourceStack source, final @Nullable Player player, final Filterable<Component> page) {
+   private static Optional<Filterable<Component>> resolvePage(
+      final ResolutionContext context, final HolderLookup.Provider registries, final Filterable<Component> page
+   ) {
       return page.resolve(component -> {
          try {
-            Component newComponent = ComponentUtils.updateForEntity(source, component, player, 0);
-            return isPageTooLarge(newComponent, source.registryAccess()) ? Optional.empty() : Optional.of(newComponent);
+            Component newComponent = ComponentUtils.resolve(context, component);
+            return isPageTooLarge(newComponent, registries) ? Optional.empty() : Optional.of(newComponent);
          } catch (Exception ignored) {
             return Optional.of(component);
          }

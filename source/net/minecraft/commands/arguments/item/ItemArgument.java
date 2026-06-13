@@ -24,8 +24,7 @@ public class ItemArgument implements ArgumentType<ItemInput> {
    }
 
    public ItemInput parse(final StringReader reader) throws CommandSyntaxException {
-      ItemParser.ItemResult result = this.parser.parse(reader);
-      return new ItemInput(result.item(), result.components());
+      return this.parser.parse(reader);
    }
 
    public static <S> ItemInput getItem(final CommandContext<S> context, final String name) {

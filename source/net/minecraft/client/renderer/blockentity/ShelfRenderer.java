@@ -8,9 +8,8 @@ import net.minecraft.client.renderer.blockentity.state.ShelfRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -42,6 +41,7 @@ public class ShelfRenderer implements BlockEntityRenderer<ShelfBlockEntity, Shel
    ) {
       BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
       state.alignToBottom = blockEntity.getAlignItemsToBottom();
+      state.facing = blockEntity.getBlockState().getValue(ShelfBlock.FACING);
       NonNullList<ItemStack> items = blockEntity.getItems();
       int seed = HashCommon.long2int(blockEntity.getBlockPos().asLong());
 
@@ -57,8 +57,7 @@ public class ShelfRenderer implements BlockEntityRenderer<ShelfBlockEntity, Shel
    }
 
    public void submit(final ShelfRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
-      Direction direction = state.blockState.getValue(ShelfBlock.FACING);
-      float yRot = direction.getAxis().isHorizontal() ? -direction.toYRot() : 180.0F;
+      float yRot = state.facing.getAxis().isHorizontal() ? -state.facing.toYRot() : 180.0F;
 
       for (int slot = 0; slot < state.items.length; slot++) {
          ItemStackRenderState itemStackRenderState = state.items[slot];

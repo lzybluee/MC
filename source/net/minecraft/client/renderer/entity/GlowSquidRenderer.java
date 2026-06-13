@@ -9,6 +9,7 @@ import net.minecraft.world.entity.animal.squid.GlowSquid;
 
 public class GlowSquidRenderer extends SquidRenderer<GlowSquid> {
    private static final Identifier GLOW_SQUID_LOCATION = Identifier.withDefaultNamespace("textures/entity/squid/glow_squid.png");
+   private static final Identifier GLOW_SQUID_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/squid/glow_squid_baby.png");
 
    public GlowSquidRenderer(final EntityRendererProvider.Context context, final SquidModel model, final SquidModel babyModel) {
       super(context, model, babyModel);
@@ -16,7 +17,7 @@ public class GlowSquidRenderer extends SquidRenderer<GlowSquid> {
 
    @Override
    public Identifier getTextureLocation(final SquidRenderState state) {
-      return GLOW_SQUID_LOCATION;
+      return state.isBaby ? GLOW_SQUID_BABY_LOCATION : GLOW_SQUID_LOCATION;
    }
 
    protected int getBlockLightLevel(final GlowSquid entity, final BlockPos blockPos) {

@@ -11,6 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
@@ -34,19 +35,22 @@ public class ThrownEgg extends ThrowableItemProjectile {
    @Override
    public void handleEntityEvent(final byte id) {
       if (id == 3) {
-         double v = 0.08;
+         ItemStack item = this.getItem();
+         if (!item.isEmpty()) {
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(item));
 
-         for (int i = 0; i < 8; i++) {
-            this.level()
-               .addParticle(
-                  new ItemParticleOption(ParticleTypes.ITEM, this.getItem()),
-                  this.getX(),
-                  this.getY(),
-                  this.getZ(),
-                  (this.random.nextFloat() - 0.5) * 0.08,
-                  (this.random.nextFloat() - 0.5) * 0.08,
-                  (this.random.nextFloat() - 0.5) * 0.08
-               );
+            for (int i = 0; i < 8; i++) {
+               this.level()
+                  .addParticle(
+                     breakParticle,
+                     this.getX(),
+                     this.getY(),
+                     this.getZ(),
+                     (this.random.nextFloat() - 0.5) * 0.08,
+                     (this.random.nextFloat() - 0.5) * 0.08,
+                     (this.random.nextFloat() - 0.5) * 0.08
+                  );
+            }
          }
       }
    }
@@ -72,9 +76,7 @@ public class ThrownEgg extends ThrowableItemProjectile {
                if (chicken != null) {
                   chicken.setAge(-24000);
                   chicken.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-                  Optional.ofNullable(this.getItem().get(DataComponents.CHICKEN_VARIANT))
-                     .flatMap(v -> v.unwrap(this.registryAccess()))
-                     .ifPresent(chicken::setVariant);
+                  Optional.ofNullable(this.getItem().get(DataComponents.CHICKEN_VARIANT)).ifPresent(chicken::setVariant);
                   if (!chicken.fudgePositionAfterSizeChange(ZERO_SIZED_DIMENSIONS)) {
                      break;
                   }

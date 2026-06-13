@@ -32,7 +32,6 @@ import net.minecraft.world.entity.monster.illager.Pillager;
 import net.minecraft.world.entity.monster.illager.Vindicator;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.npc.villager.AbstractVillager;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -41,11 +40,11 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.TradeSets;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 
 public class WanderingTrader extends AbstractVillager implements Consumable.OverrideConsumeSound {
@@ -130,11 +129,9 @@ public class WanderingTrader extends AbstractVillager implements Consumable.Over
    @Override
    protected void updateTrades(final ServerLevel level) {
       MerchantOffers offers = this.getOffers();
-
-      for (Pair<VillagerTrades.ItemListing[], Integer> tradesAndAmount : VillagerTrades.WANDERING_TRADER_TRADES) {
-         VillagerTrades.ItemListing[] itemListings = (VillagerTrades.ItemListing[])tradesAndAmount.getLeft();
-         this.addOffersFromItemListings(level, offers, itemListings, (Integer)tradesAndAmount.getRight());
-      }
+      this.addOffersFromTradeSet(level, offers, TradeSets.WANDERING_TRADER_BUYING);
+      this.addOffersFromTradeSet(level, offers, TradeSets.WANDERING_TRADER_UNCOMMON);
+      this.addOffersFromTradeSet(level, offers, TradeSets.WANDERING_TRADER_COMMON);
    }
 
    @Override

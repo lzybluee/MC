@@ -1,6 +1,7 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
@@ -16,15 +17,19 @@ import org.slf4j.Logger;
 
 public class SmeltItemFunction extends LootItemConditionalFunction {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final MapCodec<SmeltItemFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).apply(i, SmeltItemFunction::new));
+   private final boolean useInputCount;
+   public static final MapCodec<SmeltItemFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+      i -> commonFields(i).and(Codec.BOOL.optionalFieldOf("use_input_count", true).forGetter(o -> o.useInputCount)).apply(i, SmeltItemFunction::new)
+   );
 
-   private SmeltItemFunction(final List<LootItemCondition> predicates) {
+   private SmeltItemFunction(final List<LootItemCondition> predicates, final boolean useInputCount) {
       super(predicates);
+      this.useInputCount = useInputCount;
    }
 
    @Override
-   public LootItemFunctionType<SmeltItemFunction> getType() {
-      return LootItemFunctions.FURNACE_SMELT;
+   public MapCodec<SmeltItemFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
@@ -36,9 +41,10 @@ public class SmeltItemFunction extends LootItemConditionalFunction {
       SingleRecipeInput input = new SingleRecipeInput(itemStack);
       Optional<RecipeHolder<SmeltingRecipe>> recipe = context.getLevel().recipeAccess().getRecipeFor(RecipeType.SMELTING, input, context.getLevel());
       if (recipe.isPresent()) {
-         ItemStack result = recipe.get().value().assemble(input, context.getLevel().registryAccess());
+         ItemStack result = recipe.get().value().assemble(input);
          if (!result.isEmpty()) {
-            return result.copyWithCount(itemStack.getCount());
+            int newCount = (this.useInputCount ? itemStack.count() : 1) * result.getCount();
+            return result.copyWithCount(Math.min(newCount, result.getMaxStackSize()));
          }
       }
 
@@ -47,6 +53,10 @@ public class SmeltItemFunction extends LootItemConditionalFunction {
    }
 
    public static LootItemConditionalFunction.Builder<?> smelted() {
-      return simpleBuilder(SmeltItemFunction::new);
+      return smelted(true);
+   }
+
+   public static LootItemConditionalFunction.Builder<?> smelted(final boolean useInputCount) {
+      return simpleBuilder(predicates -> new SmeltItemFunction(predicates, useInputCount));
    }
 }

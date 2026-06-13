@@ -40,7 +40,7 @@ public class RecipePropertySet {
    }
 
    public boolean test(final ItemStack itemStack) {
-      return this.items.contains(itemStack.getItemHolder());
+      return this.items.contains(itemStack.typeHolder());
    }
 
    static RecipePropertySet create(final Collection<Ingredient> ingredients) {

@@ -8,7 +8,9 @@ import com.mojang.datafixers.kinds.OptionalBox;
 import com.mojang.datafixers.util.Function3;
 import com.mojang.datafixers.util.Function4;
 import com.mojang.datafixers.util.Unit;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -44,6 +46,11 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
          }
 
          @Override
+         public Set<MemoryModuleType<?>> getRequiredMemories() {
+            return resolvedBuilder.memories();
+         }
+
+         @Override
          public String debugString() {
             return "OneShot[" + resolvedBuilder.debugString() + "]";
          }
@@ -55,8 +62,32 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
       };
    }
 
-   public static <E extends LivingEntity> OneShot<E> sequence(final Trigger<? super E> first, final Trigger<? super E> second) {
-      return create(i -> i.group(i.ifTriggered(first)).apply(i, unit -> second::trigger));
+   public static <E extends LivingEntity> OneShot<E> sequence(final Trigger<? super E> first, final OneShot<? super E> second) {
+      final OneShot<E> wrapped = create(i -> i.group(i.ifTriggered(first)).apply(i, var1x -> second::trigger));
+      return new OneShot<E>() {
+         @Override
+         public boolean trigger(final ServerLevel level, final E body, final long timestamp) {
+            return wrapped.trigger(level, body, timestamp);
+         }
+
+         @Override
+         public Set<MemoryModuleType<?>> getRequiredMemories() {
+            Set<MemoryModuleType<?>> memories = new HashSet<>();
+            memories.addAll(wrapped.getRequiredMemories());
+            memories.addAll(second.getRequiredMemories());
+            return memories;
+         }
+
+         @Override
+         public String debugString() {
+            return "OneShot[stuff]";
+         }
+
+         @Override
+         public String toString() {
+            return this.debugString();
+         }
+      };
    }
 
    public static <E extends LivingEntity> OneShot<E> triggerIf(final Predicate<E> predicate, final OneShot<? super E> behavior) {
@@ -93,6 +124,11 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
             @Override
             public A tryTrigger(final ServerLevel level, final E body, final long timestamp) {
                return a;
+            }
+
+            @Override
+            public Set<MemoryModuleType<?>> memories() {
+               return Set.of();
             }
 
             @Override
@@ -160,6 +196,14 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
                }
 
                @Override
+               public Set<MemoryModuleType<?>> memories() {
+                  Set<MemoryModuleType<?>> memories = new HashSet<>();
+                  memories.addAll(aTrigger.memories());
+                  memories.addAll(fTrigger.memories());
+                  return memories;
+               }
+
+               @Override
                public String debugString() {
                   return fTrigger.debugString() + " * " + aTrigger.debugString();
                }
@@ -181,6 +225,11 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
             public R tryTrigger(final ServerLevel level, final E body, final long timestamp) {
                T t = tTrigger.tryTrigger(level, body, timestamp);
                return (R)(t == null ? null : func.apply(t));
+            }
+
+            @Override
+            public Set<MemoryModuleType<?>> memories() {
+               return tTrigger.memories();
             }
 
             @Override
@@ -216,6 +265,15 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
 
                BiFunction<A, B, R> fr = fTrigger.tryTrigger(level, body, timestamp);
                return fr == null ? null : fr.apply(ra, rb);
+            }
+
+            @Override
+            public Set<MemoryModuleType<?>> memories() {
+               Set<MemoryModuleType<?>> memories = new HashSet<>();
+               memories.addAll(aTrigger.memories());
+               memories.addAll(bTrigger.memories());
+               memories.addAll(fTrigger.memories());
+               return memories;
             }
 
             @Override
@@ -266,6 +324,16 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
 
                Function3<T1, T2, T3, R> rf = fTrigger.tryTrigger(level, body, timestamp);
                return (R)(rf == null ? null : rf.apply(r1, r2, r3));
+            }
+
+            @Override
+            public Set<MemoryModuleType<?>> memories() {
+               Set<MemoryModuleType<?>> memories = new HashSet<>();
+               memories.addAll(t1Trigger.memories());
+               memories.addAll(t2Trigger.memories());
+               memories.addAll(t3Trigger.memories());
+               memories.addAll(fTrigger.memories());
+               return memories;
             }
 
             @Override
@@ -329,6 +397,17 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
                }
 
                @Override
+               public Set<MemoryModuleType<?>> memories() {
+                  Set<MemoryModuleType<?>> memories = new HashSet<>();
+                  memories.addAll(t1Trigger.memories());
+                  memories.addAll(t2Trigger.memories());
+                  memories.addAll(t3Trigger.memories());
+                  memories.addAll(t4Trigger.memories());
+                  memories.addAll(fTrigger.memories());
+                  return memories;
+               }
+
+               @Override
                public String debugString() {
                   return fTrigger.debugString()
                      + " * "
@@ -366,6 +445,11 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
             }
 
             @Override
+            public Set<MemoryModuleType<?>> memories() {
+               return Set.of(condition.memory());
+            }
+
+            @Override
             public String debugString() {
                return "M[" + condition + "]";
             }
@@ -381,6 +465,8 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
    private interface TriggerWithResult<E extends LivingEntity, R> {
       @Nullable R tryTrigger(final ServerLevel level, final E body, final long timestamp);
 
+      Set<MemoryModuleType<?>> memories();
+
       String debugString();
    }
 
@@ -389,6 +475,11 @@ public class BehaviorBuilder<E extends LivingEntity, M> implements App<BehaviorB
          super(new BehaviorBuilder.TriggerWithResult<E, Unit>() {
             public @Nullable Unit tryTrigger(final ServerLevel level, final E body, final long timestamp) {
                return dependentTrigger.trigger(level, body, timestamp) ? Unit.INSTANCE : null;
+            }
+
+            @Override
+            public Set<MemoryModuleType<?>> memories() {
+               return Set.of();
             }
 
             @Override

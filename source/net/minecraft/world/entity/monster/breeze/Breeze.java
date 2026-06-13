@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.monster.breeze;
 
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -8,7 +8,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.util.debug.DebugBreezeInfo;
 import net.minecraft.util.debug.DebugSubscriptions;
@@ -26,9 +25,11 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,19 +40,22 @@ import org.jspecify.annotations.Nullable;
 public class Breeze extends Monster {
    private static final int SLIDE_PARTICLES_AMOUNT = 20;
    private static final int IDLE_PARTICLES_AMOUNT = 1;
-   private static final int JUMP_DUST_PARTICLES_AMOUNT = 20;
    private static final int JUMP_TRAIL_PARTICLES_AMOUNT = 3;
    private static final int JUMP_TRAIL_DURATION_TICKS = 5;
    private static final int JUMP_CIRCLE_DISTANCE_Y = 10;
    private static final float FALL_DISTANCE_SOUND_TRIGGER_THRESHOLD = 3.0F;
    private static final int WHIRL_SOUND_FREQUENCY_MIN = 1;
    private static final int WHIRL_SOUND_FREQUENCY_MAX = 80;
-   public AnimationState idle = new AnimationState();
-   public AnimationState slide = new AnimationState();
-   public AnimationState slideBack = new AnimationState();
-   public AnimationState longJump = new AnimationState();
-   public AnimationState shoot = new AnimationState();
-   public AnimationState inhale = new AnimationState();
+   private static final Brain.Provider<Breeze> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.NEAREST_PLAYERS, SensorType.BREEZE_ATTACK_ENTITY_SENSOR),
+      BreezeAi::getActivities
+   );
+   public final AnimationState idle = new AnimationState();
+   public final AnimationState slide = new AnimationState();
+   public final AnimationState slideBack = new AnimationState();
+   public final AnimationState longJump = new AnimationState();
+   public final AnimationState shoot = new AnimationState();
+   public final AnimationState inhale = new AnimationState();
    private int jumpTrailStartedTick = 0;
    private int soundTick = 0;
    private static final ProjectileDeflection PROJECTILE_DEFLECTION = (projectile, entity, random) -> {
@@ -69,24 +73,22 @@ public class Breeze extends Monster {
 
    public Breeze(final EntityType<? extends Monster> type, final Level level) {
       super(type, level);
-      this.setPathfindingMalus(PathType.DANGER_TRAPDOOR, -1.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+      this.setPathfindingMalus(PathType.ON_TOP_OF_TRAPDOOR, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE, -1.0F);
       this.xpReward = 10;
    }
 
    @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return BreezeAi.makeBrain(this, this.brainProvider().makeBrain(input));
-   }
-
-   @Override
    public Brain<Breeze> getBrain() {
-      return (Brain<Breeze>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
-   protected Brain.Provider<Breeze> brainProvider() {
-      return Brain.provider(BreezeAi.MEMORY_TYPES, BreezeAi.SENSOR_TYPES);
+   protected Brain<Breeze> makeBrain(final Brain.Packed input) {
+      Brain<Breeze> brain = BRAIN_PROVIDER.makeBrain(this, input);
+      brain.setDefaultActivity(Activity.FIGHT);
+      brain.useDefaultActivity();
+      return brain;
    }
 
    @Override
@@ -192,16 +194,11 @@ public class Breeze extends Monster {
 
    @Override
    public ProjectileDeflection deflection(final Projectile projectile) {
-      if (projectile.getType() != EntityType.BREEZE_WIND_CHARGE && projectile.getType() != EntityType.WIND_CHARGE) {
-         return this.getType().is(EntityTypeTags.DEFLECTS_PROJECTILES) ? PROJECTILE_DEFLECTION : ProjectileDeflection.NONE;
+      if (!projectile.is(EntityType.BREEZE_WIND_CHARGE) && !projectile.is(EntityType.WIND_CHARGE)) {
+         return this.is(EntityTypeTags.DEFLECTS_PROJECTILES) ? PROJECTILE_DEFLECTION : ProjectileDeflection.NONE;
       } else {
          return ProjectileDeflection.NONE;
       }
-   }
-
-   @Override
-   public SoundSource getSoundSource() {
-      return SoundSource.HOSTILE;
    }
 
    @Override
@@ -244,8 +241,8 @@ public class Breeze extends Monster {
    }
 
    @Override
-   public boolean canAttackType(final EntityType<?> targetType) {
-      return targetType == EntityType.PLAYER || targetType == EntityType.IRON_GOLEM;
+   public boolean canAttack(final LivingEntity target) {
+      return (target.is(EntityType.PLAYER) || target.is(EntityType.IRON_GOLEM)) && super.canAttack(target);
    }
 
    @Override

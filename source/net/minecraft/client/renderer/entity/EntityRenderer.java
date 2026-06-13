@@ -4,16 +4,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.Lightmap;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityAttachment;
@@ -46,7 +47,7 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
 
    public final int getPackedLightCoords(final T entity, final float partialTickTime) {
       BlockPos blockPos = BlockPos.containing(entity.getLightProbePosition(partialTickTime));
-      return LightTexture.pack(this.getBlockLightLevel(entity, blockPos), this.getSkyLightLevel(entity, blockPos));
+      return LightCoordsUtil.pack(this.getBlockLightLevel(entity, blockPos), this.getSkyLightLevel(entity, blockPos));
    }
 
    protected int getSkyLightLevel(final T entity, final BlockPos blockPos) {
@@ -105,7 +106,7 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
          }
       }
 
-      this.submitNameTag(state, poseStack, submitNodeCollector, camera);
+      this.submitNameDisplay(state, poseStack, submitNodeCollector, camera);
    }
 
    protected boolean shouldShowName(final T entity, final double distanceToCameraSq) {
@@ -116,12 +117,28 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
       return this.font;
    }
 
-   protected void submitNameTag(final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+   protected void submitNameDisplay(final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+      this.submitNameDisplay(state, poseStack, submitNodeCollector, camera, 0);
+   }
+
+   protected final <S extends EntityRenderState> void submitNameDisplay(
+      final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera, final int offset
+   ) {
+      poseStack.pushPose();
+      if (state.scoreText != null) {
+         submitNodeCollector.submitNameTag(
+            poseStack, state.nameTagAttachment, offset, state.scoreText, !state.isDiscrete, state.lightCoords, state.distanceToCameraSq, camera
+         );
+         poseStack.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
+      }
+
       if (state.nameTag != null) {
          submitNodeCollector.submitNameTag(
-            poseStack, state.nameTagAttachment, 0, state.nameTag, !state.isDiscrete, state.lightCoords, state.distanceToCameraSq, camera
+            poseStack, state.nameTagAttachment, offset, state.nameTag, !state.isDiscrete, state.lightCoords, state.distanceToCameraSq, camera
          );
       }
+
+      poseStack.popPose();
    }
 
    protected @Nullable Component getNameTag(final T entity) {
@@ -175,6 +192,12 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
             state.nameTagAttachment = entity.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTicks));
          } else {
             state.nameTag = null;
+         }
+
+         if (state.distanceToCameraSq < 100.0) {
+            state.scoreText = entity.belowNameDisplay();
+         } else {
+            state.scoreText = null;
          }
       }
 
@@ -290,7 +313,7 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
             if (belowState.isCollisionShapeFullBlock(chunk, belowPos)) {
                VoxelShape belowShape = belowState.getShape(chunk, belowPos);
                if (!belowShape.isEmpty()) {
-                  float alpha = Mth.clamp(powerAtDepth * 0.5F * LightTexture.getBrightness(level.dimensionType(), brightness), 0.0F, 1.0F);
+                  float alpha = Mth.clamp(powerAtDepth * 0.5F * Lightmap.getBrightness(level.dimensionType(), brightness), 0.0F, 1.0F);
                   float relativeX = (float)(pos.getX() - state.x);
                   float relativeY = (float)(pos.getY() - state.y);
                   float relativeZ = (float)(pos.getZ() - state.z);

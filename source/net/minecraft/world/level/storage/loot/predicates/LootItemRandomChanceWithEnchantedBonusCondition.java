@@ -19,7 +19,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record LootItemRandomChanceWithEnchantedBonusCondition(float unenchantedChance, LevelBasedValue enchantedChance, Holder<Enchantment> enchantment)
    implements LootItemCondition {
-   public static final MapCodec<LootItemRandomChanceWithEnchantedBonusCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<LootItemRandomChanceWithEnchantedBonusCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             Codec.floatRange(0.0F, 1.0F).fieldOf("unenchanted_chance").forGetter(LootItemRandomChanceWithEnchantedBonusCondition::unenchantedChance),
             LevelBasedValue.CODEC.fieldOf("enchanted_chance").forGetter(LootItemRandomChanceWithEnchantedBonusCondition::enchantedChance),
@@ -29,8 +29,8 @@ public record LootItemRandomChanceWithEnchantedBonusCondition(float unenchantedC
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.RANDOM_CHANCE_WITH_ENCHANTED_BONUS;
+   public MapCodec<LootItemRandomChanceWithEnchantedBonusCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override

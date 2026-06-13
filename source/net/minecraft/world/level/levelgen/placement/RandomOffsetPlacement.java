@@ -7,12 +7,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.util.valueproviders.TrapezoidInt;
 
 public class RandomOffsetPlacement extends PlacementModifier {
    public static final MapCodec<RandomOffsetPlacement> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
-            IntProvider.codec(-16, 16).fieldOf("xz_spread").forGetter(c -> c.xzSpread),
-            IntProvider.codec(-16, 16).fieldOf("y_spread").forGetter(c -> c.ySpread)
+            IntProviders.codec(-16, 16).fieldOf("xz_spread").forGetter(c -> c.xzSpread),
+            IntProviders.codec(-16, 16).fieldOf("y_spread").forGetter(c -> c.ySpread)
          )
          .apply(i, RandomOffsetPlacement::new)
    );
@@ -21,6 +23,10 @@ public class RandomOffsetPlacement extends PlacementModifier {
 
    public static RandomOffsetPlacement of(final IntProvider xzSpread, final IntProvider ySpread) {
       return new RandomOffsetPlacement(xzSpread, ySpread);
+   }
+
+   public static RandomOffsetPlacement ofTriangle(final int xzRange, final int yRange) {
+      return new RandomOffsetPlacement(TrapezoidInt.triangle(xzRange), TrapezoidInt.triangle(yRange));
    }
 
    public static RandomOffsetPlacement vertical(final IntProvider ySpread) {

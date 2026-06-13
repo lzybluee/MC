@@ -8,7 +8,7 @@ import com.google.gson.JsonElement;
 import org.jspecify.annotations.Nullable;
 
 public class GuardedSerializer {
-   ExclusionStrategy strategy = new ExclusionStrategy() {
+   private static final ExclusionStrategy STRATEGY = new ExclusionStrategy() {
       public boolean shouldSkipClass(final Class<?> clazz) {
          return false;
       }
@@ -17,7 +17,7 @@ public class GuardedSerializer {
          return field.getAnnotation(Exclude.class) != null;
       }
    };
-   private final Gson gson = new GsonBuilder().addSerializationExclusionStrategy(this.strategy).addDeserializationExclusionStrategy(this.strategy).create();
+   private final Gson gson = new GsonBuilder().addSerializationExclusionStrategy(STRATEGY).addDeserializationExclusionStrategy(STRATEGY).create();
 
    public String toJson(final ReflectionBasedSerialization object) {
       return this.gson.toJson(object);

@@ -48,7 +48,7 @@ public abstract class RenderLayer<S extends EntityRenderState, M extends EntityM
             model,
             state,
             poseStack,
-            RenderTypes.entityCutoutNoCull(texture),
+            RenderTypes.entityCutout(texture),
             lightCoords,
             LivingEntityRenderer.getOverlayCoords(state, 0.0F),
             color,

@@ -227,9 +227,9 @@ public class SnbtGrammar {
          String contents = result.toString();
 
          return (T)(switch (typeSuffix) {
-            case null -> (Object)convertDouble(ops, state, contents);
-            case FLOAT -> (Object)convertFloat(ops, state, contents);
-            case DOUBLE -> (Object)convertDouble(ops, state, contents);
+            case null -> convertDouble(ops, state, contents);
+            case FLOAT -> convertFloat(ops, state, contents);
+            case DOUBLE -> convertDouble(ops, state, contents);
             default -> {
                state.errorCollector().store(state.mark(), ERROR_EXPECTED_FLOAT_TYPE);
                yield null;
@@ -840,10 +840,10 @@ public class SnbtGrammar {
          try {
             if (isSigned) {
                return (T)(switch (type) {
-                  case BYTE -> (Object)ops.createByte(Byte.parseByte(fixedDigits, radix));
-                  case SHORT -> (Object)ops.createShort(Short.parseShort(fixedDigits, radix));
-                  case INT -> (Object)ops.createInt(Integer.parseInt(fixedDigits, radix));
-                  case LONG -> (Object)ops.createLong(Long.parseLong(fixedDigits, radix));
+                  case BYTE -> ops.createByte(Byte.parseByte(fixedDigits, radix));
+                  case SHORT -> ops.createShort(Short.parseShort(fixedDigits, radix));
+                  case INT -> ops.createInt(Integer.parseInt(fixedDigits, radix));
+                  case LONG -> ops.createLong(Long.parseLong(fixedDigits, radix));
                   default -> {
                      state.errorCollector().store(state.mark(), SnbtGrammar.ERROR_EXPECTED_INTEGER_TYPE);
                      yield null;
@@ -851,10 +851,10 @@ public class SnbtGrammar {
                });
             } else {
                return (T)(switch (type) {
-                  case BYTE -> (Object)ops.createByte(UnsignedBytes.parseUnsignedByte(fixedDigits, radix));
-                  case SHORT -> (Object)ops.createShort(SnbtGrammar.parseUnsignedShort(fixedDigits, radix));
-                  case INT -> (Object)ops.createInt(Integer.parseUnsignedInt(fixedDigits, radix));
-                  case LONG -> (Object)ops.createLong(Long.parseUnsignedLong(fixedDigits, radix));
+                  case BYTE -> ops.createByte(UnsignedBytes.parseUnsignedByte(fixedDigits, radix));
+                  case SHORT -> ops.createShort(SnbtGrammar.parseUnsignedShort(fixedDigits, radix));
+                  case INT -> ops.createInt(Integer.parseUnsignedInt(fixedDigits, radix));
+                  case LONG -> ops.createLong(Long.parseUnsignedLong(fixedDigits, radix));
                   default -> {
                      state.errorCollector().store(state.mark(), SnbtGrammar.ERROR_EXPECTED_INTEGER_TYPE);
                      yield null;

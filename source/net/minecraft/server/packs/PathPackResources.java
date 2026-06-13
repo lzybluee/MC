@@ -1,7 +1,6 @@
 package net.minecraft.server.packs;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.Sets;
 import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
@@ -13,6 +12,7 @@ import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -61,15 +61,20 @@ public class PathPackResources extends AbstractPackResources {
       }
    }
 
-   @Override
-   public @Nullable IoSupplier<InputStream> getResource(final PackType type, final Identifier location) {
-      Path namespacePath = this.root.resolve(type.getDirectory()).resolve(location.getNamespace());
-      return getResource(location, namespacePath);
+   private Path topPackDir(final PackType type) {
+      return this.root.resolve(type.getDirectory());
    }
 
-   public static @Nullable IoSupplier<InputStream> getResource(final Identifier location, final Path path) {
+   @Override
+   public @Nullable IoSupplier<InputStream> getResource(final PackType type, final Identifier location) {
+      Path topDir = this.topPackDir(type);
+      return getResource(topDir, location);
+   }
+
+   public static @Nullable IoSupplier<InputStream> getResource(final Path topDir, final Identifier location) {
+      Path namespaceDir = topDir.resolve(location.getNamespace());
       return (IoSupplier<InputStream>)FileUtil.decomposePath(location.getPath()).mapOrElse(decomposedPath -> {
-         Path resolvedPath = FileUtil.resolvePath(path, decomposedPath);
+         Path resolvedPath = FileUtil.resolvePath(namespaceDir, decomposedPath);
          return returnFileIfExists(resolvedPath);
       }, error -> {
          LOGGER.error("Invalid path {}: {}", location, error.message());
@@ -83,18 +88,23 @@ public class PathPackResources extends AbstractPackResources {
 
    @Override
    public void listResources(final PackType type, final String namespace, final String directory, final PackResources.ResourceOutput output) {
+      Path topDir = this.topPackDir(type);
+      listResources(topDir, namespace, directory, output);
+   }
+
+   public static void listResources(final Path topPath, final String namespace, final String directory, final PackResources.ResourceOutput output) {
       FileUtil.decomposePath(directory).ifSuccess(decomposedPath -> {
-         Path namespaceDir = this.root.resolve(type.getDirectory()).resolve(namespace);
+         Path namespaceDir = topPath.resolve(namespace);
          listPath(namespace, namespaceDir, decomposedPath, output);
       }).ifError(error -> LOGGER.error("Invalid path {}: {}", directory, error.message()));
    }
 
-   public static void listPath(final String namespace, final Path rootDir, final List<String> decomposedPrefixPath, final PackResources.ResourceOutput output) {
-      Path targetPath = FileUtil.resolvePath(rootDir, decomposedPrefixPath);
+   public static void listPath(final String namespace, final Path topDir, final List<String> decomposedPrefixPath, final PackResources.ResourceOutput output) {
+      Path targetPath = FileUtil.resolvePath(topDir, decomposedPrefixPath);
 
       try (Stream<Path> files = Files.find(targetPath, Integer.MAX_VALUE, PathPackResources::isRegularFile)) {
          files.forEach(file -> {
-            String resourcePath = PATH_JOINER.join(rootDir.relativize(file));
+            String resourcePath = PATH_JOINER.join(topDir.relativize(file));
             Identifier identifier = Identifier.tryBuild(namespace, resourcePath);
             if (identifier == null) {
                Util.logAndPauseIfInIde(String.format(Locale.ROOT, "Invalid path in pack: %s:%s, ignoring", namespace, resourcePath));
@@ -116,21 +126,29 @@ public class PathPackResources extends AbstractPackResources {
 
    @Override
    public Set<String> getNamespaces(final PackType type) {
-      Set<String> namespaces = Sets.newHashSet();
-      Path assetRoot = this.root.resolve(type.getDirectory());
+      Path assetRoot = this.topPackDir(type);
+      return getNamespaces(assetRoot);
+   }
 
-      try (DirectoryStream<Path> directDirs = Files.newDirectoryStream(assetRoot)) {
+   public static Set<String> getNamespaces(final Path rootDir) {
+      Set<String> namespaces = new HashSet<>();
+
+      try (DirectoryStream<Path> directDirs = Files.newDirectoryStream(rootDir)) {
          for (Path directDir : directDirs) {
-            String namespace = directDir.getFileName().toString();
-            if (Identifier.isValidNamespace(namespace)) {
-               namespaces.add(namespace);
+            if (!Files.isDirectory(directDir)) {
+               LOGGER.warn("Non-directory entry {} found in namespace directory, rejecting", directDir);
             } else {
-               LOGGER.warn("Non [a-z0-9_.-] character in namespace {} in pack {}, ignoring", namespace, this.root);
+               String namespace = directDir.getFileName().toString();
+               if (Identifier.isValidNamespace(namespace)) {
+                  namespaces.add(namespace);
+               } else {
+                  LOGGER.warn("Non {} character in namespace {} in pack directory {}, ignoring", new Object[]{"[a-z0-9_.-]", namespace, rootDir});
+               }
             }
          }
-      } catch (NoSuchFileException | NotDirectoryException var10) {
+      } catch (NoSuchFileException | NotDirectoryException var8) {
       } catch (IOException e) {
-         LOGGER.error("Failed to list path {}", assetRoot, e);
+         LOGGER.error("Failed to list path {}", rootDir, e);
       }
 
       return namespaces;

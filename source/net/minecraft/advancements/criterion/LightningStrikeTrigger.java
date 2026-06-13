@@ -11,6 +11,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 
 public class LightningStrikeTrigger extends SimpleCriterionTrigger<LightningStrikeTrigger.TriggerInstance> {
    @Override
@@ -49,10 +51,10 @@ public class LightningStrikeTrigger extends SimpleCriterionTrigger<LightningStri
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         validator.validateEntity(this.lightning, "lightning");
-         validator.validateEntity(this.bystander, "bystander");
+         Validatable.validate(validator.entityContext(), "lightning", this.lightning);
+         Validatable.validate(validator.entityContext(), "bystander", this.bystander);
       }
    }
 }

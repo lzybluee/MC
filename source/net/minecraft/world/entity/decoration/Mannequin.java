@@ -76,7 +76,8 @@ public class Mannequin extends Avatar {
       entityData.define(DATA_DESCRIPTION, Optional.of(DEFAULT_DESCRIPTION));
    }
 
-   protected ResolvableProfile getProfile() {
+   @Override
+   public ResolvableProfile getProfile() {
       return this.entityData.get(DATA_PROFILE);
    }
 
@@ -169,5 +170,11 @@ public class Mannequin extends Avatar {
       } else {
          return super.applyImplicitComponent(type, value);
       }
+   }
+
+   @Override
+   public void aiStep() {
+      super.aiStep();
+      this.updateSwingTime();
    }
 }

@@ -88,6 +88,8 @@ import net.minecraft.util.datafix.fixes.ContainerBlockEntityLockPredicateFix;
 import net.minecraft.util.datafix.fixes.CopperGolemWeatherStateFix;
 import net.minecraft.util.datafix.fixes.CriteriaRenameFix;
 import net.minecraft.util.datafix.fixes.CustomModelDataExpandFix;
+import net.minecraft.util.datafix.fixes.DayTimeToClockFix;
+import net.minecraft.util.datafix.fixes.DebugProfileLookingAtSplitFix;
 import net.minecraft.util.datafix.fixes.DebugProfileOverlayReferenceFix;
 import net.minecraft.util.datafix.fixes.DecoratedPotFieldRenameFix;
 import net.minecraft.util.datafix.fixes.DropChancesFormatFix;
@@ -180,6 +182,8 @@ import net.minecraft.util.datafix.fixes.LegacyDimensionIdFix;
 import net.minecraft.util.datafix.fixes.LegacyDragonFightFix;
 import net.minecraft.util.datafix.fixes.LegacyHoverEventFix;
 import net.minecraft.util.datafix.fixes.LegacyWorldBorderFix;
+import net.minecraft.util.datafix.fixes.LevelDatDifficultyFix;
+import net.minecraft.util.datafix.fixes.LevelDatToSavedDataPreparationFix;
 import net.minecraft.util.datafix.fixes.LevelDataGeneratorOptionsFix;
 import net.minecraft.util.datafix.fixes.LevelFlatGeneratorInfoFix;
 import net.minecraft.util.datafix.fixes.LevelLegacyWorldGenSettingsFix;
@@ -247,6 +251,7 @@ import net.minecraft.util.datafix.fixes.SignTextStrictJsonFix;
 import net.minecraft.util.datafix.fixes.SpawnerDataFix;
 import net.minecraft.util.datafix.fixes.StatsCounterFix;
 import net.minecraft.util.datafix.fixes.StatsRenameFix;
+import net.minecraft.util.datafix.fixes.StonecutterRecipeRenameFix;
 import net.minecraft.util.datafix.fixes.StriderGravityFix;
 import net.minecraft.util.datafix.fixes.StructureReferenceCountFix;
 import net.minecraft.util.datafix.fixes.StructureSettingsFlattenFix;
@@ -266,6 +271,7 @@ import net.minecraft.util.datafix.fixes.VillagerDataFix;
 import net.minecraft.util.datafix.fixes.VillagerFollowRangeFix;
 import net.minecraft.util.datafix.fixes.VillagerRebuildLevelAndXpFix;
 import net.minecraft.util.datafix.fixes.VillagerSetCanPickUpLootFix;
+import net.minecraft.util.datafix.fixes.VillagerSetVillagerDataFinalized;
 import net.minecraft.util.datafix.fixes.VillagerTradeFix;
 import net.minecraft.util.datafix.fixes.WallPropertyFix;
 import net.minecraft.util.datafix.fixes.WeaponSmithChestLootTableFix;
@@ -277,6 +283,7 @@ import net.minecraft.util.datafix.fixes.WorldSpawnDataFix;
 import net.minecraft.util.datafix.fixes.WriteAndReadFix;
 import net.minecraft.util.datafix.fixes.WrittenBookPagesStrictJsonFix;
 import net.minecraft.util.datafix.fixes.ZombieVillagerRebuildXpFix;
+import net.minecraft.util.datafix.fixes.ZombieVillagerSetVillagerDataFinalized;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 import net.minecraft.util.datafix.schemas.V100;
 import net.minecraft.util.datafix.schemas.V102;
@@ -383,6 +390,7 @@ import net.minecraft.util.datafix.schemas.V4533;
 import net.minecraft.util.datafix.schemas.V4543;
 import net.minecraft.util.datafix.schemas.V4648;
 import net.minecraft.util.datafix.schemas.V4656;
+import net.minecraft.util.datafix.schemas.V4771;
 import net.minecraft.util.datafix.schemas.V501;
 import net.minecraft.util.datafix.schemas.V700;
 import net.minecraft.util.datafix.schemas.V701;
@@ -392,11 +400,20 @@ import net.minecraft.util.datafix.schemas.V704;
 import net.minecraft.util.datafix.schemas.V705;
 import net.minecraft.util.datafix.schemas.V808;
 import net.minecraft.util.datafix.schemas.V99;
+import net.minecraft.util.filefix.FileFixerUpper;
+import net.minecraft.util.filefix.fixes.DimensionStorageFileFix;
+import net.minecraft.util.filefix.fixes.GeneratedStructuresRenameFileFix;
+import net.minecraft.util.filefix.fixes.LegacyStructureFileFix;
+import net.minecraft.util.filefix.fixes.LevelDatToSavedDataFileFix;
+import net.minecraft.util.filefix.fixes.PlayerStorageFileFix;
+import net.minecraft.util.filefix.fixes.RemoveObsoleteFilesFileFix;
+import net.minecraft.util.filefix.fixes.ResourcePackLocationFileFix;
 
 public class DataFixers {
    private static final BiFunction<Integer, Schema, Schema> SAME = Schema::new;
    private static final BiFunction<Integer, Schema, Schema> SAME_NAMESPACED = NamespacedSchema::new;
-   private static final Result DATA_FIXER = createFixerUpper();
+   private static final Result DATA_FIXER;
+   private static final FileFixerUpper FILE_FIXER;
    public static final int BLENDING_VERSION = 4295;
 
    private DataFixers() {
@@ -406,10 +423,8 @@ public class DataFixers {
       return DATA_FIXER.fixer();
    }
 
-   private static Result createFixerUpper() {
-      DataFixerBuilder fixerUpper = new DataFixerBuilder(SharedConstants.getCurrentVersion().dataVersion().version());
-      addFixers(fixerUpper);
-      return fixerUpper.build();
+   public static FileFixerUpper getFileFixer() {
+      return FILE_FIXER;
    }
 
    public static CompletableFuture<?> optimize(final Set<TypeReference> typesToOptimize) {
@@ -423,7 +438,7 @@ public class DataFixers {
       return DATA_FIXER.optimize(typesToOptimize, executor);
    }
 
-   private static void addFixers(final DataFixerBuilder fixerUpper) {
+   private static void addFixers(final DataFixerBuilder fixerUpper, final FileFixerUpper.Builder fileFixerUpper) {
       fixerUpper.addSchema(99, V99::new);
       Schema v100 = fixerUpper.addSchema(100, V100::new);
       fixerUpper.addFixer(new EntityEquipmentToArmorAndHandFix(v100));
@@ -681,6 +696,8 @@ public class DataFixers {
       );
       Schema v1492 = fixerUpper.addSchema(1492, SAME_NAMESPACED);
       fixerUpper.addFixer(new ChunkStructuresTemplateRenameFix(v1492, false));
+      Schema v1493 = fileFixerUpper.addSchema(fixerUpper, 1493, SAME_NAMESPACED);
+      fileFixerUpper.addFixer(new LegacyStructureFileFix(v1493));
       Schema v1494 = fixerUpper.addSchema(1494, SAME_NAMESPACED);
       fixerUpper.addFixer(new ItemStackEnchantmentNamesFix(v1494, false));
       Schema v1496 = fixerUpper.addSchema(1496, SAME_NAMESPACED);
@@ -1568,6 +1585,30 @@ public class DataFixers {
       fixerUpper.addFixer(new GameRuleRegistryFix(v4658));
       Schema v4661 = fixerUpper.addSchema(4661, SAME_NAMESPACED);
       fixerUpper.addFixer(new OptionsMusicToastFix(v4661, false));
+      Schema v4763 = fixerUpper.addSchema(4763, SAME_NAMESPACED);
+      fixerUpper.addFixer(new DebugProfileLookingAtSplitFix(v4763));
+      fixerUpper.addFixer(new VillagerSetVillagerDataFinalized(v4763));
+      fixerUpper.addFixer(new ZombieVillagerSetVillagerDataFinalized(v4763));
+      Schema v4766 = fixerUpper.addSchema(4766, SAME_NAMESPACED);
+      fixerUpper.addFixer(new DayTimeToClockFix(v4766));
+      Schema v4769 = fixerUpper.addSchema(4769, SAME_NAMESPACED);
+      fixerUpper.addFixer(
+         new NamespacedTypeRenameFix(v4769, "Rename stonecutter recipes", References.RECIPE, createRenamer(StonecutterRecipeRenameFix.RECIPE_RENAMES))
+      );
+      fixerUpper.addFixer(
+         new AdvancementsRenameFix(v4769, false, "Rename stonecutter recipe advancements", createRenamer(StonecutterRecipeRenameFix.ADVANCEMENT_RENAMES))
+      );
+      Schema v4771 = fixerUpper.addSchema(4771, V4771::new);
+      fixerUpper.addFixer(new LevelDatDifficultyFix(v4771));
+      fixerUpper.addFixer(new LevelDatToSavedDataPreparationFix(v4771));
+      Schema v4772 = fileFixerUpper.addSchema(fixerUpper, 4772, SAME_NAMESPACED);
+      fileFixerUpper.addFixer(new ResourcePackLocationFileFix(v4772));
+      fileFixerUpper.addFixer(new DimensionStorageFileFix(v4772));
+      fileFixerUpper.addFixer(new PlayerStorageFileFix(v4772));
+      fileFixerUpper.addFixer(new LevelDatToSavedDataFileFix(v4772));
+      fileFixerUpper.addFixer(new RemoveObsoleteFilesFileFix(v4772));
+      Schema v4773 = fileFixerUpper.addSchema(fixerUpper, 4773, SAME_NAMESPACED);
+      fileFixerUpper.addFixer(new GeneratedStructuresRenameFileFix(v4773));
    }
 
    private static UnaryOperator<String> createRenamerNoNamespace(final Map<String, String> map) {
@@ -1580,5 +1621,14 @@ public class DataFixers {
 
    private static UnaryOperator<String> createRenamer(final String from, final String to) {
       return id -> Objects.equals(NamespacedSchema.ensureNamespaced(id), from) ? to : id;
+   }
+
+   static {
+      int dataVersion = SharedConstants.getCurrentVersion().dataVersion().version();
+      DataFixerBuilder fixerUpper = new DataFixerBuilder(dataVersion);
+      FileFixerUpper.Builder fileFixerUpper = new FileFixerUpper.Builder(dataVersion);
+      addFixers(fixerUpper, fileFixerUpper);
+      DATA_FIXER = fixerUpper.build();
+      FILE_FIXER = fileFixerUpper.build(DATA_FIXER);
    }
 }

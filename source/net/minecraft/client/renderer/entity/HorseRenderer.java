@@ -2,6 +2,7 @@ package net.minecraft.client.renderer.entity;
 
 import com.google.common.collect.Maps;
 import java.util.Map;
+import net.minecraft.client.model.animal.equine.BabyHorseModel;
 import net.minecraft.client.model.animal.equine.EquineSaddleModel;
 import net.minecraft.client.model.animal.equine.HorseModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -14,27 +15,48 @@ import net.minecraft.world.entity.animal.equine.Horse;
 import net.minecraft.world.entity.animal.equine.Variant;
 
 public final class HorseRenderer extends AbstractHorseRenderer<Horse, HorseRenderState, HorseModel> {
-   private static final Map<Variant, Identifier> LOCATION_BY_VARIANT = Maps.newEnumMap(
+   private static final Map<Variant, HorseRenderer.HorseTextures> LOCATION_BY_VARIANT = Maps.newEnumMap(
       Map.of(
          Variant.WHITE,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_white.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_white.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_white_baby.png")
+         ),
          Variant.CREAMY,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy_baby.png")
+         ),
          Variant.CHESTNUT,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut_baby.png")
+         ),
          Variant.BROWN,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_brown.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_brown.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_brown_baby.png")
+         ),
          Variant.BLACK,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_black.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_black.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_black_baby.png")
+         ),
          Variant.GRAY,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_gray.png"),
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_gray.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_gray_baby.png")
+         ),
          Variant.DARK_BROWN,
-         Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown.png")
+         new HorseRenderer.HorseTextures(
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown.png"),
+            Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown_baby.png")
+         )
       )
    );
 
    public HorseRenderer(final EntityRendererProvider.Context context) {
-      super(context, new HorseModel(context.bakeLayer(ModelLayers.HORSE)), new HorseModel(context.bakeLayer(ModelLayers.HORSE_BABY)));
+      super(context, new HorseModel(context.bakeLayer(ModelLayers.HORSE)), new BabyHorseModel(context.bakeLayer(ModelLayers.HORSE_BABY)));
       this.addLayer(new HorseMarkingLayer(this));
       this.addLayer(
          new SimpleEquipmentLayer<>(
@@ -43,7 +65,7 @@ public final class HorseRenderer extends AbstractHorseRenderer<Horse, HorseRende
             EquipmentClientInfo.LayerType.HORSE_BODY,
             state -> state.bodyArmorItem,
             new HorseModel(context.bakeLayer(ModelLayers.HORSE_ARMOR)),
-            new HorseModel(context.bakeLayer(ModelLayers.HORSE_BABY_ARMOR)),
+            null,
             2
          )
       );
@@ -54,14 +76,15 @@ public final class HorseRenderer extends AbstractHorseRenderer<Horse, HorseRende
             EquipmentClientInfo.LayerType.HORSE_SADDLE,
             state -> state.saddle,
             new EquineSaddleModel(context.bakeLayer(ModelLayers.HORSE_SADDLE)),
-            new EquineSaddleModel(context.bakeLayer(ModelLayers.HORSE_BABY_SADDLE)),
+            null,
             2
          )
       );
    }
 
    public Identifier getTextureLocation(final HorseRenderState state) {
-      return LOCATION_BY_VARIANT.get(state.variant);
+      HorseRenderer.HorseTextures variant = LOCATION_BY_VARIANT.get(state.variant);
+      return state.isBaby ? variant.baby : variant.adult;
    }
 
    public HorseRenderState createRenderState() {
@@ -73,5 +96,8 @@ public final class HorseRenderer extends AbstractHorseRenderer<Horse, HorseRende
       state.variant = entity.getVariant();
       state.markings = entity.getMarkings();
       state.bodyArmorItem = entity.getBodyArmorItem().copy();
+   }
+
+   private record HorseTextures(Identifier adult, Identifier baby) {
    }
 }

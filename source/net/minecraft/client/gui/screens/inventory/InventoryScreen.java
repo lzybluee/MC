@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens.inventory;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.CraftingRecipeBookComponent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -68,14 +68,14 @@ public class InventoryScreen extends AbstractRecipeBookScreen<InventoryMenu> {
    }
 
    @Override
-   protected void renderLabels(final GuiGraphics graphics, final int xm, final int ym) {
-      graphics.drawString(this.font, this.title, this.titleLabelX, this.titleLabelY, -12566464, false);
+   protected void extractLabels(final GuiGraphicsExtractor graphics, final int xm, final int ym) {
+      graphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, -12566464, false);
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      this.effects.render(graphics, mouseX, mouseY);
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      this.effects.extractRenderState(graphics, mouseX, mouseY);
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       this.xMouse = mouseX;
       this.yMouse = mouseY;
    }
@@ -91,15 +91,16 @@ public class InventoryScreen extends AbstractRecipeBookScreen<InventoryMenu> {
    }
 
    @Override
-   protected void renderBg(final GuiGraphics graphics, final float a, final int xm, final int ym) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
       int xo = this.leftPos;
       int yo = this.topPos;
       graphics.blit(RenderPipelines.GUI_TEXTURED, INVENTORY_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-      renderEntityInInventoryFollowsMouse(graphics, xo + 26, yo + 8, xo + 75, yo + 78, 30, 0.0625F, this.xMouse, this.yMouse, this.minecraft.player);
+      extractEntityInInventoryFollowsMouse(graphics, xo + 26, yo + 8, xo + 75, yo + 78, 30, 0.0625F, this.xMouse, this.yMouse, this.minecraft.player);
    }
 
-   public static void renderEntityInInventoryFollowsMouse(
-      final GuiGraphics graphics,
+   public static void extractEntityInInventoryFollowsMouse(
+      final GuiGraphicsExtractor graphics,
       final int x0,
       final int y0,
       final int x1,
@@ -133,14 +134,13 @@ public class InventoryScreen extends AbstractRecipeBookScreen<InventoryMenu> {
       }
 
       Vector3f translation = new Vector3f(0.0F, renderState.boundingBoxHeight / 2.0F + offsetY, 0.0F);
-      graphics.submitEntityRenderState(renderState, size, translation, rotation, xRotation, x0, y0, x1, y1);
+      graphics.entity(renderState, size, translation, rotation, xRotation, x0, y0, x1, y1);
    }
 
    private static EntityRenderState extractRenderState(final LivingEntity entity) {
       EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
       EntityRenderer<? super LivingEntity, ?> renderer = entityRenderDispatcher.getRenderer(entity);
       EntityRenderState renderState = renderer.createRenderState(entity, 1.0F);
-      renderState.lightCoords = 15728880;
       renderState.shadowPieces.clear();
       renderState.outlineColor = 0;
       return renderState;

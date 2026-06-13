@@ -6,8 +6,10 @@ import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.TypedInstance;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
@@ -36,7 +38,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public abstract class BlockEntity implements DebugValueSource {
+public abstract class BlockEntity implements DebugValueSource, TypedInstance<BlockEntityType<?>> {
    private static final Codec<BlockEntityType<?>> TYPE_CODEC = BuiltInRegistries.BLOCK_ENTITY_TYPE.byNameCodec();
    private static final Logger LOGGER = LogUtils.getLogger();
    private final BlockEntityType<?> type;
@@ -69,7 +71,7 @@ public abstract class BlockEntity implements DebugValueSource {
       int z = entityTag.getIntOr("z", 0);
       int sectionX = SectionPos.blockToSectionCoord(x);
       int sectionZ = SectionPos.blockToSectionCoord(z);
-      if (sectionX != base.x || sectionZ != base.z) {
+      if (sectionX != base.x() || sectionZ != base.z()) {
          LOGGER.warn("Block entity {} found in a wrong chunk, expected position from chunk {}", entityTag, base);
          x = base.getBlockX(SectionPos.sectionRelative(x));
          z = base.getBlockZ(SectionPos.sectionRelative(z));
@@ -250,11 +252,16 @@ public abstract class BlockEntity implements DebugValueSource {
    }
 
    public String getNameForReporting() {
-      return BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(this.getType()) + " // " + this.getClass().getCanonicalName();
+      return this.typeHolder().getRegisteredName() + " // " + this.getClass().getCanonicalName();
    }
 
    public BlockEntityType<?> getType() {
       return this.type;
+   }
+
+   @Override
+   public Holder<BlockEntityType<?>> typeHolder() {
+      return this.type.builtInRegistryHolder();
    }
 
    @Deprecated

@@ -85,7 +85,7 @@ public class ItemEnchantments implements TooltipProvider {
          }
       }
 
-      return HolderSet.direct();
+      return HolderSet.empty();
    }
 
    public Set<Holder<Enchantment>> keySet() {

@@ -44,6 +44,7 @@ import org.jspecify.annotations.Nullable;
 
 public record PlayerPredicate(
    MinMaxBounds.Ints level,
+   FoodPredicate food,
    GameTypePredicate gameType,
    List<PlayerPredicate.StatMatcher<?>> stats,
    Object2BooleanMap<ResourceKey<Recipe<?>>> recipes,
@@ -55,6 +56,7 @@ public record PlayerPredicate(
    public static final MapCodec<PlayerPredicate> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             MinMaxBounds.Ints.CODEC.optionalFieldOf("level", MinMaxBounds.Ints.ANY).forGetter(PlayerPredicate::level),
+            FoodPredicate.CODEC.optionalFieldOf("food", FoodPredicate.ANY).forGetter(PlayerPredicate::food),
             GameTypePredicate.CODEC.optionalFieldOf("gamemode", GameTypePredicate.ANY).forGetter(PlayerPredicate::gameType),
             PlayerPredicate.StatMatcher.CODEC.listOf().optionalFieldOf("stats", List.of()).forGetter(PlayerPredicate::stats),
             ExtraCodecs.object2BooleanMap(Recipe.KEY_CODEC).optionalFieldOf("recipes", Object2BooleanMaps.emptyMap()).forGetter(PlayerPredicate::recipes),
@@ -73,6 +75,10 @@ public record PlayerPredicate(
          return false;
       } else {
          if (!this.level.matches(player.experienceLevel)) {
+            return false;
+         }
+
+         if (!this.food.matches(player.getFoodData())) {
             return false;
          }
 
@@ -181,6 +187,7 @@ public record PlayerPredicate(
 
    public static class Builder {
       private MinMaxBounds.Ints level = MinMaxBounds.Ints.ANY;
+      private FoodPredicate food = FoodPredicate.ANY;
       private GameTypePredicate gameType = GameTypePredicate.ANY;
       private final com.google.common.collect.ImmutableList.Builder<PlayerPredicate.StatMatcher<?>> stats = ImmutableList.builder();
       private final Object2BooleanMap<ResourceKey<Recipe<?>>> recipes = new Object2BooleanOpenHashMap();
@@ -194,6 +201,11 @@ public record PlayerPredicate(
 
       public PlayerPredicate.Builder setLevel(final MinMaxBounds.Ints level) {
          this.level = level;
+         return this;
+      }
+
+      public PlayerPredicate.Builder setFood(final FoodPredicate food) {
+         this.food = food;
          return this;
       }
 
@@ -233,7 +245,7 @@ public record PlayerPredicate(
       }
 
       public PlayerPredicate build() {
-         return new PlayerPredicate(this.level, this.gameType, this.stats.build(), this.recipes, this.advancements, this.lookingAt, this.input);
+         return new PlayerPredicate(this.level, this.food, this.gameType, this.stats.build(), this.recipes, this.advancements, this.lookingAt, this.input);
       }
    }
 

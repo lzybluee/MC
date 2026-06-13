@@ -109,7 +109,7 @@ public class CandleBlock extends AbstractCandleBlock implements SimpleWaterlogge
       }
 
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
-      boolean isWaterSource = replacedFluidState.getType() == Fluids.WATER;
+      boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
       return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
    }
 
@@ -148,7 +148,7 @@ public class CandleBlock extends AbstractCandleBlock implements SimpleWaterlogge
 
    @Override
    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
-      if (!state.getValue(WATERLOGGED) && fluidState.getType() == Fluids.WATER) {
+      if (!state.getValue(WATERLOGGED) && fluidState.is(Fluids.WATER)) {
          BlockState newState = state.setValue(WATERLOGGED, true);
          if (state.getValue(LIT)) {
             extinguish(null, newState, level, pos);

@@ -5,6 +5,7 @@ import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
@@ -106,7 +107,7 @@ public class PitcherCropBlock extends DoublePlantBlock implements BonemealableBl
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(Blocks.FARMLAND);
+      return state.is(BlockTags.SUPPORTS_CROPS);
    }
 
    @Override
@@ -176,7 +177,10 @@ public class PitcherCropBlock extends DoublePlantBlock implements BonemealableBl
    }
 
    private boolean canGrow(final LevelReader level, final BlockPos lowerPos, final BlockState lowerState, final int newAge) {
-      return !this.isMaxAge(lowerState) && sufficientLight(level, lowerPos) && (!isDouble(newAge) || canGrowInto(level, lowerPos.above()));
+      return !this.isMaxAge(lowerState)
+         && sufficientLight(level, lowerPos)
+         && level.isInsideBuildHeight(lowerPos.above())
+         && (!isDouble(newAge) || canGrowInto(level, lowerPos.above()));
    }
 
    private boolean isMaxAge(final BlockState state) {

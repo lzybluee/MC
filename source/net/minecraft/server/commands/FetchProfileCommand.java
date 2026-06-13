@@ -4,12 +4,15 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.UuidArgument;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.ClickEvent;
@@ -22,35 +25,53 @@ import net.minecraft.network.chat.contents.objects.PlayerSprite;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.util.Util;
+import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.component.ResolvableProfile;
 
 public class FetchProfileCommand {
+   private static final DynamicCommandExceptionType NO_PROFILE = new DynamicCommandExceptionType(
+      id -> Component.translatableEscape("commands.fetchprofile.no_profile", id)
+   );
+
    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("fetchprofile")
-                  .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)))
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal("fetchprofile")
+                     .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)))
+                  .then(
+                     Commands.literal("name")
+                        .then(
+                           Commands.argument("name", StringArgumentType.greedyString())
+                              .executes(c -> resolveName((CommandSourceStack)c.getSource(), StringArgumentType.getString(c, "name")))
+                        )
+                  ))
                .then(
-                  Commands.literal("name")
+                  Commands.literal("id")
                      .then(
-                        Commands.argument("name", StringArgumentType.greedyString())
-                           .executes(c -> resolveName((CommandSourceStack)c.getSource(), StringArgumentType.getString(c, "name")))
+                        Commands.argument("id", UuidArgument.uuid()).executes(c -> resolveId((CommandSourceStack)c.getSource(), UuidArgument.getUuid(c, "id")))
                      )
                ))
             .then(
-               Commands.literal("id")
-                  .then(Commands.argument("id", UuidArgument.uuid()).executes(c -> resolveId((CommandSourceStack)c.getSource(), UuidArgument.getUuid(c, "id"))))
+               Commands.literal("entity")
+                  .then(
+                     Commands.argument("entity", EntityArgument.entity())
+                        .executes(c -> printForEntity((CommandSourceStack)c.getSource(), EntityArgument.getEntity(c, "entity")))
+                  )
             )
       );
    }
 
    private static void reportResolvedProfile(final CommandSourceStack sender, final GameProfile gameProfile, final String messageId, final Component argument) {
-      ResolvableProfile componentToWrite = ResolvableProfile.createResolved(gameProfile);
+      reportResolvedProfile(sender, messageId, argument, ResolvableProfile.createResolved(gameProfile));
+   }
+
+   private static void reportResolvedProfile(final CommandSourceStack sender, final String messageId, final Component argument, final ResolvableProfile profile) {
       ResolvableProfile.CODEC
-         .encodeStart(NbtOps.INSTANCE, componentToWrite)
+         .encodeStart(NbtOps.INSTANCE, profile)
          .ifSuccess(
             encodedProfile -> {
                String encodedProfileAsString = encodedProfile.toString();
-               MutableComponent headComponent = Component.object(new PlayerSprite(componentToWrite, true));
+               MutableComponent headComponent = Component.object(new PlayerSprite(profile, true));
                ComponentSerialization.CODEC
                   .encodeStart(NbtOps.INSTANCE, headComponent)
                   .ifSuccess(
@@ -132,5 +153,18 @@ public class FetchProfileCommand {
             }
          );
       return 1;
+   }
+
+   private static int printForEntity(final CommandSourceStack source, final Entity entity) throws CommandSyntaxException {
+      if (entity instanceof Avatar avatar) {
+         printForAvatar(source, avatar);
+         return 1;
+      } else {
+         throw NO_PROFILE.create(entity.getDisplayName());
+      }
+   }
+
+   public static void printForAvatar(final CommandSourceStack source, final Avatar avatar) {
+      reportResolvedProfile(source, "commands.fetchprofile.entity.success", avatar.getDisplayName(), avatar.getProfile());
    }
 }

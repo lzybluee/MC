@@ -31,6 +31,7 @@ import net.minecraft.SharedConstants;
 import net.minecraft.SystemReport;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundLowDiskSpaceWarningPacket;
 import net.minecraft.server.ConsoleInput;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerInterface;
@@ -51,6 +52,8 @@ import net.minecraft.server.network.ServerTextFilter;
 import net.minecraft.server.network.TextFilter;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.OldUsersConverter;
@@ -99,11 +102,23 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface 
       final LevelStorageSource.LevelStorageAccess levelStorageSource,
       final PackRepository packRepository,
       final WorldStem worldStem,
+      final Optional<GameRules> gameRules,
       final DedicatedServerSettings settings,
       final DataFixer fixerUpper,
       final Services services
    ) {
-      super(serverThread, levelStorageSource, packRepository, worldStem, Proxy.NO_PROXY, fixerUpper, services, LoggingLevelLoadListener.forDedicatedServer());
+      super(
+         serverThread,
+         levelStorageSource,
+         packRepository,
+         worldStem,
+         gameRules,
+         Proxy.NO_PROXY,
+         fixerUpper,
+         services,
+         LoggingLevelLoadListener.forDedicatedServer(),
+         true
+      );
       this.settings = settings;
       this.rconConsoleSource = new RconConsoleSource(this);
       this.serverTextFilter = ServerTextFilter.createFromConfig(settings.getProperties());
@@ -255,7 +270,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface 
          this.services.nameToIdCache().save();
       }
 
-      if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
+      if (!OldUsersConverter.areOldUserlistsRemoved()) {
          return false;
       }
 
@@ -269,7 +284,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface 
       String time = String.format(Locale.ROOT, "%.3fs", elapsed / 1.0E9);
       LOGGER.info("Done ({})! For help, type \"help\"", time);
       if (properties.announcePlayerAchievements != null) {
-         this.worldData.getGameRules().set(GameRules.SHOW_ADVANCEMENT_MESSAGES, properties.announcePlayerAchievements, this);
+         this.getGameRules().set(GameRules.SHOW_ADVANCEMENT_MESSAGES, properties.announcePlayerAchievements, this);
       }
 
       if (properties.enableQuery) {
@@ -295,6 +310,7 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface 
          LOGGER.info("JMX monitoring enabled");
       }
 
+      this.saveEverything(false, true, true);
       this.notificationManager().serverStarted();
       return true;
    }
@@ -343,6 +359,17 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface 
       boolean savedChunks = super.saveAllChunks(silent, flush, force);
       this.notificationManager().serverSaveCompleted();
       return savedChunks;
+   }
+
+   @Override
+   public void sendLowDiskSpaceWarning() {
+      super.sendLowDiskSpaceWarning();
+      Permission.HasCommandLevel adminCheck = new Permission.HasCommandLevel(PermissionLevel.ADMINS);
+      this.getPlayerList()
+         .getPlayers()
+         .stream()
+         .filter(p -> p.permissions().hasPermission(adminCheck))
+         .forEach(p -> p.connection.send(ClientboundLowDiskSpaceWarningPacket.INSTANCE));
    }
 
    @Override

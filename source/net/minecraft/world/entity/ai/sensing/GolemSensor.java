@@ -1,6 +1,5 @@
 package net.minecraft.world.entity.ai.sensing;
 
-import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -28,13 +27,13 @@ public class GolemSensor extends Sensor<LivingEntity> {
 
    @Override
    public Set<MemoryModuleType<?>> requires() {
-      return ImmutableSet.of(MemoryModuleType.NEAREST_LIVING_ENTITIES);
+      return Set.of(MemoryModuleType.NEAREST_LIVING_ENTITIES, MemoryModuleType.GOLEM_DETECTED_RECENTLY);
    }
 
    public static void checkForNearbyGolem(final LivingEntity body) {
       Optional<List<LivingEntity>> livingEntitiesMemory = body.getBrain().getMemory(MemoryModuleType.NEAREST_LIVING_ENTITIES);
       if (!livingEntitiesMemory.isEmpty()) {
-         boolean golemPresent = livingEntitiesMemory.get().stream().anyMatch(entity -> entity.getType().equals(EntityType.IRON_GOLEM));
+         boolean golemPresent = livingEntitiesMemory.get().stream().anyMatch(entity -> entity.is(EntityType.IRON_GOLEM));
          if (golemPresent) {
             golemDetected(body);
          }

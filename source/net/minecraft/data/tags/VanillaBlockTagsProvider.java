@@ -49,6 +49,9 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.ENDERMAN_HOLDABLE)
          .addTag(BlockTags.SMALL_FLOWERS)
          .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.MUD)
+         .addTag(BlockTags.MOSS_BLOCKS)
+         .addTag(BlockTags.GRASS_BLOCKS)
          .add(
             Blocks.SAND,
             Blocks.RED_SAND,
@@ -108,7 +111,8 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
             Blocks.POTTED_FLOWERING_AZALEA,
             Blocks.POTTED_MANGROVE_PROPAGULE,
             Blocks.POTTED_CHERRY_SAPLING,
-            Blocks.POTTED_TORCHFLOWER
+            Blocks.POTTED_TORCHFLOWER,
+            Blocks.POTTED_GOLDEN_DANDELION
          );
       this.tag(BlockTags.BANNERS)
          .add(
@@ -183,10 +187,6 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
             Blocks.BARRIER
          );
       this.tag(BlockTags.UNDERWATER_BONEMEALS).add(Blocks.SEAGRASS).addTag(BlockTags.CORALS).addTag(BlockTags.WALL_CORALS);
-      this.tag(BlockTags.BAMBOO_PLANTABLE_ON)
-         .addTag(BlockTags.SAND)
-         .addTag(BlockTags.DIRT)
-         .add(Blocks.BAMBOO, Blocks.BAMBOO_SAPLING, Blocks.GRAVEL, Blocks.SUSPICIOUS_GRAVEL);
       this.tag(BlockTags.WALL_SIGNS)
          .add(
             Blocks.OAK_WALL_SIGN,
@@ -315,7 +315,6 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
          .addTag(BlockTags.GOLD_ORES);
       this.tag(BlockTags.PREVENT_MOB_SPAWNING_INSIDE).addTag(BlockTags.RAILS);
       this.tag(BlockTags.UNSTABLE_BOTTOM_CENTER).addTag(BlockTags.FENCE_GATES);
-      this.tag(BlockTags.MUSHROOM_GROW_BLOCK).add(Blocks.MYCELIUM).add(Blocks.PODZOL).add(Blocks.CRIMSON_NYLIUM).add(Blocks.WARPED_NYLIUM);
       this.tag(BlockTags.EDIBLE_FOR_SHEEP).add(Blocks.SHORT_GRASS).add(Blocks.SHORT_DRY_GRASS).add(Blocks.TALL_DRY_GRASS).add(Blocks.FERN);
       this.tag(BlockTags.CAN_GLIDE_THROUGH)
          .add(Blocks.VINE)
@@ -327,6 +326,7 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.INFINIBURN_END).addTag(BlockTags.INFINIBURN_OVERWORLD).add(Blocks.BEDROCK);
       this.tag(BlockTags.STONE_ORE_REPLACEABLES).add(Blocks.STONE).add(Blocks.GRANITE).add(Blocks.DIORITE).add(Blocks.ANDESITE);
       this.tag(BlockTags.DEEPSLATE_ORE_REPLACEABLES).add(Blocks.DEEPSLATE).add(Blocks.TUFF);
+      this.tag(BlockTags.SUBSTRATE_OVERWORLD).addTag(BlockTags.DIRT).addTag(BlockTags.MUD).addTag(BlockTags.MOSS_BLOCKS).addTag(BlockTags.GRASS_BLOCKS);
       this.tag(BlockTags.BASE_STONE_OVERWORLD)
          .add(Blocks.STONE)
          .add(Blocks.GRANITE)
@@ -337,7 +337,7 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.BASE_STONE_NETHER).add(Blocks.NETHERRACK).add(Blocks.BASALT).add(Blocks.BLACKSTONE);
       this.tag(BlockTags.OVERWORLD_CARVER_REPLACEABLES)
          .addTag(BlockTags.BASE_STONE_OVERWORLD)
-         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
          .addTag(BlockTags.SAND)
          .addTag(BlockTags.TERRACOTTA)
          .addTag(BlockTags.IRON_ORES)
@@ -357,10 +357,13 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.NETHER_CARVER_REPLACEABLES)
          .addTag(BlockTags.BASE_STONE_OVERWORLD)
          .addTag(BlockTags.BASE_STONE_NETHER)
-         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
          .addTag(BlockTags.NYLIUM)
          .addTag(BlockTags.WART_BLOCKS)
          .add(Blocks.SOUL_SAND, Blocks.SOUL_SOIL);
+      this.tag(BlockTags.BENEATH_TREE_PODZOL_REPLACEABLE).addTag(BlockTags.SUBSTRATE_OVERWORLD);
+      this.tag(BlockTags.BENEATH_BAMBOO_PODZOL_REPLACEABLE).addTag(BlockTags.SUBSTRATE_OVERWORLD);
+      this.tag(BlockTags.CANNOT_REPLACE_BELOW_TREE_TRUNK).addTag(BlockTags.DIRT).addTag(BlockTags.MUD).addTag(BlockTags.MOSS_BLOCKS).add(Blocks.PODZOL);
       this.tag(BlockTags.CANDLE_CAKES)
          .add(
             Blocks.CANDLE_CAKE,
@@ -399,11 +402,17 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
          .add(Blocks.MOSS_CARPET, Blocks.PALE_MOSS_CARPET, Blocks.SNOW, Blocks.NETHER_SPROUTS, Blocks.WARPED_ROOTS, Blocks.CRIMSON_ROOTS, Blocks.RESIN_CLUMP);
       this.tag(BlockTags.DRIPSTONE_REPLACEABLE).addTag(BlockTags.BASE_STONE_OVERWORLD);
       this.tag(BlockTags.CAVE_VINES).add(Blocks.CAVE_VINES_PLANT).add(Blocks.CAVE_VINES);
-      this.tag(BlockTags.MOSS_REPLACEABLE).addTag(BlockTags.BASE_STONE_OVERWORLD).addTag(BlockTags.CAVE_VINES).addTag(BlockTags.DIRT);
+      this.tag(BlockTags.MOSS_REPLACEABLE)
+         .addTag(BlockTags.BASE_STONE_OVERWORLD)
+         .addTag(BlockTags.CAVE_VINES)
+         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.MUD)
+         .addTag(BlockTags.MOSS_BLOCKS)
+         .addTag(BlockTags.GRASS_BLOCKS);
       this.tag(BlockTags.LUSH_GROUND_REPLACEABLE).addTag(BlockTags.MOSS_REPLACEABLE).add(Blocks.CLAY).add(Blocks.GRAVEL).add(Blocks.SAND);
       this.tag(BlockTags.AZALEA_ROOT_REPLACEABLE)
          .addTag(BlockTags.BASE_STONE_OVERWORLD)
-         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
          .addTag(BlockTags.TERRACOTTA)
          .add(Blocks.RED_SAND)
          .add(Blocks.CLAY)
@@ -411,21 +420,20 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
          .add(Blocks.SAND)
          .add(Blocks.SNOW_BLOCK)
          .add(Blocks.POWDER_SNOW);
-      this.tag(BlockTags.SMALL_DRIPLEAF_PLACEABLE).add(Blocks.CLAY).add(Blocks.MOSS_BLOCK);
-      this.tag(BlockTags.BIG_DRIPLEAF_PLACEABLE)
-         .addTag(BlockTags.SMALL_DRIPLEAF_PLACEABLE)
-         .add(
-            Blocks.DIRT,
-            Blocks.GRASS_BLOCK,
-            Blocks.PODZOL,
-            Blocks.COARSE_DIRT,
-            Blocks.MYCELIUM,
-            Blocks.ROOTED_DIRT,
-            Blocks.MOSS_BLOCK,
-            Blocks.MUD,
-            Blocks.MUDDY_MANGROVE_ROOTS,
-            Blocks.FARMLAND
-         );
+      this.tag(BlockTags.ICE_SPIKE_REPLACEABLE).addTag(BlockTags.SUBSTRATE_OVERWORLD).add(Blocks.SNOW_BLOCK).add(Blocks.ICE);
+      this.tag(BlockTags.FOREST_ROCK_CAN_PLACE_ON).addTag(BlockTags.SUBSTRATE_OVERWORLD).addTag(BlockTags.BASE_STONE_OVERWORLD);
+      this.tag(BlockTags.HUGE_BROWN_MUSHROOM_CAN_PLACE_ON)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
+         .add(Blocks.MYCELIUM)
+         .add(Blocks.PODZOL)
+         .add(Blocks.CRIMSON_NYLIUM)
+         .add(Blocks.WARPED_NYLIUM);
+      this.tag(BlockTags.HUGE_RED_MUSHROOM_CAN_PLACE_ON)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
+         .add(Blocks.MYCELIUM)
+         .add(Blocks.PODZOL)
+         .add(Blocks.CRIMSON_NYLIUM)
+         .add(Blocks.WARPED_NYLIUM);
       this.tag(BlockTags.OCCLUDES_VIBRATION_SIGNALS).addTag(BlockTags.WOOL);
       this.tag(BlockTags.SNOW).add(Blocks.SNOW, Blocks.SNOW_BLOCK, Blocks.POWDER_SNOW);
       this.tag(BlockTags.MINEABLE_WITH_AXE)
@@ -1086,7 +1094,7 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
             Blocks.BLACK_CONCRETE_POWDER
          );
       this.tag(BlockTags.AZALEA_GROWS_ON)
-         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
          .addTag(BlockTags.SAND)
          .addTag(BlockTags.TERRACOTTA)
          .add(Blocks.SNOW_BLOCK)
@@ -1094,7 +1102,7 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.FROG_PREFER_JUMP_TO).add(Blocks.LILY_PAD, Blocks.BIG_DRIPLEAF);
       this.tag(BlockTags.SCULK_REPLACEABLE)
          .addTag(BlockTags.BASE_STONE_OVERWORLD)
-         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
          .addTag(BlockTags.TERRACOTTA)
          .addTag(BlockTags.NYLIUM)
          .addTag(BlockTags.BASE_STONE_NETHER)
@@ -1145,9 +1153,6 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
          );
       this.tag(BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH)
          .add(Blocks.MUD, Blocks.MUDDY_MANGROVE_ROOTS, Blocks.MANGROVE_ROOTS, Blocks.MOSS_CARPET, Blocks.VINE, Blocks.MANGROVE_PROPAGULE, Blocks.SNOW);
-      this.tag(BlockTags.DRY_VEGETATION_MAY_PLACE_ON).addTag(BlockTags.SAND).addTag(BlockTags.TERRACOTTA).addTag(BlockTags.DIRT).add(Blocks.FARMLAND);
-      this.tag(BlockTags.SNOW_LAYER_CANNOT_SURVIVE_ON).add(Blocks.ICE).add(Blocks.PACKED_ICE).add(Blocks.BARRIER);
-      this.tag(BlockTags.SNOW_LAYER_CAN_SURVIVE_ON).add(Blocks.HONEY_BLOCK).add(Blocks.SOUL_SAND).add(Blocks.MUD);
       this.tag(BlockTags.REPLACEABLE_BY_TREES)
          .addTag(BlockTags.LEAVES)
          .addTag(BlockTags.SMALL_FLOWERS)
@@ -1200,6 +1205,62 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
             Blocks.BUSH,
             Blocks.FIREFLY_BUSH
          );
+      this.tag(BlockTags.ENABLES_BUBBLE_COLUMN_DRAG_DOWN).add(Blocks.MAGMA_BLOCK);
+      this.tag(BlockTags.ENABLES_BUBBLE_COLUMN_PUSH_UP).add(Blocks.SOUL_SAND);
+      this.tag(BlockTags.PREVENTS_NEARBY_LEAF_DECAY).addTag(BlockTags.LOGS);
+      this.tag(BlockTags.SUPPORTS_VEGETATION).addTag(BlockTags.SUBSTRATE_OVERWORLD).add(Blocks.FARMLAND);
+      this.tag(BlockTags.SUPPORTS_DRY_VEGETATION).addTag(BlockTags.SAND).addTag(BlockTags.TERRACOTTA).addTag(BlockTags.SUPPORTS_VEGETATION);
+      this.tag(BlockTags.SUPPORTS_CROPS).add(Blocks.FARMLAND);
+      this.tag(BlockTags.SUPPORTS_STEM_CROPS).addTag(BlockTags.SUPPORTS_CROPS);
+      this.tag(BlockTags.SUPPORTS_STEM_FRUIT).addTag(BlockTags.SUPPORTS_VEGETATION);
+      this.tag(BlockTags.SUPPORTS_PUMPKIN_STEM).addTag(BlockTags.SUPPORTS_STEM_CROPS);
+      this.tag(BlockTags.SUPPORTS_MELON_STEM).addTag(BlockTags.SUPPORTS_STEM_CROPS);
+      this.tag(BlockTags.SUPPORTS_PUMPKIN_STEM_FRUIT).addTag(BlockTags.SUPPORTS_STEM_FRUIT);
+      this.tag(BlockTags.SUPPORTS_MELON_STEM_FRUIT).addTag(BlockTags.SUPPORTS_STEM_FRUIT);
+      this.tag(BlockTags.SUPPORTS_SUGAR_CANE).addTag(BlockTags.SUBSTRATE_OVERWORLD).addTag(BlockTags.SAND);
+      this.tag(BlockTags.SUPPORTS_SUGAR_CANE_ADJACENTLY).add(Blocks.FROSTED_ICE);
+      this.tag(BlockTags.SUPPORTS_BAMBOO)
+         .addTag(BlockTags.SAND)
+         .addTag(BlockTags.SUBSTRATE_OVERWORLD)
+         .add(Blocks.BAMBOO, Blocks.BAMBOO_SAPLING, Blocks.GRAVEL, Blocks.SUSPICIOUS_GRAVEL);
+      this.tag(BlockTags.SUPPORTS_SMALL_DRIPLEAF).add(Blocks.CLAY).add(Blocks.MOSS_BLOCK);
+      this.tag(BlockTags.SUPPORTS_BIG_DRIPLEAF)
+         .addTag(BlockTags.SUPPORTS_SMALL_DRIPLEAF)
+         .add(
+            Blocks.DIRT,
+            Blocks.GRASS_BLOCK,
+            Blocks.PODZOL,
+            Blocks.COARSE_DIRT,
+            Blocks.MYCELIUM,
+            Blocks.ROOTED_DIRT,
+            Blocks.MOSS_BLOCK,
+            Blocks.MUD,
+            Blocks.MUDDY_MANGROVE_ROOTS,
+            Blocks.FARMLAND
+         );
+      this.tag(BlockTags.SUPPORTS_CACTUS).addTag(BlockTags.SAND);
+      this.tag(BlockTags.SUPPORTS_CHORUS_PLANT).add(Blocks.END_STONE);
+      this.tag(BlockTags.SUPPORTS_CHORUS_FLOWER).add(Blocks.END_STONE);
+      this.tag(BlockTags.SUPPORTS_NETHER_SPROUTS).addTag(BlockTags.SUPPORTS_VEGETATION).addTag(BlockTags.NYLIUM).add(Blocks.SOUL_SOIL);
+      this.tag(BlockTags.SUPPORTS_AZALEA).addTag(BlockTags.SUPPORTS_VEGETATION).add(Blocks.CLAY);
+      this.tag(BlockTags.SUPPORTS_WARPED_FUNGUS).addTag(BlockTags.SUPPORTS_VEGETATION).addTag(BlockTags.NYLIUM).add(Blocks.MYCELIUM).add(Blocks.SOUL_SOIL);
+      this.tag(BlockTags.SUPPORTS_CRIMSON_FUNGUS).addTag(BlockTags.SUPPORTS_WARPED_FUNGUS);
+      this.tag(BlockTags.SUPPORTS_MANGROVE_PROPAGULE).addTag(BlockTags.SUPPORTS_VEGETATION).add(Blocks.CLAY);
+      this.tag(BlockTags.SUPPORTS_HANGING_MANGROVE_PROPAGULE).add(Blocks.MANGROVE_LEAVES);
+      this.tag(BlockTags.SUPPORTS_NETHER_WART).add(Blocks.SOUL_SAND);
+      this.tag(BlockTags.SUPPORTS_WARPED_ROOTS).addTag(BlockTags.SUPPORTS_VEGETATION).addTag(BlockTags.NYLIUM).add(Blocks.SOUL_SOIL);
+      this.tag(BlockTags.SUPPORTS_CRIMSON_ROOTS).addTag(BlockTags.SUPPORTS_WARPED_ROOTS);
+      this.tag(BlockTags.SUPPORTS_WITHER_ROSE).addTag(BlockTags.SUPPORTS_VEGETATION).add(Blocks.NETHERRACK).add(Blocks.SOUL_SAND).add(Blocks.SOUL_SOIL);
+      this.tag(BlockTags.SUPPORTS_COCOA).addTag(BlockTags.JUNGLE_LOGS);
+      this.tag(BlockTags.SUPPORTS_LILY_PAD).add(Blocks.ICE).add(Blocks.FROSTED_ICE);
+      this.tag(BlockTags.SUPPORTS_FROGSPAWN);
+      this.tag(BlockTags.SUPPORT_OVERRIDE_CACTUS_FLOWER).add(Blocks.CACTUS).add(Blocks.FARMLAND);
+      this.tag(BlockTags.SUPPORT_OVERRIDE_SNOW_LAYER).add(Blocks.HONEY_BLOCK).add(Blocks.SOUL_SAND).add(Blocks.MUD);
+      this.tag(BlockTags.CANNOT_SUPPORT_SEAGRASS).add(Blocks.MAGMA_BLOCK);
+      this.tag(BlockTags.CANNOT_SUPPORT_KELP).add(Blocks.MAGMA_BLOCK);
+      this.tag(BlockTags.CANNOT_SUPPORT_SNOW_LAYER).add(Blocks.ICE).add(Blocks.PACKED_ICE).add(Blocks.BARRIER);
+      this.tag(BlockTags.OVERRIDES_MUSHROOM_LIGHT_REQUIREMENT).add(Blocks.MYCELIUM).add(Blocks.PODZOL).add(Blocks.CRIMSON_NYLIUM).add(Blocks.WARPED_NYLIUM);
+      this.tag(BlockTags.GROWS_CROPS).add(Blocks.FARMLAND);
       this.tag(BlockTags.SNAPS_GOAT_HORN)
          .addTag(BlockTags.OVERWORLD_NATURAL_LOGS)
          .add(Blocks.STONE)
@@ -1211,17 +1272,10 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
       this.tag(BlockTags.INVALID_SPAWN_INSIDE).add(Blocks.END_PORTAL, Blocks.END_GATEWAY);
       this.tag(BlockTags.TRAIL_RUINS_REPLACEABLE).add(Blocks.GRAVEL);
       this.tag(BlockTags.SNIFFER_DIGGABLE_BLOCK)
-         .add(
-            Blocks.DIRT,
-            Blocks.GRASS_BLOCK,
-            Blocks.PODZOL,
-            Blocks.COARSE_DIRT,
-            Blocks.ROOTED_DIRT,
-            Blocks.MOSS_BLOCK,
-            Blocks.PALE_MOSS_BLOCK,
-            Blocks.MUD,
-            Blocks.MUDDY_MANGROVE_ROOTS
-         );
+         .addTag(BlockTags.DIRT)
+         .addTag(BlockTags.MUD)
+         .addTag(BlockTags.MOSS_BLOCKS)
+         .add(Blocks.GRASS_BLOCK, Blocks.PODZOL);
       this.tag(BlockTags.SNIFFER_EGG_HATCH_BOOST).add(Blocks.MOSS_BLOCK);
       this.tag(BlockTags.REPLACEABLE)
          .addAll(registries.lookupOrThrow(Registries.BLOCK).listElements().map(Holder.Reference::value).filter(b -> b.defaultBlockState().canBeReplaced()));
@@ -1239,8 +1293,10 @@ public class VanillaBlockTagsProvider extends IntrinsicHolderTagsProvider<Block>
             Blocks.TORCHFLOWER_CROP,
             Blocks.TORCHFLOWER,
             Blocks.PITCHER_CROP,
-            Blocks.WHEAT
-         );
+            Blocks.WHEAT,
+            Blocks.MOVING_PISTON
+         )
+         .addTag(BlockTags.FENCE_GATES);
       this.tag(BlockTags.CAMEL_SAND_STEP_SOUND_BLOCKS).addTag(BlockTags.SAND).addTag(BlockTags.CONCRETE_POWDER);
       this.tag(BlockTags.HAPPY_GHAST_AVOIDS)
          .add(Blocks.SWEET_BERRY_BUSH, Blocks.CACTUS, Blocks.WITHER_ROSE, Blocks.MAGMA_BLOCK, Blocks.FIRE, Blocks.POINTED_DRIPSTONE);

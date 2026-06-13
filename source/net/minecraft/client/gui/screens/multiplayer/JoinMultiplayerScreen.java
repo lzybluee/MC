@@ -2,7 +2,6 @@ package net.minecraft.client.gui.screens.multiplayer;
 
 import com.mojang.logging.LogUtils;
 import java.util.List;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
@@ -114,9 +113,8 @@ public class JoinMultiplayerScreen extends Screen {
       }).width(74).build());
       bottomFooterButtons.addChild(Button.builder(Component.translatable("selectServer.refresh"), button -> this.refreshServerList()).width(74).build());
       bottomFooterButtons.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).width(74).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      JoinMultiplayerScreen var4 = this;
+      this.layout.visitWidgets(x$0 -> var4.addRenderableWidget(x$0));
       this.repositionElements();
       this.onSelectedChange();
    }

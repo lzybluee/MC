@@ -13,7 +13,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.Optionull;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
@@ -93,7 +93,9 @@ public class PlayerTabOverlay {
       return this.minecraft.player.connection.getListedOnlinePlayers().stream().sorted(PLAYER_COMPARATOR).limit(80L).toList();
    }
 
-   public void render(final GuiGraphics graphics, final int screenWidth, final Scoreboard scoreboard, final @Nullable Objective displayObjective) {
+   public void extractRenderState(
+      final GuiGraphicsExtractor graphics, final int screenWidth, final Scoreboard scoreboard, final @Nullable Objective displayObjective
+   ) {
       List<PlayerInfo> playerInfos = this.getPlayerInfos();
       List<PlayerTabOverlay.ScoreDisplayEntry> entriesToDisplay = new ArrayList<>(playerInfos.size());
       int spacerWidth = this.minecraft.font.width(" ");
@@ -176,7 +178,7 @@ public class PlayerTabOverlay {
 
          for (FormattedCharSequence line : headerLines) {
             int lineWidth = this.minecraft.font.width(line);
-            graphics.drawString(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
+            graphics.text(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
             yyo += 9;
          }
 
@@ -199,20 +201,20 @@ public class PlayerTabOverlay {
             if (showHead) {
                Player playerByUUID = this.minecraft.level.getPlayerByUUID(profile.id());
                boolean flip = playerByUUID != null && AvatarRenderer.isPlayerUpsideDown(playerByUUID);
-               PlayerFaceRenderer.draw(graphics, info.getSkin().body().texturePath(), xo, yo, 8, info.showHat(), flip, -1);
+               PlayerFaceExtractor.extractRenderState(graphics, info.getSkin().body().texturePath(), xo, yo, 8, info.showHat(), flip, -1);
                xo += 9;
             }
 
-            graphics.drawString(this.minecraft.font, displayInfo.name, xo, yo, info.getGameMode() == GameType.SPECTATOR ? -1862270977 : -1);
+            graphics.text(this.minecraft.font, displayInfo.name, xo, yo, info.getGameMode() == GameType.SPECTATOR ? -1862270977 : -1);
             if (displayObjective != null && info.getGameMode() != GameType.SPECTATOR) {
                int left = xo + maxNameWidth + 1;
                int right = left + widthForScore;
                if (right - left > 5) {
-                  this.renderTablistScore(displayObjective, yo, displayInfo, left, right, profile.id(), graphics);
+                  this.extractTablistScore(displayObjective, yo, displayInfo, left, right, profile.id(), graphics);
                }
             }
 
-            this.renderPingIcon(graphics, slotWidth, xo - (showHead ? 9 : 0), yo, info);
+            this.extractPingIcon(graphics, slotWidth, xo - (showHead ? 9 : 0), yo, info);
          }
       }
 
@@ -222,13 +224,13 @@ public class PlayerTabOverlay {
 
          for (FormattedCharSequence line : footerLines) {
             int lineWidth = this.minecraft.font.width(line);
-            graphics.drawString(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
+            graphics.text(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
             yyo += 9;
          }
       }
    }
 
-   protected void renderPingIcon(final GuiGraphics graphics, final int slotWidth, final int xo, final int yo, final PlayerInfo info) {
+   protected void extractPingIcon(final GuiGraphicsExtractor graphics, final int slotWidth, final int xo, final int yo, final PlayerInfo info) {
       Identifier sprite;
       if (info.getLatency() < 0) {
          sprite = PING_UNKNOWN_SPRITE;
@@ -247,23 +249,23 @@ public class PlayerTabOverlay {
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, xo + slotWidth - 11, yo, 10, 8);
    }
 
-   private void renderTablistScore(
+   private void extractTablistScore(
       final Objective displayObjective,
       final int yo,
       final PlayerTabOverlay.ScoreDisplayEntry entry,
       final int left,
       final int right,
       final UUID profileId,
-      final GuiGraphics graphics
+      final GuiGraphicsExtractor graphics
    ) {
       if (displayObjective.getRenderType() == ObjectiveCriteria.RenderType.HEARTS) {
-         this.renderTablistHearts(yo, left, right, profileId, graphics, entry.score);
+         this.extractTablistHearts(yo, left, right, profileId, graphics, entry.score);
       } else if (entry.formattedScore != null) {
-         graphics.drawString(this.minecraft.font, entry.formattedScore, right - entry.scoreWidth, yo, -1);
+         graphics.text(this.minecraft.font, entry.formattedScore, right - entry.scoreWidth, yo, -1);
       }
    }
 
-   private void renderTablistHearts(final int yo, final int left, final int right, final UUID profileId, final GuiGraphics graphics, final int score) {
+   private void extractTablistHearts(final int yo, final int left, final int right, final UUID profileId, final GuiGraphicsExtractor graphics, final int score) {
       PlayerTabOverlay.HealthState health = this.healthStates.computeIfAbsent(profileId, id -> new PlayerTabOverlay.HealthState(score));
       health.update(score, this.gui.getGuiTicks());
       int fullHearts = Mth.positiveCeilDiv(Math.max(score, health.displayedValue()), 2);
@@ -283,7 +285,7 @@ public class PlayerTabOverlay {
                text = Component.literal(Float.toString(hearts));
             }
 
-            graphics.drawString(this.minecraft.font, text, (right + left - this.minecraft.font.width(text)) / 2, yo, ARGB.opaque(color));
+            graphics.text(this.minecraft.font, text, (right + left - this.minecraft.font.width(text)) / 2, yo, ARGB.opaque(color));
          } else {
             Identifier sprite = blink ? HEART_CONTAINER_BLINKING_SPRITE : HEART_CONTAINER_SPRITE;
 

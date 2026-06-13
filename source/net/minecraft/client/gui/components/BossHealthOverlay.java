@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
@@ -54,7 +54,7 @@ public class BossHealthOverlay {
       this.minecraft = minecraft;
    }
 
-   public void render(final GuiGraphics graphics) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics) {
       if (!this.events.isEmpty()) {
          graphics.nextStratum();
          ProfilerFiller profiler = Profiler.get();
@@ -65,12 +65,12 @@ public class BossHealthOverlay {
          for (LerpingBossEvent event : this.events.values()) {
             int xLeft = screenWidth / 2 - 91;
             int yo = yOffset;
-            this.drawBar(graphics, xLeft, yo, event);
+            this.extractBar(graphics, xLeft, yo, event);
             Component msg = event.getName();
             int width = this.minecraft.font.width(msg);
             int x = screenWidth / 2 - width / 2;
             int y = yo - 9;
-            graphics.drawString(this.minecraft.font, msg, x, y, -1);
+            graphics.text(this.minecraft.font, msg, x, y, -1);
             yOffset += 10 + 9;
             if (yOffset >= graphics.guiHeight() / 3) {
                break;
@@ -81,16 +81,16 @@ public class BossHealthOverlay {
       }
    }
 
-   private void drawBar(final GuiGraphics graphics, final int x, final int y, final BossEvent event) {
-      this.drawBar(graphics, x, y, event, 182, BAR_BACKGROUND_SPRITES, OVERLAY_BACKGROUND_SPRITES);
+   private void extractBar(final GuiGraphicsExtractor graphics, final int x, final int y, final BossEvent event) {
+      this.extractBar(graphics, x, y, event, 182, BAR_BACKGROUND_SPRITES, OVERLAY_BACKGROUND_SPRITES);
       int width = Mth.lerpDiscrete(event.getProgress(), 0, 182);
       if (width > 0) {
-         this.drawBar(graphics, x, y, event, width, BAR_PROGRESS_SPRITES, OVERLAY_PROGRESS_SPRITES);
+         this.extractBar(graphics, x, y, event, width, BAR_PROGRESS_SPRITES, OVERLAY_PROGRESS_SPRITES);
       }
    }
 
-   private void drawBar(
-      final GuiGraphics graphics,
+   private void extractBar(
+      final GuiGraphicsExtractor graphics,
       final int x,
       final int y,
       final BossEvent event,

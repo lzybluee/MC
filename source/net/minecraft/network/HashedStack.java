@@ -32,7 +32,7 @@ public interface HashedStack {
    static HashedStack create(final ItemStack itemStack, final HashedPatchMap.HashGenerator hasher) {
       return itemStack.isEmpty()
          ? EMPTY
-         : new HashedStack.ActualItem(itemStack.getItemHolder(), itemStack.getCount(), HashedPatchMap.create(itemStack.getComponentsPatch(), hasher));
+         : new HashedStack.ActualItem(itemStack.typeHolder(), itemStack.getCount(), HashedPatchMap.create(itemStack.getComponentsPatch(), hasher));
    }
 
    record ActualItem(Holder<Item> item, int count, HashedPatchMap components) implements HashedStack {
@@ -51,7 +51,7 @@ public interface HashedStack {
          if (this.count != itemStack.getCount()) {
             return false;
          } else {
-            return !this.item.equals(itemStack.getItemHolder()) ? false : this.components.matches(itemStack.getComponentsPatch(), hasher);
+            return !this.item.equals(itemStack.typeHolder()) ? false : this.components.matches(itemStack.getComponentsPatch(), hasher);
          }
       }
    }

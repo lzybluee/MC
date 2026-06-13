@@ -1,9 +1,9 @@
 package net.minecraft.world.level.block.entity;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,8 +16,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.CachedOutput;
-import net.minecraft.data.structures.NbtToSnbt;
 import net.minecraft.gametest.framework.FailedTestTracker;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestInstance;
@@ -38,7 +36,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.ByIdMap;
-import net.minecraft.util.FileUtil;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -48,11 +45,15 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.TemplatePathFactory;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import org.slf4j.Logger;
 
 public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxRenderable, BeaconBeamOwner {
+   private static final Logger LOGGER = LogUtils.getLogger();
    private static final Component INVALID_TEST_NAME = Component.translatable("test_instance_block.invalid_test");
    private static final List<BeaconBeamOwner.Section> BEAM_CLEARED = List.of();
    private static final List<BeaconBeamOwner.Section> BEAM_RUNNING = List.of(new BeaconBeamOwner.Section(ARGB.color(128, 128, 128)));
@@ -83,8 +84,16 @@ public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxR
       return BoundingBox.fromCorners(corner1, corner2);
    }
 
+   public BoundingBox getTestBoundingBox() {
+      return this.getStructureBoundingBox().inflatedBy(this.getPadding());
+   }
+
    public AABB getStructureBounds() {
       return AABB.of(this.getStructureBoundingBox());
+   }
+
+   public AABB getTestBounds() {
+      return this.getStructureBounds().inflate(this.getPadding());
    }
 
    private static Optional<StructureTemplate> getStructureTemplate(final ServerLevel level, final ResourceKey<GameTestInstance> testKey) {
@@ -170,7 +179,8 @@ public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxR
    }
 
    public BlockPos getStructurePos() {
-      return getStructurePos(this.getBlockPos());
+      int padding = this.getPadding();
+      return getStructurePos(this.getBlockPos().offset(padding, padding, padding));
    }
 
    public static BlockPos getStructurePos(final BlockPos blockPos) {
@@ -179,7 +189,8 @@ public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxR
 
    @Override
    public BoundingBoxRenderable.RenderableBox getRenderableBox() {
-      return new BoundingBoxRenderable.RenderableBox(new BlockPos(STRUCTURE_OFFSET), this.getTransformedSize());
+      int padding = this.getPadding();
+      return new BoundingBoxRenderable.RenderableBox(new BlockPos(STRUCTURE_OFFSET).offset(padding, padding, padding), this.getTransformedSize());
    }
 
    @Override
@@ -245,20 +256,26 @@ public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxR
    }
 
    public static boolean export(final ServerLevel level, final Identifier structureId, final Consumer<Component> feedbackOutput) {
-      Path outputDir = StructureUtils.testStructuresDir;
-      Path inputFile = level.getStructureManager().createAndValidatePathToGeneratedStructure(structureId, ".nbt");
-      Path outputFile = NbtToSnbt.convertStructure(
-         CachedOutput.NO_CACHE, inputFile, structureId.getPath(), outputDir.resolve(structureId.getNamespace()).resolve("structure")
-      );
-      if (outputFile == null) {
-         feedbackOutput.accept(Component.literal("Failed to export " + inputFile).withStyle(ChatFormatting.RED));
+      StructureTemplateManager structureManager = level.getStructureManager();
+      TemplatePathFactory testTemplatePathFactory = structureManager.testTemplates();
+      if (testTemplatePathFactory == null) {
+         feedbackOutput.accept(Component.literal("Test structure exporting is disabled").withStyle(ChatFormatting.RED));
          return true;
       }
 
+      Optional<StructureTemplate> structureTemplate = structureManager.get(structureId);
+      if (structureTemplate.isEmpty()) {
+         feedbackOutput.accept(Component.literal("Could not find structure " + structureId).withStyle(ChatFormatting.RED));
+         return true;
+      }
+
+      Path outputFile = testTemplatePathFactory.createAndValidatePathToStructure(structureId, StructureTemplateManager.RESOURCE_TEXT_STRUCTURE_LISTER);
+
       try {
-         FileUtil.createDirectoriesSafe(outputFile.getParent());
-      } catch (IOException e) {
-         feedbackOutput.accept(Component.literal("Could not create folder " + outputFile.getParent()).withStyle(ChatFormatting.RED));
+         StructureTemplateManager.save(outputFile, structureTemplate.get(), true);
+      } catch (Exception e) {
+         LOGGER.error("Failed to save structure file {} to {}", new Object[]{structureId, outputFile, e});
+         feedbackOutput.accept(Component.literal("Failed to save structure file " + structureId + " to " + outputFile).withStyle(ChatFormatting.RED));
          return true;
       }
 
@@ -310,18 +327,23 @@ public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxR
          .setKnownShape(true);
       BlockPos pos = this.getStartCorner();
       this.forceLoadChunks();
-      StructureUtils.clearSpaceForStructure(this.getStructureBoundingBox(), level);
+      int padding = this.getPadding();
+      StructureUtils.clearSpaceForStructure(this.getTestBoundingBox(), level);
       this.removeEntities();
       template.placeInWorld(level, pos, pos, placeSettings, level.getRandom(), 818);
    }
 
+   private int getPadding() {
+      return this.getTestHolder().map(r -> r.value().padding()).orElse(0);
+   }
+
    private void removeEntities() {
-      this.level.getEntities(null, this.getStructureBounds()).stream().filter(entity -> !(entity instanceof Player)).forEach(Entity::discard);
+      this.level.getEntities(null, this.getTestBounds()).stream().filter(entity -> !(entity instanceof Player)).forEach(Entity::discard);
    }
 
    private void forceLoadChunks() {
       if (this.level instanceof ServerLevel serverLevel) {
-         this.getStructureBoundingBox().intersectingChunks().forEach(pos -> serverLevel.setChunkForced(pos.x, pos.z, true));
+         this.getStructureBoundingBox().intersectingChunks().forEach(pos -> serverLevel.setChunkForced(pos.x(), pos.z(), true));
       }
    }
 

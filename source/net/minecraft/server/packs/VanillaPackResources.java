@@ -1,7 +1,6 @@
 package net.minecraft.server.packs;
 
 import com.mojang.logging.LogUtils;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.server.packs.resources.ResourceProvider;
 import net.minecraft.util.FileUtil;
 import org.jspecify.annotations.Nullable;
@@ -23,20 +23,21 @@ import org.slf4j.Logger;
 public class VanillaPackResources implements PackResources {
    private static final Logger LOGGER = LogUtils.getLogger();
    private final PackLocationInfo location;
-   private final BuiltInMetadata metadata;
+   private final ResourceMetadata builtInMetadata;
+   private @Nullable ResourceMetadata resourceMetadata;
    private final Set<String> namespaces;
    private final List<Path> rootPaths;
    private final Map<PackType, List<Path>> pathsForType;
 
    VanillaPackResources(
       final PackLocationInfo location,
-      final BuiltInMetadata metadata,
+      final ResourceMetadata metadata,
       final Set<String> namespaces,
       final List<Path> rootPaths,
       final Map<PackType, List<Path>> pathsForType
    ) {
       this.location = location;
-      this.metadata = metadata;
+      this.builtInMetadata = metadata;
       this.namespaces = namespaces;
       this.rootPaths = rootPaths;
       this.pathsForType = pathsForType;
@@ -124,18 +125,20 @@ public class VanillaPackResources implements PackResources {
 
    @Override
    public <T> @Nullable T getMetadataSection(final MetadataSectionType<T> metadataSerializer) {
-      IoSupplier<InputStream> resource = this.getRootResource("pack.mcmeta");
-      if (resource != null) {
-         try (InputStream stream = resource.get()) {
-            T result = AbstractPackResources.getMetadataFromStream(metadataSerializer, stream, this.location);
-            if (result != null) {
-               return result;
-            }
-         } catch (IOException var8) {
+      try {
+         if (this.resourceMetadata == null) {
+            this.resourceMetadata = AbstractPackResources.loadMetadata(this);
          }
+
+         Optional<T> section = this.resourceMetadata.getSection(metadataSerializer);
+         if (section.isPresent()) {
+            return section.get();
+         }
+      } catch (Exception e) {
+         LOGGER.warn("Failed to parse vanilla pack metadata", e);
       }
 
-      return this.metadata.get(metadataSerializer);
+      return this.builtInMetadata.getSection(metadataSerializer).orElse(null);
    }
 
    @Override

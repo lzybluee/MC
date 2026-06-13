@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.components.ObjectSelectionList;
@@ -101,9 +100,7 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
       bottomButtons.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).width(100).build());
       this.publisherButton = bottomButtons.addChild(Button.builder(PUBLISHER_BUTTON_NAME, button -> this.onPublish()).width(100).build());
       this.updateButtonStates();
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -208,15 +205,15 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int xm, final int ym, final float a) {
-      super.render(graphics, xm, ym, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+      super.extractRenderState(graphics, xm, ym, a);
       this.currentLink = null;
       if (this.noTemplatesMessage != null) {
-         this.renderMultilineMessage(graphics, xm, ym, this.noTemplatesMessage);
+         this.extractMultilineMessage(graphics, xm, ym, this.noTemplatesMessage);
       }
    }
 
-   private void renderMultilineMessage(final GuiGraphics graphics, final int xm, final int ym, final List<TextRenderingUtils.Line> noTemplatesMessage) {
+   private void extractMultilineMessage(final GuiGraphicsExtractor graphics, final int xm, final int ym, final List<TextRenderingUtils.Line> noTemplatesMessage) {
       for (int i = 0; i < noTemplatesMessage.size(); i++) {
          TextRenderingUtils.Line line = noTemplatesMessage.get(i);
          int lineY = row(4 + i);
@@ -226,7 +223,7 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
          for (TextRenderingUtils.LineSegment segment : line.segments) {
             int color = segment.isLink() ? -13408581 : -1;
             String text = segment.renderedText();
-            graphics.drawString(this.font, text, startX, lineY, color);
+            graphics.text(this.font, text, startX, lineY, color);
             int endX = startX + this.font.width(text);
             if (segment.isLink() && xm > startX && xm < endX && ym > lineY - 3 && ym < lineY + 8) {
                graphics.setTooltipForNextFrame(Component.literal(segment.getLinkUrl()), xm, ym);
@@ -288,7 +285,7 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          graphics.blit(
             RenderPipelines.GUI_TEXTURED,
             RealmsTextureManager.worldTemplate(this.template.id(), this.template.image()),
@@ -308,23 +305,21 @@ public class RealmsSelectWorldTemplateScreen extends RealmsScreen {
          int versionTextWidth = RealmsSelectWorldTemplateScreen.this.font.width(this.template.version());
          if (this.websiteButton != null) {
             this.websiteButton.setPosition(this.getContentRight() - versionTextWidth - this.websiteButton.getWidth() - 10, this.getContentY());
-            this.websiteButton.render(graphics, mouseX, mouseY, a);
+            this.websiteButton.extractRenderState(graphics, mouseX, mouseY, a);
          }
 
          if (this.trailerButton != null) {
             this.trailerButton.setPosition(this.getContentRight() - versionTextWidth - this.trailerButton.getWidth() * 2 - 15, this.getContentY());
-            this.trailerButton.render(graphics, mouseX, mouseY, a);
+            this.trailerButton.extractRenderState(graphics, mouseX, mouseY, a);
          }
 
          int textX = this.getContentX() + 45 + 20;
          int textY = this.getContentY() + 5;
-         graphics.drawString(RealmsSelectWorldTemplateScreen.this.font, this.template.name(), textX, textY, -1);
-         graphics.drawString(RealmsSelectWorldTemplateScreen.this.font, this.template.version(), this.getContentRight() - versionTextWidth - 5, textY, -6250336);
-         graphics.drawString(RealmsSelectWorldTemplateScreen.this.font, this.template.author(), textX, textY + 9 + 5, -6250336);
+         graphics.text(RealmsSelectWorldTemplateScreen.this.font, this.template.name(), textX, textY, -1);
+         graphics.text(RealmsSelectWorldTemplateScreen.this.font, this.template.version(), this.getContentRight() - versionTextWidth - 5, textY, -6250336);
+         graphics.text(RealmsSelectWorldTemplateScreen.this.font, this.template.author(), textX, textY + 9 + 5, -6250336);
          if (!this.template.recommendedPlayers().isBlank()) {
-            graphics.drawString(
-               RealmsSelectWorldTemplateScreen.this.font, this.template.recommendedPlayers(), textX, this.getContentBottom() - 9 / 2 - 5, -8355712
-            );
+            graphics.text(RealmsSelectWorldTemplateScreen.this.font, this.template.recommendedPlayers(), textX, this.getContentBottom() - 9 / 2 - 5, -8355712);
          }
       }
 

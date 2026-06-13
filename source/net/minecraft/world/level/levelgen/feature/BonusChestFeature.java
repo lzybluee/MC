@@ -26,7 +26,7 @@ public class BonusChestFeature extends Feature<NoneFeatureConfiguration> {
    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
       RandomSource random = context.random();
       WorldGenLevel level = context.level();
-      ChunkPos chunkPos = new ChunkPos(context.origin());
+      ChunkPos chunkPos = ChunkPos.containing(context.origin());
       IntArrayList xPoses = Util.toShuffledList(IntStream.rangeClosed(chunkPos.getMinBlockX(), chunkPos.getMaxBlockX()), random);
       IntArrayList zPoses = Util.toShuffledList(IntStream.rangeClosed(chunkPos.getMinBlockZ(), chunkPos.getMaxBlockZ()), random);
       BlockPos.MutableBlockPos mutPos = new BlockPos.MutableBlockPos();

@@ -1,6 +1,7 @@
 package net.minecraft.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Transformation;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -9,18 +10,18 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraft.client.renderer.MaterialMapper;
+import net.minecraft.client.renderer.SpriteMapper;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.blockentity.state.CondiutRenderState;
+import net.minecraft.client.renderer.blockentity.state.ConduitRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.entity.ConduitBlockEntity;
 import net.minecraft.world.phys.Vec3;
@@ -28,22 +29,23 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
 
-public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, CondiutRenderState> {
-   public static final MaterialMapper MAPPER = new MaterialMapper(TextureAtlas.LOCATION_BLOCKS, "entity/conduit");
-   public static final Material SHELL_TEXTURE = MAPPER.defaultNamespaceApply("base");
-   public static final Material ACTIVE_SHELL_TEXTURE = MAPPER.defaultNamespaceApply("cage");
-   public static final Material WIND_TEXTURE = MAPPER.defaultNamespaceApply("wind");
-   public static final Material VERTICAL_WIND_TEXTURE = MAPPER.defaultNamespaceApply("wind_vertical");
-   public static final Material OPEN_EYE_TEXTURE = MAPPER.defaultNamespaceApply("open_eye");
-   public static final Material CLOSED_EYE_TEXTURE = MAPPER.defaultNamespaceApply("closed_eye");
-   private final MaterialSet materials;
+public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, ConduitRenderState> {
+   public static final Transformation DEFAULT_TRANSFORMATION = new Transformation(new Vector3f(0.5F, 0.5F, 0.5F), null, null, null);
+   public static final SpriteMapper MAPPER = new SpriteMapper(TextureAtlas.LOCATION_BLOCKS, "entity/conduit");
+   public static final SpriteId SHELL_TEXTURE = MAPPER.defaultNamespaceApply("base");
+   public static final SpriteId ACTIVE_SHELL_TEXTURE = MAPPER.defaultNamespaceApply("cage");
+   public static final SpriteId WIND_TEXTURE = MAPPER.defaultNamespaceApply("wind");
+   public static final SpriteId VERTICAL_WIND_TEXTURE = MAPPER.defaultNamespaceApply("wind_vertical");
+   public static final SpriteId OPEN_EYE_TEXTURE = MAPPER.defaultNamespaceApply("open_eye");
+   public static final SpriteId CLOSED_EYE_TEXTURE = MAPPER.defaultNamespaceApply("closed_eye");
+   private final SpriteGetter sprites;
    private final ModelPart eye;
    private final ModelPart wind;
    private final ModelPart shell;
    private final ModelPart cage;
 
    public ConduitRenderer(final BlockEntityRendererProvider.Context context) {
-      this.materials = context.materials();
+      this.sprites = context.sprites();
       this.eye = context.bakeLayer(ModelLayers.CONDUIT_EYE);
       this.wind = context.bakeLayer(ModelLayers.CONDUIT_WIND);
       this.shell = context.bakeLayer(ModelLayers.CONDUIT_SHELL);
@@ -80,13 +82,13 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
       return LayerDefinition.create(mesh, 32, 16);
    }
 
-   public CondiutRenderState createRenderState() {
-      return new CondiutRenderState();
+   public ConduitRenderState createRenderState() {
+      return new ConduitRenderState();
    }
 
    public void extractRenderState(
       final ConduitBlockEntity blockEntity,
-      final CondiutRenderState state,
+      final ConduitRenderState state,
       final float partialTicks,
       final Vec3 cameraPosition,
       final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
@@ -99,7 +101,7 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
       state.isHunting = blockEntity.isHunting();
    }
 
-   public void submit(final CondiutRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+   public void submit(final ConduitRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
       if (!state.isActive) {
          poseStack.pushPose();
          poseStack.translate(0.5F, 0.5F, 0.5F);
@@ -110,7 +112,7 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
             SHELL_TEXTURE.renderType(RenderTypes::entitySolid),
             state.lightCoords,
             OverlayTexture.NO_OVERLAY,
-            this.materials.get(SHELL_TEXTURE),
+            this.sprites.get(SHELL_TEXTURE),
             -1,
             state.breakProgress
          );
@@ -126,10 +128,10 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
          submitNodeCollector.submitModelPart(
             this.cage,
             poseStack,
-            ACTIVE_SHELL_TEXTURE.renderType(RenderTypes::entityCutoutNoCull),
+            ACTIVE_SHELL_TEXTURE.renderType(RenderTypes::entityCutout),
             state.lightCoords,
             OverlayTexture.NO_OVERLAY,
-            this.materials.get(ACTIVE_SHELL_TEXTURE),
+            this.sprites.get(ACTIVE_SHELL_TEXTURE),
             -1,
             state.breakProgress
          );
@@ -142,9 +144,9 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
             poseStack.mulPose(new Quaternionf().rotationZ((float) (Math.PI / 2)));
          }
 
-         Material windMaterial = state.animationPhase == 1 ? VERTICAL_WIND_TEXTURE : WIND_TEXTURE;
-         RenderType windRenderType = windMaterial.renderType(RenderTypes::entityCutoutNoCull);
-         TextureAtlasSprite windSprite = this.materials.get(windMaterial);
+         SpriteId windSpriteId = state.animationPhase == 1 ? VERTICAL_WIND_TEXTURE : WIND_TEXTURE;
+         RenderType windRenderType = windSpriteId.renderType(RenderTypes::entityCutout);
+         TextureAtlasSprite windSprite = this.sprites.get(windSpriteId);
          submitNodeCollector.submitModelPart(this.wind, poseStack, windRenderType, state.lightCoords, OverlayTexture.NO_OVERLAY, windSprite);
          poseStack.popPose();
          poseStack.pushPose();
@@ -160,14 +162,9 @@ public class ConduitRenderer implements BlockEntityRenderer<ConduitBlockEntity, 
          poseStack.mulPose(new Quaternionf().rotationZ((float) Math.PI).rotateY((float) Math.PI));
          float scale = 1.3333334F;
          poseStack.scale(1.3333334F, 1.3333334F, 1.3333334F);
-         Material eyeMaterial = state.isHunting ? OPEN_EYE_TEXTURE : CLOSED_EYE_TEXTURE;
+         SpriteId eyeSprite = state.isHunting ? OPEN_EYE_TEXTURE : CLOSED_EYE_TEXTURE;
          submitNodeCollector.submitModelPart(
-            this.eye,
-            poseStack,
-            eyeMaterial.renderType(RenderTypes::entityCutoutNoCull),
-            state.lightCoords,
-            OverlayTexture.NO_OVERLAY,
-            this.materials.get(eyeMaterial)
+            this.eye, poseStack, eyeSprite.renderType(RenderTypes::entityCutout), state.lightCoords, OverlayTexture.NO_OVERLAY, this.sprites.get(eyeSprite)
          );
          poseStack.popPose();
       }

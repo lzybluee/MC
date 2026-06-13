@@ -26,7 +26,7 @@ public class TransientEntitySectionManager<T extends EntityAccess> {
    }
 
    public void startTicking(final ChunkPos pos) {
-      long chunkKey = pos.toLong();
+      long chunkKey = pos.pack();
       this.tickingChunks.add(chunkKey);
       this.sectionStorage.getExistingSectionsInChunk(chunkKey).forEach(section -> {
          Visibility previousStatus = section.updateChunkStatus(Visibility.TICKING);
@@ -37,7 +37,7 @@ public class TransientEntitySectionManager<T extends EntityAccess> {
    }
 
    public void stopTicking(final ChunkPos pos) {
-      long chunkKey = pos.toLong();
+      long chunkKey = pos.pack();
       this.tickingChunks.remove(chunkKey);
       this.sectionStorage.getExistingSectionsInChunk(chunkKey).forEach(section -> {
          Visibility previousStatus = section.updateChunkStatus(Visibility.TRACKED);

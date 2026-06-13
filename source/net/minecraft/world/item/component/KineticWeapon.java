@@ -105,7 +105,7 @@ public record KineticWeapon(
          Vec3 attackerLookVector = livingEntity.getLookAngle();
          double attackerSpeedProjection = attackerLookVector.dot(getMotion(livingEntity));
          float actionFactor = livingEntity instanceof Player ? 1.0F : 0.2F;
-         AttackRange attackRange = livingEntity.entityAttackRange();
+         AttackRange attackRange = livingEntity.getAttackRangeWith(stack);
          double baseMobDamage = livingEntity.getAttributeBaseValue(Attributes.ATTACK_DAMAGE);
          boolean affected = false;
 

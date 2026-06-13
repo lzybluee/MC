@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
@@ -49,23 +50,23 @@ public class DragonEggBlock extends FallingBlock {
 
    private void teleport(final BlockState state, final Level level, final BlockPos pos) {
       WorldBorder worldBorder = level.getWorldBorder();
+      RandomSource random = level.getRandom();
 
       for (int i = 0; i < 1000; i++) {
-         BlockPos testPos = pos.offset(
-            level.random.nextInt(16) - level.random.nextInt(16),
-            level.random.nextInt(8) - level.random.nextInt(8),
-            level.random.nextInt(16) - level.random.nextInt(16)
-         );
-         if (level.getBlockState(testPos).isAir() && worldBorder.isWithinBounds(testPos) && !level.isOutsideBuildHeight(testPos)) {
+         BlockPos testPos = pos.offset(random.nextInt(16) - random.nextInt(16), random.nextInt(8) - random.nextInt(8), random.nextInt(16) - random.nextInt(16));
+         if (level.getBlockState(testPos).isAir()
+            && !level.getBlockState(testPos.below()).isAir()
+            && worldBorder.isWithinBounds(testPos)
+            && level.isInsideBuildHeight(testPos)) {
             if (level.isClientSide()) {
                for (int j = 0; j < 128; j++) {
-                  double d = level.random.nextDouble();
-                  float xa = (level.random.nextFloat() - 0.5F) * 0.2F;
-                  float ya = (level.random.nextFloat() - 0.5F) * 0.2F;
-                  float za = (level.random.nextFloat() - 0.5F) * 0.2F;
-                  double x = Mth.lerp(d, testPos.getX(), pos.getX()) + (level.random.nextDouble() - 0.5) + 0.5;
-                  double y = Mth.lerp(d, testPos.getY(), pos.getY()) + level.random.nextDouble() - 0.5;
-                  double z = Mth.lerp(d, testPos.getZ(), pos.getZ()) + (level.random.nextDouble() - 0.5) + 0.5;
+                  double d = random.nextDouble();
+                  float xa = (random.nextFloat() - 0.5F) * 0.2F;
+                  float ya = (random.nextFloat() - 0.5F) * 0.2F;
+                  float za = (random.nextFloat() - 0.5F) * 0.2F;
+                  double x = Mth.lerp(d, testPos.getX(), pos.getX()) + (random.nextDouble() - 0.5) + 0.5;
+                  double y = Mth.lerp(d, testPos.getY(), pos.getY()) + random.nextDouble() - 0.5;
+                  double z = Mth.lerp(d, testPos.getZ(), pos.getZ()) + (random.nextDouble() - 0.5) + 0.5;
                   level.addParticle(ParticleTypes.PORTAL, x, y, z, xa, ya, za);
                }
             } else {

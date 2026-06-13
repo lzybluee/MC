@@ -82,12 +82,11 @@ public class MapTextureManager implements AutoCloseable {
       private void updateTextureIfNeeded() {
          if (this.requiresUpload) {
             NativeImage pixels = this.texture.getPixels();
-            if (pixels != null) {
-               for (int y = 0; y < 128; y++) {
-                  for (int x = 0; x < 128; x++) {
-                     int i = x + y * 128;
-                     pixels.setPixel(x, y, MapColor.getColorFromPackedId(this.data.colors[i]));
-                  }
+
+            for (int y = 0; y < 128; y++) {
+               for (int x = 0; x < 128; x++) {
+                  int i = x + y * 128;
+                  pixels.setPixel(x, y, MapColor.getColorFromPackedId(this.data.colors[i]));
                }
             }
 

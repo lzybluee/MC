@@ -5,10 +5,10 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.LightningBoltRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LightningBolt;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class LightningBoltRenderer extends EntityRenderer<LightningBolt, LightningBoltRenderState> {
    public LightningBoltRenderer(final EntityRendererProvider.Context context) {
@@ -22,7 +22,7 @@ public class LightningBoltRenderer extends EntityRenderer<LightningBolt, Lightni
       float[] zOffs = new float[8];
       float xOff = 0.0F;
       float zOff = 0.0F;
-      RandomSource random = RandomSource.create(state.seed);
+      RandomSource random = RandomSource.createThreadLocalInstance(state.seed);
 
       for (int h = 7; h >= 0; h--) {
          xOffs[h] = xOff;
@@ -34,10 +34,10 @@ public class LightningBoltRenderer extends EntityRenderer<LightningBolt, Lightni
       float finalXOff = xOff;
       float finalZOff = zOff;
       submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.lightning(), (pose, buffer) -> {
-         Matrix4f poseMatrix = pose.pose();
+         Matrix4fc poseMatrix = pose.pose();
 
          for (int r = 0; r < 4; r++) {
-            RandomSource randomx = RandomSource.create(state.seed);
+            RandomSource randomx = RandomSource.createThreadLocalInstance(state.seed);
 
             for (int p = 0; p < 3; p++) {
                int hs = 7;
@@ -89,7 +89,7 @@ public class LightningBoltRenderer extends EntityRenderer<LightningBolt, Lightni
    }
 
    private static void quad(
-      final Matrix4f pose,
+      final Matrix4fc pose,
       final VertexConsumer buffer,
       final float xo0,
       final float zo0,

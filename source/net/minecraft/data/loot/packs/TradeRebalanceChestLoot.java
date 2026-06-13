@@ -6,6 +6,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.InstrumentTags;
+import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -84,6 +85,7 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
    }
 
    public LootTable.Builder pillagerOutpostLootTable() {
+      HolderLookup.RegistryLookup<Instrument> instruments = this.registries.lookupOrThrow(Registries.INSTRUMENT);
       HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
       return LootTable.lootTable()
          .withPool(LootPool.lootPool().setRolls(UniformGenerator.between(0.0F, 1.0F)).add(LootItem.lootTableItem(Items.CROSSBOW)))
@@ -113,7 +115,7 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
             LootPool.lootPool()
                .setRolls(UniformGenerator.between(0.0F, 1.0F))
                .add(LootItem.lootTableItem(Items.GOAT_HORN))
-               .apply(SetInstrumentFunction.setInstrumentOptions(InstrumentTags.REGULAR_GOAT_HORNS))
+               .apply(SetInstrumentFunction.setInstrumentOptions(instruments.getOrThrow(InstrumentTags.REGULAR_GOAT_HORNS)))
          )
          .withPool(
             LootPool.lootPool()
@@ -198,7 +200,6 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                .add(LootItem.lootTableItem(Items.MUSIC_DISC_OTHERSIDE).setWeight(1))
                .add(LootItem.lootTableItem(Items.COMPASS).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                .add(LootItem.lootTableItem(Items.SCULK_CATALYST).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
-               .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(2))
                .add(
                   LootItem.lootTableItem(Items.DIAMOND_HOE)
                      .setWeight(2)

@@ -20,7 +20,7 @@ public class BlockBasedTestInstance extends GameTestInstance {
       i -> i.group(TestData.CODEC.forGetter(GameTestInstance::info)).apply(i, BlockBasedTestInstance::new)
    );
 
-   public BlockBasedTestInstance(final TestData<Holder<TestEnvironmentDefinition>> testData) {
+   public BlockBasedTestInstance(final TestData<Holder<TestEnvironmentDefinition<?>>> testData) {
       super(testData);
    }
 

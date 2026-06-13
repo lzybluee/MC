@@ -158,7 +158,8 @@ public class ChiseledBookShelfBlock extends BaseEntityBlock implements Selectabl
    @Override
    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
       builder.add(FACING);
-      SLOT_OCCUPIED_PROPERTIES.forEach(xva$0 -> builder.add(xva$0));
+      StateDefinition.Builder var2 = builder;
+      SLOT_OCCUPIED_PROPERTIES.forEach(xva$0 -> var2.add(xva$0));
    }
 
    @Override

@@ -88,14 +88,14 @@ public interface DataProvider {
                jsonWriter.setSerializeNulls(false);
                jsonWriter.setIndent("  ");
                GsonHelper.writeValue(jsonWriter, root, KEY_COMPARATOR);
-            } catch (Throwable var9) {
+            } catch (Throwable t$) {
                try {
                   jsonWriter.close();
-               } catch (Throwable var8) {
-                  var9.addSuppressed(var8);
+               } catch (Throwable x2) {
+                  t$.addSuppressed(x2);
                }
 
-               throw var9;
+               throw t$;
             }
 
             jsonWriter.close();

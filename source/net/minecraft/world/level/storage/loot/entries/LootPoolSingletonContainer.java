@@ -3,15 +3,16 @@ package net.minecraft.world.level.storage.loot.entries;
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.Products.P4;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import net.minecraft.util.Mth;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.functions.FunctionUserBuilder;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
@@ -40,6 +41,9 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
       this.compositeFunction = LootItemFunctions.compose(functions);
    }
 
+   @Override
+   public abstract MapCodec<? extends LootPoolSingletonContainer> codec();
+
    protected static <T extends LootPoolSingletonContainer> P4<Mu<T>, Integer, Integer, List<LootItemCondition>, List<LootItemFunction>> singletonFields(
       final Instance<T> i
    ) {
@@ -51,10 +55,7 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
    @Override
    public void validate(final ValidationContext context) {
       super.validate(context);
-
-      for (int i = 0; i < this.functions.size(); i++) {
-         this.functions.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("functions", i)));
-      }
+      Validatable.validate(context, "functions", this.functions);
    }
 
    protected abstract void createItemStack(Consumer<ItemStack> output, LootContext context);

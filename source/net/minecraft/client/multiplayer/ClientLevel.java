@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
@@ -18,8 +19,10 @@ import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Camera;
+import net.minecraft.client.ClientClockManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockTintCache;
+import net.minecraft.client.color.block.BlockTintSource;
 import net.minecraft.client.gui.screens.WinScreen;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.client.particle.FireworkParticles;
@@ -30,6 +33,7 @@ import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.client.renderer.EndFlashState;
 import net.minecraft.client.renderer.LevelEventHandler;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.resources.sounds.DirectionalSoundInstance;
 import net.minecraft.client.resources.sounds.EntityBoundSoundInstance;
@@ -58,6 +62,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.util.profiling.Zone;
 import net.minecraft.util.profiling.jfr.JvmProfiler;
 import net.minecraft.util.random.WeightedList;
@@ -80,6 +85,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.PotionBrewing;
 import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.item.crafting.RecipeAccess;
+import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ColorResolver;
 import net.minecraft.world.level.ExplosionDamageCalculator;
@@ -116,7 +122,7 @@ import net.minecraft.world.ticks.LevelTickAccess;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel> {
+public class ClientLevel extends Level implements BlockAndTintGetter, CacheSlot.Cleaner<ClientLevel> {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static final Component DEFAULT_QUIT_MESSAGE = Component.translatable("multiplayer.status.quitting");
    private static final double FLUID_PARTICLE_SPAWN_OFFSET = 0.05;
@@ -150,7 +156,6 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
    private final WorldBorder worldBorder = new WorldBorder();
    private final EnvironmentAttributeSystem environmentAttributes;
    private final int seaLevel;
-   private boolean tickDayTime;
    private static final Set<Item> MARKER_PARTICLE_ITEMS = Set.of(Items.BARRIER, Items.LIGHT);
 
    public void handleBlockChangedAck(final int sequence) {
@@ -179,12 +184,12 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       }
    }
 
-   public void syncBlockState(final BlockPos pos, final BlockState state, final Vec3 playerPos) {
+   public void syncBlockState(final BlockPos pos, final BlockState state, final @Nullable Vec3 playerPos) {
       BlockState oldState = this.getBlockState(pos);
       if (oldState != state) {
          this.setBlock(pos, state, 19);
          Player player = this.minecraft.player;
-         if (this == player.level() && player.isColliding(pos, state)) {
+         if (playerPos != null && this == player.level() && player.isColliding(pos, state)) {
             player.absSnapTo(playerPos.x, playerPos.y, playerPos.z);
          }
       }
@@ -234,9 +239,6 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       this.serverSimulationDistance = serverSimulationDistance;
       this.environmentAttributes = this.addEnvironmentAttributeLayers(EnvironmentAttributeSystem.builder()).build();
       this.updateSkyBrightness();
-      if (this.canHaveWeather()) {
-         this.prepareWeather();
-      }
    }
 
    private EnvironmentAttributeSystem.Builder addEnvironmentAttributeLayers(final EnvironmentAttributeSystem.Builder environmentAttributes) {
@@ -283,7 +285,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       }
 
       if (this.endFlashState != null) {
-         this.endFlashState.tick(this.getGameTime());
+         this.endFlashState.tick(this.getDefaultClockTime());
          if (this.endFlashState.flashStartedThisTick() && !(this.minecraft.screen instanceof WinScreen)) {
             this.minecraft
                .getSoundManager()
@@ -313,15 +315,10 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
 
    private void tickTime() {
       this.clientLevelData.setGameTime(this.clientLevelData.getGameTime() + 1L);
-      if (this.tickDayTime) {
-         this.clientLevelData.setDayTime(this.clientLevelData.getDayTime() + 1L);
-      }
    }
 
-   public void setTimeFromServer(final long gameTime, final long dayTime, final boolean tickDayTime) {
+   public void setTimeFromServer(final long gameTime) {
       this.clientLevelData.setGameTime(gameTime);
-      this.clientLevelData.setDayTime(dayTime);
-      this.tickDayTime = tickDayTime;
    }
 
    public Iterable<Entity> entitiesForRendering() {
@@ -348,7 +345,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
    public void tickNonPassenger(final Entity entity) {
       entity.setOldPosAndRot();
       entity.tickCount++;
-      Profiler.get().push(() -> BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString());
+      Profiler.get().push(entity.typeHolder()::getRegisteredName);
       entity.tick();
       Profiler.get().pop();
 
@@ -371,6 +368,15 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       }
    }
 
+   public void update() {
+      ProfilerFiller profiler = Profiler.get();
+      profiler.push("populateLightUpdates");
+      this.pollLightUpdates();
+      profiler.popPush("runLightUpdates");
+      this.getChunkSource().getLightEngine().runLightUpdates();
+      profiler.pop();
+   }
+
    public void unload(final LevelChunk levelChunk) {
       levelChunk.clearAllBlockEntities();
       this.chunkSource.getLightEngine().setLightEnabled(levelChunk.getPos(), false);
@@ -378,7 +384,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
    }
 
    public void onChunkLoaded(final ChunkPos pos) {
-      this.tintCaches.forEach((resolver, cache) -> cache.invalidateForChunk(pos.x, pos.z));
+      this.tintCaches.forEach((resolver, cache) -> cache.invalidateForChunk(pos.x(), pos.z()));
       this.entityStorage.startTicking(pos);
    }
 
@@ -431,7 +437,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
 
    public void animateTick(final int xt, final int yt, final int zt) {
       int r = 32;
-      RandomSource animateRandom = RandomSource.create();
+      RandomSource animateRandom = RandomSource.createThreadLocalInstance();
       Block markerParticleTarget = this.getMarkerParticleTarget();
       BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
@@ -548,6 +554,7 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
          "Server type", () -> this.minecraft.getSingleplayerServer() == null ? "Non-integrated multiplayer server" : "Integrated singleplayer server"
       );
       category.setDetail("Tracked entity count", () -> String.valueOf(this.getEntityCount()));
+      category.setDetail("Client weather", () -> String.format(Locale.ROOT, "Raining: %b, thundering: %b", this.isRaining(), this.isThundering()));
       return category;
    }
 
@@ -661,6 +668,10 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
    @Override
    public TickRateManager tickRateManager() {
       return this.tickRateManager;
+   }
+
+   public ClientClockManager clockManager() {
+      return this.connection.clockManager();
    }
 
    @Override
@@ -852,18 +863,8 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
    }
 
    @Override
-   public float getShade(final Direction direction, final boolean shade) {
-      DimensionType.CardinalLightType type = this.dimensionType().cardinalLightType();
-      if (!shade) {
-         return type == DimensionType.CardinalLightType.NETHER ? 0.9F : 1.0F;
-      }
-
-      return switch (direction) {
-         case DOWN -> type == DimensionType.CardinalLightType.NETHER ? 0.9F : 0.5F;
-         case UP -> type == DimensionType.CardinalLightType.NETHER ? 0.9F : 1.0F;
-         case NORTH, SOUTH -> 0.8F;
-         case WEST, EAST -> 0.6F;
-      };
+   public CardinalLighting cardinalLighting() {
+      return this.dimensionType().cardinalLightType().get();
    }
 
    @Override
@@ -888,12 +889,12 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       while (cursor.advance()) {
          nextPos.set(cursor.nextX(), cursor.nextY(), cursor.nextZ());
          int color = colorResolver.getColor(this.getBiome(nextPos).value(), nextPos.getX(), nextPos.getZ());
-         totalRed += (color & 0xFF0000) >> 16;
-         totalGreen += (color & 0xFF00) >> 8;
-         totalBlue += color & 0xFF;
+         totalRed += ARGB.red(color);
+         totalGreen += ARGB.green(color);
+         totalBlue += ARGB.blue(color);
       }
 
-      return (totalRed / count & 0xFF) << 16 | (totalGreen / count & 0xFF) << 8 | totalBlue / count & 0xFF;
+      return ARGB.color(totalRed / count, totalGreen / count, totalBlue / count);
    }
 
    @Override
@@ -1058,7 +1059,9 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
 
    @Override
    public int getClientLeafTintColor(final BlockPos pos) {
-      return Minecraft.getInstance().getBlockColors().getColor(this.getBlockState(pos), this, pos, 0);
+      BlockState state = this.getBlockState(pos);
+      BlockTintSource tintSource = Minecraft.getInstance().getBlockColors().getTintSource(state, 0);
+      return tintSource != null ? tintSource.colorInWorld(state, this, pos) : -1;
    }
 
    @Override
@@ -1075,8 +1078,6 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
       private final boolean isFlat;
       private LevelData.RespawnData respawnData;
       private long gameTime;
-      private long dayTime;
-      private boolean raining;
       private Difficulty difficulty;
       private boolean difficultyLocked;
 
@@ -1096,37 +1097,13 @@ public class ClientLevel extends Level implements CacheSlot.Cleaner<ClientLevel>
          return this.gameTime;
       }
 
-      @Override
-      public long getDayTime() {
-         return this.dayTime;
-      }
-
       public void setGameTime(final long time) {
          this.gameTime = time;
-      }
-
-      public void setDayTime(final long time) {
-         this.dayTime = time;
       }
 
       @Override
       public void setSpawn(final LevelData.RespawnData respawnData) {
          this.respawnData = respawnData;
-      }
-
-      @Override
-      public boolean isThundering() {
-         return false;
-      }
-
-      @Override
-      public boolean isRaining() {
-         return this.raining;
-      }
-
-      @Override
-      public void setRaining(final boolean raining) {
-         this.raining = raining;
       }
 
       @Override

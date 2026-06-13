@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -35,17 +36,22 @@ public class AzaleaBlock extends VegetationBlock implements BonemealableBlock {
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(Blocks.CLAY) || super.mayPlaceOn(state, level, pos);
+      return state.is(BlockTags.SUPPORTS_AZALEA);
    }
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return level.getFluidState(pos.above()).isEmpty();
+      if (!(level instanceof ServerLevel serverLevel)) {
+         return false;
+      } else {
+         int minHeight = TreeGrower.AZALEA.getMinimumHeight(serverLevel).orElse(0);
+         return level.isInsideBuildHeight(pos.above(minHeight + 2)) && level.getFluidState(pos.above()).isEmpty();
+      }
    }
 
    @Override
    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
-      return level.random.nextFloat() < 0.45;
+      return level.getRandom().nextFloat() < 0.45;
    }
 
    @Override

@@ -30,7 +30,7 @@ public class LakeFeature extends Feature<LakeFeature.Configuration> {
          return false;
       }
 
-      origin = origin.below(4);
+      origin = origin.offset(-8, -4, -8);
       boolean[] grid = new boolean[2048];
       int spots = random.nextInt(4) + 4;
 
@@ -57,7 +57,7 @@ public class LakeFeature extends Feature<LakeFeature.Configuration> {
          }
       }
 
-      BlockState fluid = config.fluid().getState(random, origin);
+      BlockState fluid = config.fluid().getState(level, random, origin);
 
       for (int xx = 0; xx < 16; xx++) {
          for (int zz = 0; zz < 16; zz++) {
@@ -103,7 +103,7 @@ public class LakeFeature extends Feature<LakeFeature.Configuration> {
          }
       }
 
-      BlockState barrier = config.barrier().getState(random, origin);
+      BlockState barrier = config.barrier().getState(level, random, origin);
       if (!barrier.isAir()) {
          for (int xx = 0; xx < 16; xx++) {
             for (int zz = 0; zz < 16; zz++) {

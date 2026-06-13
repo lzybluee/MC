@@ -33,7 +33,7 @@ public abstract class AbstractIllager extends Raider {
       if (super.considersEntityAsAlly(other)) {
          return true;
       } else {
-         return !other.getType().is(EntityTypeTags.ILLAGER_FRIENDS) ? false : this.getTeam() == null && other.getTeam() == null;
+         return !other.is(EntityTypeTags.ILLAGER_FRIENDS) ? false : this.getTeam() == null && other.getTeam() == null;
       }
    }
 

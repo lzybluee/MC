@@ -7,8 +7,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public abstract class CompositeLootItemCondition implements LootItemCondition {
@@ -19,6 +19,9 @@ public abstract class CompositeLootItemCondition implements LootItemCondition {
       this.terms = terms;
       this.composedPredicate = composedPredicate;
    }
+
+   @Override
+   public abstract MapCodec<? extends CompositeLootItemCondition> codec();
 
    protected static <T extends CompositeLootItemCondition> MapCodec<T> createCodec(final Function<List<LootItemCondition>, T> factory) {
       return RecordCodecBuilder.mapCodec(
@@ -37,10 +40,7 @@ public abstract class CompositeLootItemCondition implements LootItemCondition {
    @Override
    public void validate(final ValidationContext output) {
       LootItemCondition.super.validate(output);
-
-      for (int i = 0; i < this.terms.size(); i++) {
-         this.terms.get(i).validate(output.forChild(new ProblemReporter.IndexedFieldPathElement("terms", i)));
-      }
+      Validatable.validate(output, "terms", this.terms);
    }
 
    public abstract static class Builder implements LootItemCondition.Builder {

@@ -136,8 +136,8 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
    public Parrot(final EntityType<? extends Parrot> type, final Level level) {
       super(type, level);
       this.moveControl = new FlyingMoveControl(this, 10, false);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
-      this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE, -1.0F);
       this.setPathfindingMalus(PathType.COCOA, -1.0F);
    }
 
@@ -193,7 +193,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
          this.jukebox = null;
       }
 
-      if (this.level().random.nextInt(400) == 0) {
+      if (this.level().getRandom().nextInt(400) == 0) {
          imitateNearbyMobs(this.level(), this);
       }
 
@@ -230,13 +230,14 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
    }
 
    public static boolean imitateNearbyMobs(final Level level, final Entity entity) {
-      if (entity.isAlive() && !entity.isSilent() && level.random.nextInt(2) == 0) {
+      RandomSource random = level.getRandom();
+      if (entity.isAlive() && !entity.isSilent() && random.nextInt(2) == 0) {
          List<Mob> mobs = level.getEntitiesOfClass(Mob.class, entity.getBoundingBox().inflate(20.0), NOT_PARROT_PREDICATE);
          if (!mobs.isEmpty()) {
-            Mob mob = mobs.get(level.random.nextInt(mobs.size()));
+            Mob mob = mobs.get(random.nextInt(mobs.size()));
             if (!mob.isSilent()) {
                SoundEvent soundEvent = getImitatedSound(mob.getType());
-               level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), soundEvent, entity.getSoundSource(), 0.7F, getPitch(level.random));
+               level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), soundEvent, entity.getSoundSource(), 0.7F, getPitch(random));
                return true;
             }
          }
@@ -324,7 +325,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
 
    @Override
    public @Nullable SoundEvent getAmbientSound() {
-      return getAmbient(this.level(), this.level().random);
+      return getAmbient(this.level(), this.level().getRandom());
    }
 
    public static SoundEvent getAmbient(final Level level, final RandomSource random) {

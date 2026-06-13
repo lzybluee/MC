@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
+import net.minecraft.core.component.DataComponentLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -40,6 +41,7 @@ public class MappedRegistry<T> implements WritableRegistry<T> {
    private Lifecycle registryLifecycle;
    private final Map<TagKey<T>, HolderSet.Named<T>> frozenTags = new IdentityHashMap<>();
    private MappedRegistry.TagSet<T> allTags = MappedRegistry.TagSet.unbound();
+   private @Nullable DataComponentLookup<T> componentLookup;
    private boolean frozen;
    private @Nullable Map<T, Holder.Reference<T>> unregisteredIntrusiveHolders;
 
@@ -265,6 +267,11 @@ public class MappedRegistry<T> implements WritableRegistry<T> {
    }
 
    @Override
+   public DataComponentLookup<T> componentLookup() {
+      return Objects.requireNonNull(this.componentLookup, "Registry not frozen yet");
+   }
+
+   @Override
    public Registry<T> freeze() {
       if (this.frozen) {
          return this;
@@ -294,6 +301,7 @@ public class MappedRegistry<T> implements WritableRegistry<T> {
          throw new IllegalStateException("Unbound tags in registry " + this.key() + ": " + unboundTags);
       }
 
+      this.componentLookup = new DataComponentLookup<>(this.byId);
       this.allTags = MappedRegistry.TagSet.fromMap(this.frozenTags);
       this.refreshTagsInHolders();
       return this;
@@ -325,9 +333,9 @@ public class MappedRegistry<T> implements WritableRegistry<T> {
    }
 
    @Override
-   public void bindTag(final TagKey<T> id, final List<Holder<T>> values) {
+   public void bindTags(final Map<TagKey<T>, List<Holder<T>>> pendingTags) {
       this.validateWrite();
-      this.getOrCreateTagForRegistration(id).bind(values);
+      pendingTags.forEach((id, values) -> this.getOrCreateTagForRegistration((TagKey<T>)id).bind((List<Holder<T>>)values));
    }
 
    private void refreshTagsInHolders() {

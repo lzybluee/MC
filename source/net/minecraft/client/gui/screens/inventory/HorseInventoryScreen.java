@@ -35,11 +35,11 @@ public class HorseInventoryScreen extends AbstractMountInventoryScreen<HorseInve
 
    @Override
    protected boolean shouldRenderSaddleSlot() {
-      return this.mount.canUseSlot(EquipmentSlot.SADDLE) && this.mount.getType().is(EntityTypeTags.CAN_EQUIP_SADDLE);
+      return this.mount.canUseSlot(EquipmentSlot.SADDLE) && this.mount.is(EntityTypeTags.CAN_EQUIP_SADDLE);
    }
 
    @Override
    protected boolean shouldRenderArmorSlot() {
-      return this.mount.canUseSlot(EquipmentSlot.BODY) && (this.mount.getType().is(EntityTypeTags.CAN_WEAR_HORSE_ARMOR) || this.mount instanceof Llama);
+      return this.mount.canUseSlot(EquipmentSlot.BODY) && (this.mount.is(EntityTypeTags.CAN_WEAR_HORSE_ARMOR) || this.mount instanceof Llama);
    }
 }

@@ -9,7 +9,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
@@ -23,7 +24,7 @@ public abstract class FoliagePlacer {
 
    protected static <P extends FoliagePlacer> P2<Mu<P>, IntProvider, IntProvider> foliagePlacerParts(final Instance<P> instance) {
       return instance.group(
-         IntProvider.codec(0, 16).fieldOf("radius").forGetter(p -> p.radius), IntProvider.codec(0, 16).fieldOf("offset").forGetter(p -> p.offset)
+         IntProviders.codec(0, 16).fieldOf("radius").forGetter(p -> p.radius), IntProviders.codec(0, 16).fieldOf("offset").forGetter(p -> p.offset)
       );
    }
 
@@ -35,7 +36,7 @@ public abstract class FoliagePlacer {
    protected abstract FoliagePlacerType<?> type();
 
    public void createFoliage(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,
@@ -48,7 +49,7 @@ public abstract class FoliagePlacer {
    }
 
    protected abstract void createFoliage(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,
@@ -90,7 +91,7 @@ public abstract class FoliagePlacer {
    }
 
    protected void placeLeavesRow(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,
@@ -113,7 +114,7 @@ public abstract class FoliagePlacer {
    }
 
    protected final void placeLeavesRowWithHangingLeavesBelow(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,
@@ -151,7 +152,7 @@ public abstract class FoliagePlacer {
    }
 
    private static boolean tryPlaceExtension(
-      final LevelSimulatedReader level,
+      final WorldGenLevel level,
       final FoliagePlacer.FoliageSetter foliageSetter,
       final RandomSource random,
       final TreeConfiguration config,
@@ -167,15 +168,11 @@ public abstract class FoliagePlacer {
    }
 
    protected static boolean tryPlaceLeaf(
-      final LevelSimulatedReader level,
-      final FoliagePlacer.FoliageSetter foliageSetter,
-      final RandomSource random,
-      final TreeConfiguration config,
-      final BlockPos pos
+      final WorldGenLevel level, final FoliagePlacer.FoliageSetter foliageSetter, final RandomSource random, final TreeConfiguration config, final BlockPos pos
    ) {
       boolean isPersistent = level.isStateAtPosition(pos, state -> state.getValueOrElse(BlockStateProperties.PERSISTENT, false));
       if (!isPersistent && TreeFeature.validTreePos(level, pos)) {
-         BlockState foliageState = config.foliageProvider.getState(random, pos);
+         BlockState foliageState = config.foliageProvider.getState(level, random, pos);
          if (foliageState.hasProperty(BlockStateProperties.WATERLOGGED)) {
             foliageState = foliageState.setValue(
                BlockStateProperties.WATERLOGGED, level.isFluidAtPosition(pos, fluidState -> fluidState.isSourceOfType(Fluids.WATER))

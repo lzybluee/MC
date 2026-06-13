@@ -71,7 +71,7 @@ public class SculkSensorBlock extends BaseEntityBlock implements SimpleWaterlogg
    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
       BlockPos pos = context.getClickedPos();
       FluidState replacedFluidState = context.getLevel().getFluidState(pos);
-      return this.defaultBlockState().setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+      return this.defaultBlockState().setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
    }
 
    @Override
@@ -85,7 +85,7 @@ public class SculkSensorBlock extends BaseEntityBlock implements SimpleWaterlogg
          if (getPhase(state) == SculkSensorPhase.COOLDOWN) {
             level.setBlock(pos, state.setValue(PHASE, SculkSensorPhase.INACTIVE), 3);
             if (!state.getValue(WATERLOGGED)) {
-               level.playSound(null, pos, SoundEvents.SCULK_CLICKING_STOP, SoundSource.BLOCKS, 1.0F, level.random.nextFloat() * 0.2F + 0.8F);
+               level.playSound(null, pos, SoundEvents.SCULK_CLICKING_STOP, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.2F + 0.8F);
             }
          }
       } else {
@@ -97,7 +97,7 @@ public class SculkSensorBlock extends BaseEntityBlock implements SimpleWaterlogg
    public void stepOn(final Level level, final BlockPos pos, final BlockState onState, final Entity entity) {
       if (!level.isClientSide()
          && canActivate(onState)
-         && entity.getType() != EntityType.WARDEN
+         && !entity.is(EntityType.WARDEN)
          && level.getBlockEntity(pos) instanceof SculkSensorBlockEntity sculkSensor
          && level instanceof ServerLevel serverLevel
          && sculkSensor.getVibrationUser().canReceiveVibration(serverLevel, pos, GameEvent.STEP, GameEvent.Context.of(onState))) {
@@ -224,7 +224,7 @@ public class SculkSensorBlock extends BaseEntityBlock implements SimpleWaterlogg
             SoundEvents.SCULK_CLICKING,
             SoundSource.BLOCKS,
             1.0F,
-            level.random.nextFloat() * 0.2F + 0.8F
+            level.getRandom().nextFloat() * 0.2F + 0.8F
          );
       }
    }

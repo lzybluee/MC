@@ -1,6 +1,5 @@
 package net.minecraft.world.entity.animal.sniffer;
 
-import com.mojang.serialization.Dynamic;
 import io.netty.buffer.ByteBuf;
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +43,7 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -60,11 +60,16 @@ import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.phys.Vec3;
 
 public class Sniffer extends Animal {
+   private static final Brain.Provider<Sniffer> BRAIN_PROVIDER = Brain.provider(
+      List.of(MemoryModuleType.SNIFFER_EXPLORED_POSITIONS),
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.NEAREST_PLAYERS, SensorType.FOOD_TEMPTATIONS),
+      var0 -> SnifferAi.getActivities()
+   );
    private static final int DIGGING_PARTICLES_DELAY_TICKS = 1700;
    private static final int DIGGING_PARTICLES_DURATION_TICKS = 6000;
    private static final int DIGGING_PARTICLES_AMOUNT = 30;
    private static final int DIGGING_DROP_SEED_OFFSET_TICKS = 120;
-   private static final int SNIFFER_BABY_AGE_TICKS = 48000;
+   private static final int SNIFFER_BABY_START_AGE = -48000;
    private static final float DIGGING_BB_HEIGHT_OFFSET = 0.4F;
    private static final EntityDimensions DIGGING_DIMENSIONS = EntityDimensions.scalable(EntityType.SNIFFER.getWidth(), EntityType.SNIFFER.getHeight() - 0.4F)
       .withEyeHeight(0.81F);
@@ -84,7 +89,7 @@ public class Sniffer extends Animal {
       super(type, level);
       this.getNavigation().setCanFloat(true);
       this.setPathfindingMalus(PathType.WATER, -1.0F);
-      this.setPathfindingMalus(PathType.DANGER_POWDER_SNOW, -1.0F);
+      this.setPathfindingMalus(PathType.ON_TOP_OF_POWDER_SNOW, -1.0F);
       this.setPathfindingMalus(PathType.DAMAGE_CAUTIOUS, -1.0F);
    }
 
@@ -106,6 +111,11 @@ public class Sniffer extends Animal {
    @Override
    public void onPathfindingDone() {
       this.setPathfindingMalus(PathType.WATER, -1.0F);
+   }
+
+   @Override
+   public int getBabyStartAge() {
+      return -48000;
    }
 
    @Override
@@ -374,7 +384,7 @@ public class Sniffer extends Animal {
 
    @Override
    protected void playEatingSound() {
-      this.level().playSound(null, this, SoundEvents.SNIFFER_EAT, SoundSource.NEUTRAL, 1.0F, Mth.randomBetween(this.level().random, 0.8F, 1.2F));
+      this.level().playSound(null, this, SoundEvents.SNIFFER_EAT, SoundSource.NEUTRAL, 1.0F, Mth.randomBetween(this.level().getRandom(), 0.8F, 1.2F));
    }
 
    private void playSearchingSound() {
@@ -409,11 +419,6 @@ public class Sniffer extends Animal {
    }
 
    @Override
-   public void setBaby(final boolean baby) {
-      this.setAge(baby ? -48000 : 0);
-   }
-
-   @Override
    public AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
       return EntityType.SNIFFER.create(level, EntitySpawnReason.BREEDING);
    }
@@ -434,18 +439,13 @@ public class Sniffer extends Animal {
    }
 
    @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return SnifferAi.makeBrain(this.brainProvider().makeBrain(input));
+   protected Brain<Sniffer> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Sniffer> getBrain() {
-      return (Brain<Sniffer>)super.getBrain();
-   }
-
-   @Override
-   protected Brain.Provider<Sniffer> brainProvider() {
-      return Brain.provider(SnifferAi.MEMORY_TYPES, SnifferAi.SENSOR_TYPES);
+      return super.getBrain();
    }
 
    @Override

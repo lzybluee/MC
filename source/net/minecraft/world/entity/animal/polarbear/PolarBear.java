@@ -89,7 +89,7 @@ public class PolarBear extends Animal implements NeutralMob {
       this.targetSelector.addGoal(1, new PolarBear.PolarBearHurtByTargetGoal());
       this.targetSelector.addGoal(2, new PolarBear.PolarBearAttackPlayersGoal());
       this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isAngryAt));
-      this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Fox.class, 10, true, true, null));
+      this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Fox.class, 10, true, true, (target, level) -> !this.isBaby()));
       this.targetSelector.addGoal(5, new ResetUniversalAngerTargetGoal<>(this, false));
    }
 

@@ -30,6 +30,10 @@ public class SnbtToNbt implements DataProvider {
    private final Iterable<Path> inputFolders;
    private final List<SnbtToNbt.Filter> filters = Lists.newArrayList();
 
+   public SnbtToNbt(final PackOutput output, final Path inputFolder) {
+      this(output, List.of(inputFolder));
+   }
+
    public SnbtToNbt(final PackOutput output, final Iterable<Path> inputFolders) {
       this.output = output;
       this.inputFolders = inputFolders;

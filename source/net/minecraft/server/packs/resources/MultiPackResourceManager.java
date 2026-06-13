@@ -1,7 +1,6 @@
 package net.minecraft.server.packs.resources;
 
 import com.mojang.logging.LogUtils;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +57,7 @@ public class MultiPackResourceManager implements CloseableResourceManager {
    private @Nullable ResourceFilterSection getPackFilterSection(final PackResources pack) {
       try {
          return pack.getMetadataSection(ResourceFilterSection.TYPE);
-      } catch (IOException e) {
+      } catch (Exception e) {
          LOGGER.error("Failed to get filter section from pack {}", pack.packId());
          return null;
       }

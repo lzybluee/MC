@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -19,6 +20,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jspecify.annotations.Nullable;
 
 public final class TreeGrower {
@@ -192,5 +194,17 @@ public final class TreeGrower {
       }
 
       return false;
+   }
+
+   public OptionalInt getMinimumHeight(final ServerLevel level) {
+      ResourceKey<ConfiguredFeature<?, ?>> featureKey = this.tree.orElse(null);
+      if (featureKey == null) {
+         return OptionalInt.empty();
+      }
+
+      Holder<ConfiguredFeature<?, ?>> featureHolder = level.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE).get(featureKey).orElse(null);
+      return featureHolder != null && featureHolder.value().config() instanceof TreeConfiguration treeConfig
+         ? OptionalInt.of(treeConfig.trunkPlacer.getBaseHeight())
+         : OptionalInt.empty();
    }
 }

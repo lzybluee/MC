@@ -21,50 +21,77 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.util.Unit;
+import net.minecraft.world.attribute.EnvironmentAttributeSystem;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.level.gamerules.GameRule;
 import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.timeline.Timeline;
 import org.slf4j.Logger;
 
-public interface TestEnvironmentDefinition {
-   Codec<TestEnvironmentDefinition> DIRECT_CODEC = BuiltInRegistries.TEST_ENVIRONMENT_DEFINITION_TYPE
+public interface TestEnvironmentDefinition<SavedDataType> {
+   Codec<TestEnvironmentDefinition<?>> DIRECT_CODEC = BuiltInRegistries.TEST_ENVIRONMENT_DEFINITION_TYPE
       .byNameCodec()
       .dispatch(TestEnvironmentDefinition::codec, c -> c);
-   Codec<Holder<TestEnvironmentDefinition>> CODEC = RegistryFileCodec.create(Registries.TEST_ENVIRONMENT, DIRECT_CODEC);
+   Codec<Holder<TestEnvironmentDefinition<?>>> CODEC = RegistryFileCodec.create(Registries.TEST_ENVIRONMENT, DIRECT_CODEC);
 
-   static MapCodec<? extends TestEnvironmentDefinition> bootstrap(final Registry<MapCodec<? extends TestEnvironmentDefinition>> registry) {
+   static MapCodec<? extends TestEnvironmentDefinition<?>> bootstrap(final Registry<MapCodec<? extends TestEnvironmentDefinition<?>>> registry) {
       Registry.register(registry, "all_of", TestEnvironmentDefinition.AllOf.CODEC);
       Registry.register(registry, "game_rules", TestEnvironmentDefinition.SetGameRules.CODEC);
-      Registry.register(registry, "time_of_day", TestEnvironmentDefinition.TimeOfDay.CODEC);
+      Registry.register(registry, "clock_time", TestEnvironmentDefinition.ClockTime.CODEC);
+      Registry.register(registry, "timeline_attributes", TestEnvironmentDefinition.Timelines.CODEC);
       Registry.register(registry, "weather", TestEnvironmentDefinition.Weather.CODEC);
       return Registry.register(registry, "function", TestEnvironmentDefinition.Functions.CODEC);
    }
 
-   void setup(ServerLevel level);
+   SavedDataType setup(ServerLevel level);
 
-   default void teardown(final ServerLevel level) {
+   void teardown(final ServerLevel level, final SavedDataType saveData);
+
+   MapCodec<? extends TestEnvironmentDefinition<SavedDataType>> codec();
+
+   static <T> TestEnvironmentDefinition.Activation<T> activate(final TestEnvironmentDefinition<T> environment, final ServerLevel level) {
+      return new TestEnvironmentDefinition.Activation<>(environment.setup(level), environment, level);
    }
 
-   MapCodec<? extends TestEnvironmentDefinition> codec();
+   class Activation<T> {
+      private final T value;
+      private final TestEnvironmentDefinition<T> definition;
+      private final ServerLevel level;
 
-   record AllOf(List<Holder<TestEnvironmentDefinition>> definitions) implements TestEnvironmentDefinition {
+      private Activation(final T value, final TestEnvironmentDefinition<T> definition, final ServerLevel level) {
+         this.value = value;
+         this.definition = definition;
+         this.level = level;
+      }
+
+      public void teardown() {
+         this.definition.teardown(this.level, this.value);
+      }
+   }
+
+   record AllOf(List<Holder<TestEnvironmentDefinition<?>>> definitions)
+      implements TestEnvironmentDefinition<List<? extends TestEnvironmentDefinition.Activation<?>>> {
       public static final MapCodec<TestEnvironmentDefinition.AllOf> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(TestEnvironmentDefinition.CODEC.listOf().fieldOf("definitions").forGetter(TestEnvironmentDefinition.AllOf::definitions))
             .apply(i, TestEnvironmentDefinition.AllOf::new)
       );
 
-      public AllOf(final TestEnvironmentDefinition... defs) {
-         this(Arrays.stream(defs).map(Holder::direct).toList());
+      public AllOf(final TestEnvironmentDefinition<?>... defs) {
+         this(Arrays.stream(defs).map(TestEnvironmentDefinition.AllOf::holder).toList());
       }
 
-      @Override
-      public void setup(final ServerLevel level) {
-         this.definitions.forEach(b -> b.value().setup(level));
+      private static Holder<TestEnvironmentDefinition<?>> holder(final TestEnvironmentDefinition<?> holder) {
+         return Holder.direct(holder);
       }
 
-      @Override
-      public void teardown(final ServerLevel level) {
-         this.definitions.forEach(b -> b.value().teardown(level));
+      public List<? extends TestEnvironmentDefinition.Activation<?>> setup(final ServerLevel level) {
+         return this.definitions.stream().map(b -> TestEnvironmentDefinition.activate(b.value(), level)).toList();
+      }
+
+      public void teardown(final ServerLevel level, final List<? extends TestEnvironmentDefinition.Activation<?>> activations) {
+         activations.reversed().forEach(TestEnvironmentDefinition.Activation::teardown);
       }
 
       @Override
@@ -73,7 +100,34 @@ public interface TestEnvironmentDefinition {
       }
    }
 
-   record Functions(Optional<Identifier> setupFunction, Optional<Identifier> teardownFunction) implements TestEnvironmentDefinition {
+   record ClockTime(Holder<WorldClock> clock, int time) implements TestEnvironmentDefinition<Long> {
+      public static final MapCodec<TestEnvironmentDefinition.ClockTime> CODEC = RecordCodecBuilder.mapCodec(
+         i -> i.group(
+               WorldClock.CODEC.fieldOf("clock").forGetter(TestEnvironmentDefinition.ClockTime::clock),
+               ExtraCodecs.NON_NEGATIVE_INT.fieldOf("time").forGetter(TestEnvironmentDefinition.ClockTime::time)
+            )
+            .apply(i, TestEnvironmentDefinition.ClockTime::new)
+      );
+
+      public Long setup(final ServerLevel level) {
+         MinecraftServer server = level.getServer();
+         long previous = server.clockManager().getTotalTicks(this.clock);
+         server.clockManager().setTotalTicks(this.clock, this.time);
+         return previous;
+      }
+
+      public void teardown(final ServerLevel level, final Long saveData) {
+         MinecraftServer server = level.getServer();
+         server.clockManager().setTotalTicks(this.clock, saveData);
+      }
+
+      @Override
+      public MapCodec<TestEnvironmentDefinition.ClockTime> codec() {
+         return CODEC;
+      }
+   }
+
+   record Functions(Optional<Identifier> setupFunction, Optional<Identifier> teardownFunction) implements TestEnvironmentDefinition<Unit> {
       private static final Logger LOGGER = LogUtils.getLogger();
       public static final MapCodec<TestEnvironmentDefinition.Functions> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
@@ -83,13 +137,12 @@ public interface TestEnvironmentDefinition {
             .apply(i, TestEnvironmentDefinition.Functions::new)
       );
 
-      @Override
-      public void setup(final ServerLevel level) {
+      public Unit setup(final ServerLevel level) {
          this.setupFunction.ifPresent(p -> run(level, p));
+         return Unit.INSTANCE;
       }
 
-      @Override
-      public void teardown(final ServerLevel level) {
+      public void teardown(final ServerLevel level, final Unit saveData) {
          this.teardownFunction.ifPresent(p -> run(level, p));
       }
 
@@ -114,26 +167,26 @@ public interface TestEnvironmentDefinition {
       }
    }
 
-   record SetGameRules(GameRuleMap gameRulesMap) implements TestEnvironmentDefinition {
+   record SetGameRules(GameRuleMap gameRulesMap) implements TestEnvironmentDefinition<GameRuleMap> {
       public static final MapCodec<TestEnvironmentDefinition.SetGameRules> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(GameRuleMap.CODEC.fieldOf("rules").forGetter(TestEnvironmentDefinition.SetGameRules::gameRulesMap))
             .apply(i, TestEnvironmentDefinition.SetGameRules::new)
       );
 
-      @Override
-      public void setup(final ServerLevel level) {
+      public GameRuleMap setup(final ServerLevel level) {
+         GameRuleMap originalState = GameRuleMap.of();
          GameRules gameRules = level.getGameRules();
-         MinecraftServer server = level.getServer();
-         gameRules.setAll(this.gameRulesMap, server);
+         this.gameRulesMap.keySet().forEach(rule -> setFromActive(originalState, (GameRule<?>)rule, gameRules));
+         gameRules.setAll(this.gameRulesMap, level.getServer());
+         return originalState;
       }
 
-      @Override
-      public void teardown(final ServerLevel level) {
-         this.gameRulesMap.keySet().forEach(gameRule -> this.resetRule(level, (GameRule<?>)gameRule));
+      private static <T> void setFromActive(final GameRuleMap map, final GameRule<T> rule, final GameRules rules) {
+         map.set(rule, rules.get(rule));
       }
 
-      private <T> void resetRule(final ServerLevel level, final GameRule<T> gameRule) {
-         level.getGameRules().set(gameRule, gameRule.defaultValue(), level.getServer());
+      public void teardown(final ServerLevel level, final GameRuleMap saveData) {
+         level.getGameRules().setAll(saveData, level.getServer());
       }
 
       @Override
@@ -142,37 +195,55 @@ public interface TestEnvironmentDefinition {
       }
    }
 
-   record TimeOfDay(int time) implements TestEnvironmentDefinition {
-      public static final MapCodec<TestEnvironmentDefinition.TimeOfDay> CODEC = RecordCodecBuilder.mapCodec(
-         i -> i.group(ExtraCodecs.NON_NEGATIVE_INT.fieldOf("time").forGetter(TestEnvironmentDefinition.TimeOfDay::time))
-            .apply(i, TestEnvironmentDefinition.TimeOfDay::new)
+   record Timelines(List<Holder<Timeline>> timelines) implements TestEnvironmentDefinition<EnvironmentAttributeSystem> {
+      public static final MapCodec<TestEnvironmentDefinition.Timelines> CODEC = RecordCodecBuilder.mapCodec(
+         i -> i.group(Timeline.CODEC.listOf().fieldOf("timelines").forGetter(TestEnvironmentDefinition.Timelines::timelines))
+            .apply(i, TestEnvironmentDefinition.Timelines::new)
       );
 
-      @Override
-      public void setup(final ServerLevel level) {
-         level.setDayTime(this.time);
+      public EnvironmentAttributeSystem setup(final ServerLevel level) {
+         EnvironmentAttributeSystem.Builder builder = EnvironmentAttributeSystem.builder().addDefaultLayers(level);
+
+         for (Holder<Timeline> timeline : this.timelines) {
+            builder.addTimelineLayer(timeline, level.clockManager());
+         }
+
+         return level.setEnvironmentAttributes(builder.build());
+      }
+
+      public void teardown(final ServerLevel level, final EnvironmentAttributeSystem saveData) {
+         level.setEnvironmentAttributes(saveData);
       }
 
       @Override
-      public MapCodec<TestEnvironmentDefinition.TimeOfDay> codec() {
+      public MapCodec<TestEnvironmentDefinition.Timelines> codec() {
          return CODEC;
       }
    }
 
-   record Weather(TestEnvironmentDefinition.Weather.Type weather) implements TestEnvironmentDefinition {
+   record Weather(TestEnvironmentDefinition.Weather.Type weather) implements TestEnvironmentDefinition<TestEnvironmentDefinition.Weather.Type> {
       public static final MapCodec<TestEnvironmentDefinition.Weather> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(TestEnvironmentDefinition.Weather.Type.CODEC.fieldOf("weather").forGetter(TestEnvironmentDefinition.Weather::weather))
             .apply(i, TestEnvironmentDefinition.Weather::new)
       );
 
-      @Override
-      public void setup(final ServerLevel level) {
+      public TestEnvironmentDefinition.Weather.Type setup(final ServerLevel level) {
+         TestEnvironmentDefinition.Weather.Type previous;
+         if (level.isThundering()) {
+            previous = TestEnvironmentDefinition.Weather.Type.THUNDER;
+         } else if (level.isRaining()) {
+            previous = TestEnvironmentDefinition.Weather.Type.RAIN;
+         } else {
+            previous = TestEnvironmentDefinition.Weather.Type.CLEAR;
+         }
+
          this.weather.apply(level);
+         return previous;
       }
 
-      @Override
-      public void teardown(final ServerLevel level) {
+      public void teardown(final ServerLevel level, final TestEnvironmentDefinition.Weather.Type saveData) {
          level.resetWeatherCycle();
+         saveData.apply(level);
       }
 
       @Override
@@ -201,7 +272,7 @@ public interface TestEnvironmentDefinition {
          }
 
          void apply(final ServerLevel level) {
-            level.setWeatherParameters(this.clearTime, this.rainTime, this.raining, this.thundering);
+            level.getServer().setWeatherParameters(this.clearTime, this.rainTime, this.raining, this.thundering);
          }
 
          @Override

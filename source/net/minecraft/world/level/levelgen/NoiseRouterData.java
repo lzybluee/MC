@@ -366,13 +366,26 @@ public class NoiseRouterData {
       );
    }
 
-   private static NoiseRouter noNewCaves(
-      final HolderGetter<DensityFunction> functions, final HolderGetter<NormalNoise.NoiseParameters> noises, final DensityFunction slide
-   ) {
-      DensityFunction shiftX = getFunction(functions, SHIFT_X);
-      DensityFunction shiftZ = getFunction(functions, SHIFT_Z);
-      DensityFunction temperature = DensityFunctions.shiftedNoise2d(shiftX, shiftZ, 0.25, noises.getOrThrow(Noises.TEMPERATURE));
-      DensityFunction vegetation = DensityFunctions.shiftedNoise2d(shiftX, shiftZ, 0.25, noises.getOrThrow(Noises.VEGETATION));
+   private static DensityFunction slideOverworld(final boolean isAmplified, final DensityFunction caves) {
+      return slide(caves, -64, 384, isAmplified ? 16 : 80, isAmplified ? 0 : 64, -0.078125, 0, 24, isAmplified ? 0.4 : 0.1171875);
+   }
+
+   private static DensityFunction slideNetherLike(final HolderGetter<DensityFunction> functions, final int minY, final int height) {
+      return slide(getFunction(functions, BASE_3D_NOISE_NETHER), minY, height, 24, 0, 0.9375, -8, 24, 2.5);
+   }
+
+   private static DensityFunction slideEndLike(final DensityFunction caves, final int minY, final int height) {
+      return slide(caves, minY, height, 72, -184, -23.4375, 4, 32, -0.234375);
+   }
+
+   protected static NoiseRouter nether(final HolderGetter<DensityFunction> functions, final HolderGetter<NormalNoise.NoiseParameters> noises) {
+      DensityFunction temperature = DensityFunctions.shiftedNoise2d(
+         DensityFunctions.zero(), DensityFunctions.zero(), 0.25, noises.getOrThrow(Noises.TEMPERATURE_NETHER)
+      );
+      DensityFunction vegetation = DensityFunctions.shiftedNoise2d(
+         DensityFunctions.zero(), DensityFunctions.zero(), 0.25, noises.getOrThrow(Noises.VEGETATION_NETHER)
+      );
+      DensityFunction slide = slideNetherLike(functions, 0, 128);
       DensityFunction fullNoise = postProcess(slide);
       return new NoiseRouter(
          DensityFunctions.zero(),
@@ -393,28 +406,14 @@ public class NoiseRouterData {
       );
    }
 
-   private static DensityFunction slideOverworld(final boolean isAmplified, final DensityFunction caves) {
-      return slide(caves, -64, 384, isAmplified ? 16 : 80, isAmplified ? 0 : 64, -0.078125, 0, 24, isAmplified ? 0.4 : 0.1171875);
-   }
-
-   private static DensityFunction slideNetherLike(final HolderGetter<DensityFunction> functions, final int minY, final int height) {
-      return slide(getFunction(functions, BASE_3D_NOISE_NETHER), minY, height, 24, 0, 0.9375, -8, 24, 2.5);
-   }
-
-   private static DensityFunction slideEndLike(final DensityFunction caves, final int minY, final int height) {
-      return slide(caves, minY, height, 72, -184, -23.4375, 4, 32, -0.234375);
-   }
-
-   protected static NoiseRouter nether(final HolderGetter<DensityFunction> functions, final HolderGetter<NormalNoise.NoiseParameters> noises) {
-      return noNewCaves(functions, noises, slideNetherLike(functions, 0, 128));
-   }
-
-   protected static NoiseRouter caves(final HolderGetter<DensityFunction> functions, final HolderGetter<NormalNoise.NoiseParameters> noises) {
-      return noNewCaves(functions, noises, slideNetherLike(functions, -64, 192));
+   protected static NoiseRouter caves(final HolderGetter<DensityFunction> functions) {
+      DensityFunction slide = slideNetherLike(functions, -64, 192);
+      return simpleRouter(postProcess(slide));
    }
 
    protected static NoiseRouter floatingIslands(final HolderGetter<DensityFunction> functions, final HolderGetter<NormalNoise.NoiseParameters> noises) {
-      return noNewCaves(functions, noises, slideEndLike(getFunction(functions, BASE_3D_NOISE_END), 0, 256));
+      DensityFunction slide = slideEndLike(getFunction(functions, BASE_3D_NOISE_END), 0, 256);
+      return simpleRouter(postProcess(slide));
    }
 
    private static DensityFunction slideEnd(final DensityFunction caves) {
@@ -443,7 +442,7 @@ public class NoiseRouterData {
       );
    }
 
-   protected static NoiseRouter none() {
+   private static NoiseRouter simpleRouter(final DensityFunction fullNoise) {
       return new NoiseRouter(
          DensityFunctions.zero(),
          DensityFunctions.zero(),
@@ -456,11 +455,15 @@ public class NoiseRouterData {
          DensityFunctions.zero(),
          DensityFunctions.zero(),
          DensityFunctions.zero(),
-         DensityFunctions.zero(),
+         fullNoise,
          DensityFunctions.zero(),
          DensityFunctions.zero(),
          DensityFunctions.zero()
       );
+   }
+
+   public static NoiseRouter none() {
+      return simpleRouter(DensityFunctions.zero());
    }
 
    private static DensityFunction splineWithBlending(final DensityFunction spline, final DensityFunction blendingTarget) {

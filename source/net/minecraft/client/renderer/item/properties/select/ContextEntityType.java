@@ -20,7 +20,7 @@ public record ContextEntityType() implements SelectItemModelProperty<ResourceKey
    public @Nullable ResourceKey<EntityType<?>> get(
       final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable LivingEntity owner, final int seed, final ItemDisplayContext displayContext
    ) {
-      return owner == null ? null : owner.getType().builtInRegistryHolder().key();
+      return owner == null ? null : owner.typeHolder().unwrapKey().orElse(null);
    }
 
    @Override

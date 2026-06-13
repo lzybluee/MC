@@ -6,15 +6,15 @@ import java.util.List;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SequentialEntry extends CompositeEntryBase {
-   public static final MapCodec<SequentialEntry> CODEC = createCodec(SequentialEntry::new);
+   public static final MapCodec<SequentialEntry> MAP_CODEC = createCodec(SequentialEntry::new);
 
    SequentialEntry(final List<LootPoolEntryContainer> children, final List<LootItemCondition> conditions) {
       super(children, conditions);
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.SEQUENCE;
+   public MapCodec<SequentialEntry> codec() {
+      return MAP_CODEC;
    }
 
    @Override

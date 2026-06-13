@@ -30,17 +30,20 @@ public class PostChain implements AutoCloseable {
    private final Map<Identifier, PostChainConfig.InternalTarget> internalTargets;
    private final Set<Identifier> externalTargets;
    private final Map<Identifier, RenderTarget> persistentTargets = new HashMap<>();
-   private final CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer;
+   private final Projection projection;
+   private final ProjectionMatrixBuffer projectionMatrixBuffer;
 
    private PostChain(
       final List<PostPass> passes,
       final Map<Identifier, PostChainConfig.InternalTarget> internalTargets,
       final Set<Identifier> externalTargets,
-      final CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer
+      final Projection projection,
+      final ProjectionMatrixBuffer projectionMatrixBuffer
    ) {
       this.passes = passes;
       this.internalTargets = internalTargets;
       this.externalTargets = externalTargets;
+      this.projection = projection;
       this.projectionMatrixBuffer = projectionMatrixBuffer;
    }
 
@@ -49,7 +52,8 @@ public class PostChain implements AutoCloseable {
       final TextureManager textureManager,
       final Set<Identifier> allowedExternalTargets,
       final Identifier id,
-      final CachedOrthoProjectionMatrixBuffer projectionMatrixBuffer
+      final Projection projection,
+      final ProjectionMatrixBuffer projectionMatrixBuffer
    ) throws ShaderManager.CompilationException {
       Stream<Identifier> referencedTargets = config.passes().stream().flatMap(PostChainConfig.Pass::referencedTargets);
       Set<Identifier> referencedExternalTargets = referencedTargets.filter(targetId -> !config.internalTargets().containsKey(targetId))
@@ -66,7 +70,7 @@ public class PostChain implements AutoCloseable {
          passes.add(createPass(textureManager, pass, id.withSuffix("/" + i)));
       }
 
-      return new PostChain(passes.build(), config.internalTargets(), referencedExternalTargets, projectionMatrixBuffer);
+      return new PostChain(passes.build(), config.internalTargets(), referencedExternalTargets, projection, projectionMatrixBuffer);
    }
 
    private static PostPass createPass(final TextureManager textureManager, final PostChainConfig.Pass config, final Identifier id) throws ShaderManager.CompilationException {
@@ -91,8 +95,8 @@ public class PostChain implements AutoCloseable {
       for (PostChainConfig.Input input : config.inputs()) {
          switch (input) {
             case PostChainConfig.TextureInput(String samplerName, Identifier location, int width, int height, boolean bilinear):
-               AbstractTexture texture = textureManager.getTexture(location.withPath(path -> "textures/effect/" + path + ".png"));
-               inputs.add(new PostPass.TextureInput(samplerName, texture, width, height, bilinear));
+               AbstractTexture var41 = textureManager.getTexture(location.withPath(path -> "textures/effect/" + path + ".png"));
+               inputs.add(new PostPass.TextureInput(samplerName, var41, width, height, bilinear));
                break;
             case PostChainConfig.TargetInput(String samplerName, Identifier targetId, boolean useDepthBuffer, boolean bilinear):
                inputs.add(new PostPass.TargetInput(samplerName, targetId, useDepthBuffer, bilinear));
@@ -106,7 +110,8 @@ public class PostChain implements AutoCloseable {
    }
 
    public void addToFrame(final FrameGraphBuilder frame, final int screenWidth, final int screenHeight, final PostChain.TargetBundle providedTargets) {
-      GpuBufferSlice projectionBuffer = this.projectionMatrixBuffer.getBuffer(screenWidth, screenHeight);
+      this.projection.setSize(screenWidth, screenHeight);
+      GpuBufferSlice projectionBuffer = this.projectionMatrixBuffer.getBuffer(this.projection);
       Map<Identifier, ResourceHandle<RenderTarget>> targets = new HashMap<>(this.internalTargets.size() + this.externalTargets.size());
 
       for (Identifier id : this.externalTargets) {

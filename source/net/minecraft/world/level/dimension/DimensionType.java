@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.nio.file.Path;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -18,7 +19,10 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.attribute.EnvironmentAttributeMap;
+import net.minecraft.world.clock.WorldClock;
+import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.timeline.Timeline;
@@ -27,6 +31,7 @@ public record DimensionType(
    boolean hasFixedTime,
    boolean hasSkyLight,
    boolean hasCeiling,
+   boolean hasEnderDragonFight,
    double coordinateScale,
    int minY,
    int height,
@@ -35,9 +40,10 @@ public record DimensionType(
    float ambientLight,
    DimensionType.MonsterSettings monsterSettings,
    DimensionType.Skybox skybox,
-   DimensionType.CardinalLightType cardinalLightType,
+   CardinalLighting.Type cardinalLightType,
    EnvironmentAttributeMap attributes,
-   HolderSet<Timeline> timelines
+   HolderSet<Timeline> timelines,
+   Optional<Holder<WorldClock>> defaultClock
 ) {
    public static final int BITS_FOR_Y = BlockPos.PACKED_Y_LENGTH;
    public static final int MIN_HEIGHT = 16;
@@ -81,6 +87,7 @@ public record DimensionType(
                   Codec.BOOL.optionalFieldOf("has_fixed_time", false).forGetter(DimensionType::hasFixedTime),
                   Codec.BOOL.fieldOf("has_skylight").forGetter(DimensionType::hasSkyLight),
                   Codec.BOOL.fieldOf("has_ceiling").forGetter(DimensionType::hasCeiling),
+                  Codec.BOOL.fieldOf("has_ender_dragon_fight").forGetter(DimensionType::hasEnderDragonFight),
                   Codec.doubleRange(1.0E-5F, 3.0E7).fieldOf("coordinate_scale").forGetter(DimensionType::coordinateScale),
                   Codec.intRange(MIN_Y, MAX_Y).fieldOf("min_y").forGetter(DimensionType::minY),
                   Codec.intRange(16, Y_SIZE).fieldOf("height").forGetter(DimensionType::height),
@@ -89,11 +96,10 @@ public record DimensionType(
                   Codec.FLOAT.fieldOf("ambient_light").forGetter(DimensionType::ambientLight),
                   DimensionType.MonsterSettings.CODEC.forGetter(DimensionType::monsterSettings),
                   DimensionType.Skybox.CODEC.optionalFieldOf("skybox", DimensionType.Skybox.OVERWORLD).forGetter(DimensionType::skybox),
-                  DimensionType.CardinalLightType.CODEC
-                     .optionalFieldOf("cardinal_light", DimensionType.CardinalLightType.DEFAULT)
-                     .forGetter(DimensionType::cardinalLightType),
+                  CardinalLighting.Type.CODEC.optionalFieldOf("cardinal_light", CardinalLighting.Type.DEFAULT).forGetter(DimensionType::cardinalLightType),
                   attributeMapCodec.optionalFieldOf("attributes", EnvironmentAttributeMap.EMPTY).forGetter(DimensionType::attributes),
-                  RegistryCodecs.homogeneousList(Registries.TIMELINE).optionalFieldOf("timelines", HolderSet.empty()).forGetter(DimensionType::timelines)
+                  RegistryCodecs.homogeneousList(Registries.TIMELINE).optionalFieldOf("timelines", HolderSet.empty()).forGetter(DimensionType::timelines),
+                  WorldClock.CODEC.optionalFieldOf("default_clock").forGetter(DimensionType::defaultClock)
                )
                .apply(i, DimensionType::new)
          )
@@ -107,15 +113,7 @@ public record DimensionType(
    }
 
    public static Path getStorageFolder(final ResourceKey<Level> name, final Path baseFolder) {
-      if (name == Level.OVERWORLD) {
-         return baseFolder;
-      } else if (name == Level.END) {
-         return baseFolder.resolve("DIM1");
-      } else {
-         return name == Level.NETHER
-            ? baseFolder.resolve("DIM-1")
-            : baseFolder.resolve("dimensions").resolve(name.identifier().getNamespace()).resolve(name.identifier().getPath());
-      }
+      return name.identifier().resolveAgainst(baseFolder.resolve("dimensions"));
    }
 
    public IntProvider monsterSpawnLightTest() {
@@ -130,27 +128,10 @@ public record DimensionType(
       return this.skybox == DimensionType.Skybox.END;
    }
 
-   public enum CardinalLightType implements StringRepresentable {
-      DEFAULT("default"),
-      NETHER("nether");
-
-      public static final Codec<DimensionType.CardinalLightType> CODEC = StringRepresentable.fromEnum(DimensionType.CardinalLightType::values);
-      private final String name;
-
-      CardinalLightType(final String name) {
-         this.name = name;
-      }
-
-      @Override
-      public String getSerializedName() {
-         return this.name;
-      }
-   }
-
    public record MonsterSettings(IntProvider monsterSpawnLightTest, int monsterSpawnBlockLightLimit) {
       public static final MapCodec<DimensionType.MonsterSettings> CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
-               IntProvider.codec(0, 15).fieldOf("monster_spawn_light_level").forGetter(DimensionType.MonsterSettings::monsterSpawnLightTest),
+               IntProviders.codec(0, 15).fieldOf("monster_spawn_light_level").forGetter(DimensionType.MonsterSettings::monsterSpawnLightTest),
                Codec.intRange(0, 15).fieldOf("monster_spawn_block_light_limit").forGetter(DimensionType.MonsterSettings::monsterSpawnBlockLightLimit)
             )
             .apply(i, DimensionType.MonsterSettings::new)

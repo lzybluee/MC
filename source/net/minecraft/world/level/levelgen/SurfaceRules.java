@@ -353,7 +353,7 @@ public class SurfaceRules {
             this.lastMinSurfaceLevelUpdate = this.lastUpdateXZ;
             int cornerCellX = blockCoordToSurfaceCell(this.blockX);
             int cornerCellZ = blockCoordToSurfaceCell(this.blockZ);
-            long preliminarySurfaceCellOrigin = ChunkPos.asLong(cornerCellX, cornerCellZ);
+            long preliminarySurfaceCellOrigin = ChunkPos.pack(cornerCellX, cornerCellZ);
             if (this.lastPreliminarySurfaceCellOrigin != preliminarySurfaceCellOrigin) {
                this.lastPreliminarySurfaceCellOrigin = preliminarySurfaceCellOrigin;
                this.preliminarySurfaceCache[0] = this.noiseChunk

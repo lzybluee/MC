@@ -32,7 +32,7 @@ public class Main {
          boolean client = allOptions || optionSet.has(clientOption);
          Bootstrap.bootStrap();
          ClientBootstrap.bootstrap();
-         DataGenerator generator = new DataGenerator(output, SharedConstants.getCurrentVersion(), true);
+         DataGenerator generator = new DataGenerator.Cached(output, SharedConstants.getCurrentVersion(), true);
          addClientProviders(generator, client);
          generator.run();
          Util.shutdownExecutors();

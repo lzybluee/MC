@@ -23,7 +23,7 @@ public class WorkAtPoi extends Behavior<Villager> {
          return false;
       }
 
-      if (level.random.nextInt(2) != 0) {
+      if (level.getRandom().nextInt(2) != 0) {
          return false;
       }
 

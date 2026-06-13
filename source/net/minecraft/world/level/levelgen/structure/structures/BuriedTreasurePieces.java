@@ -47,20 +47,20 @@ public class BuriedTreasurePieces {
          while (pos.getY() > level.getMinY()) {
             BlockState currentState = level.getBlockState(pos);
             BlockState belowState = level.getBlockState(pos.below());
-            if (belowState == Blocks.SANDSTONE.defaultBlockState()
-               || belowState == Blocks.STONE.defaultBlockState()
-               || belowState == Blocks.ANDESITE.defaultBlockState()
-               || belowState == Blocks.GRANITE.defaultBlockState()
-               || belowState == Blocks.DIORITE.defaultBlockState()) {
-               BlockState softState = !currentState.isAir() && !this.isLiquid(currentState) ? currentState : Blocks.SAND.defaultBlockState();
+            if (belowState.is(Blocks.SANDSTONE)
+               || belowState.is(Blocks.STONE)
+               || belowState.is(Blocks.ANDESITE)
+               || belowState.is(Blocks.GRANITE)
+               || belowState.is(Blocks.DIORITE)) {
+               BlockState softState = !currentState.isAir() && !isLiquid(currentState) ? currentState : Blocks.SAND.defaultBlockState();
 
                for (Direction direction : Direction.values()) {
                   BlockPos relativePos = pos.relative(direction);
                   BlockState relativeState = level.getBlockState(relativePos);
-                  if (relativeState.isAir() || this.isLiquid(relativeState)) {
+                  if (relativeState.isAir() || isLiquid(relativeState)) {
                      BlockPos belowRelativePos = relativePos.below();
                      BlockState belowRelativeState = level.getBlockState(belowRelativePos);
-                     if ((belowRelativeState.isAir() || this.isLiquid(belowRelativeState)) && direction != Direction.UP) {
+                     if ((belowRelativeState.isAir() || isLiquid(belowRelativeState)) && direction != Direction.UP) {
                         level.setBlock(relativePos, belowState, 3);
                      } else {
                         level.setBlock(relativePos, softState, 3);
@@ -77,8 +77,8 @@ public class BuriedTreasurePieces {
          }
       }
 
-      private boolean isLiquid(final BlockState blockState) {
-         return blockState == Blocks.WATER.defaultBlockState() || blockState == Blocks.LAVA.defaultBlockState();
+      private static boolean isLiquid(final BlockState blockState) {
+         return blockState.is(Blocks.WATER) || blockState.is(Blocks.LAVA);
       }
    }
 }

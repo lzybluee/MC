@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.item.HoneycombItem;
@@ -195,10 +196,11 @@ public class LightningBolt extends Entity {
          }
 
          BlockPos.MutableBlockPos workPos = struckPos.mutable();
-         int strikesCount = level.random.nextInt(3) + 3;
+         RandomSource random = level.getRandom();
+         int strikesCount = random.nextInt(3) + 3;
 
          for (int strike = 0; strike < strikesCount; strike++) {
-            int stepCount = level.random.nextInt(8) + 1;
+            int stepCount = random.nextInt(8) + 1;
             randomWalkCleaningCopper(level, struckPos, workPos, stepCount);
          }
       }
@@ -220,7 +222,7 @@ public class LightningBolt extends Entity {
    }
 
    private static Optional<BlockPos> randomStepCleaningCopper(final Level level, final BlockPos pos) {
-      for (BlockPos candidate : BlockPos.randomInCube(level.random, 10, pos, 1)) {
+      for (BlockPos candidate : BlockPos.randomInCube(level.getRandom(), 10, pos, 1)) {
          BlockState state = level.getBlockState(candidate);
          if (state.getBlock() instanceof WeatheringCopper) {
             WeatheringCopper.getPrevious(state).ifPresent(s -> level.setBlockAndUpdate(candidate, s));

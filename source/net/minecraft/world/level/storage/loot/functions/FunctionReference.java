@@ -7,16 +7,16 @@ import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.slf4j.Logger;
 
 public class FunctionReference extends LootItemConditionalFunction {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final MapCodec<FunctionReference> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<FunctionReference> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i).and(ResourceKey.codec(Registries.ITEM_MODIFIER).fieldOf("name").forGetter(f -> f.name)).apply(i, FunctionReference::new)
    );
    private final ResourceKey<LootItemFunction> name;
@@ -27,25 +27,14 @@ public class FunctionReference extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<FunctionReference> getType() {
-      return LootItemFunctions.REFERENCE;
+   public MapCodec<FunctionReference> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public void validate(final ValidationContext context) {
-      if (!context.allowsReferences()) {
-         context.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(this.name));
-      } else if (context.hasVisitedElement(this.name)) {
-         context.reportProblem(new ValidationContext.RecursiveReferenceProblem(this.name));
-      } else {
-         super.validate(context);
-         context.resolver()
-            .get(this.name)
-            .ifPresentOrElse(
-               function -> function.value().validate(context.enterElement(new ProblemReporter.ElementReferencePathElement(this.name), this.name)),
-               () -> context.reportProblem(new ValidationContext.MissingReferenceProblem(this.name))
-            );
-      }
+      super.validate(context);
+      Validatable.validateReference(context, this.name);
    }
 
    @Override

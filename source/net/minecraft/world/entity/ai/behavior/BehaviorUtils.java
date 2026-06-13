@@ -41,7 +41,7 @@ public class BehaviorUtils {
    }
 
    public static boolean targetIsValid(final Brain<?> brain, final MemoryModuleType<? extends LivingEntity> memory, final EntityType<?> targetType) {
-      return targetIsValid(brain, memory, entity -> entity.getType() == targetType);
+      return targetIsValid(brain, memory, entity -> entity.is(targetType));
    }
 
    private static boolean targetIsValid(

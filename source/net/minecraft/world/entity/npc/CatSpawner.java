@@ -26,7 +26,7 @@ public class CatSpawner implements CustomSpawner {
          this.nextTick = 1200;
          Player player = level.getRandomPlayer();
          if (player != null) {
-            RandomSource random = level.random;
+            RandomSource random = level.getRandom();
             int x = (8 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
             int z = (8 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
             BlockPos spawnPos = player.blockPosition().offset(x, 0, z);

@@ -16,7 +16,7 @@ public class SpearRetreat extends Behavior<PathfinderMob> {
    public static final int MIN_COOLDOWN_DISTANCE = 9;
    public static final int MAX_COOLDOWN_DISTANCE = 11;
    public static final int MAX_FLEEING_TIME = 100;
-   double speedModifierWhenRepositioning;
+   private final double speedModifierWhenRepositioning;
 
    public SpearRetreat(final double speedModifierWhenRepositioning) {
       super(Map.of(MemoryModuleType.SPEAR_STATUS, MemoryStatus.VALUE_PRESENT), 100);

@@ -15,7 +15,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.AbstractHugeMushroomFeature;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -81,7 +83,7 @@ public class MushroomBlock extends VegetationBlock implements BonemealableBlock 
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockPos belowPos = pos.below();
       BlockState below = level.getBlockState(belowPos);
-      return below.is(BlockTags.MUSHROOM_GROW_BLOCK) ? true : level.getRawBrightness(pos, 0) < 13 && this.mayPlaceOn(below, level, belowPos);
+      return below.is(BlockTags.OVERRIDES_MUSHROOM_LIGHT_REQUIREMENT) ? true : level.getRawBrightness(pos, 0) < 13 && this.mayPlaceOn(below, level, belowPos);
    }
 
    public boolean growMushroom(final ServerLevel level, final BlockPos pos, final BlockState state, final RandomSource random) {
@@ -101,7 +103,25 @@ public class MushroomBlock extends VegetationBlock implements BonemealableBlock 
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return true;
+      if (level instanceof ServerLevel serverLevel) {
+         Optional<? extends Holder<ConfiguredFeature<?, ?>>> featureHolder = serverLevel.registryAccess()
+            .lookupOrThrow(Registries.CONFIGURED_FEATURE)
+            .get(this.feature);
+         if (featureHolder.isPresent()) {
+            ConfiguredFeature<?, ?> configuredFeature = featureHolder.get().value();
+            if (configuredFeature.feature() instanceof AbstractHugeMushroomFeature
+               && configuredFeature.config() instanceof HugeMushroomFeatureConfiguration config) {
+               int minHeight = 4 + config.foliageRadius();
+               return level.isInsideBuildHeight(pos.above(minHeight));
+            } else {
+               return false;
+            }
+         } else {
+            return false;
+         }
+      } else {
+         return false;
+      }
    }
 
    @Override

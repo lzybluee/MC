@@ -87,7 +87,7 @@ public class BambooStalkBlock extends Block implements BonemealableBlock {
       }
 
       BlockState belowState = context.getLevel().getBlockState(context.getClickedPos().below());
-      if (belowState.is(BlockTags.BAMBOO_PLANTABLE_ON)) {
+      if (belowState.is(BlockTags.SUPPORTS_BAMBOO)) {
          if (belowState.is(Blocks.BAMBOO_SAPLING)) {
             return this.defaultBlockState().setValue(AGE, 0);
          } else if (belowState.is(Blocks.BAMBOO)) {
@@ -128,7 +128,7 @@ public class BambooStalkBlock extends Block implements BonemealableBlock {
 
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
-      return level.getBlockState(pos.below()).is(BlockTags.BAMBOO_PLANTABLE_ON);
+      return level.getBlockState(pos.below()).is(BlockTags.SUPPORTS_BAMBOO);
    }
 
    @Override
@@ -155,7 +155,11 @@ public class BambooStalkBlock extends Block implements BonemealableBlock {
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
       int heightAbove = this.getHeightAboveUpToMax(level, pos);
       int heightBelow = this.getHeightBelowUpToMax(level, pos);
-      return heightAbove + heightBelow + 1 < 16 && level.getBlockState(pos.above(heightAbove)).getValue(STAGE) != 1;
+      BlockPos growthPos = pos.above(heightAbove + 1);
+      return heightAbove + heightBelow + 1 < 16
+         && level.getBlockState(pos.above(heightAbove)).getValue(STAGE) != 1
+         && level.isInsideBuildHeight(growthPos)
+         && level.isEmptyBlock(growthPos);
    }
 
    @Override
@@ -173,7 +177,8 @@ public class BambooStalkBlock extends Block implements BonemealableBlock {
       for (int i = 0; i < newBamboo; i++) {
          BlockPos topPos = pos.above(heightAbove);
          BlockState topState = level.getBlockState(topPos);
-         if (totalHeight >= 16 || topState.getValue(STAGE) == 1 || !level.isEmptyBlock(topPos.above())) {
+         BlockPos growthPos = topPos.above();
+         if (totalHeight >= 16 || topState.getValue(STAGE) == 1 || !level.isEmptyBlock(growthPos) || level.isOutsideBuildHeight(growthPos)) {
             return;
          }
 

@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Phantom;
 
 public class PhantomRenderer extends MobRenderer<Phantom, PhantomRenderState, PhantomModel> {
-   private static final Identifier PHANTOM_LOCATION = Identifier.withDefaultNamespace("textures/entity/phantom.png");
+   private static final Identifier PHANTOM_LOCATION = Identifier.withDefaultNamespace("textures/entity/phantom/phantom.png");
 
    public PhantomRenderer(final EntityRendererProvider.Context context) {
       super(context, new PhantomModel(context.bakeLayer(ModelLayers.PHANTOM)), 0.75F);

@@ -7,7 +7,6 @@ import java.util.function.Consumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.DecoratedPotRenderer;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.PotDecorations;
 import org.joml.Vector3fc;
@@ -26,7 +25,6 @@ public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDeco
 
    public void submit(
       final @Nullable PotDecorations decorations,
-      final ItemDisplayContext type,
       final PoseStack poseStack,
       final SubmitNodeCollector submitNodeCollector,
       final int lightCoords,
@@ -43,7 +41,7 @@ public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDeco
       this.decoratedPotRenderer.getExtents(output);
    }
 
-   public record Unbaked() implements SpecialModelRenderer.Unbaked {
+   public record Unbaked() implements SpecialModelRenderer.Unbaked<PotDecorations> {
       public static final MapCodec<DecoratedPotSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new DecoratedPotSpecialRenderer.Unbaked());
 
       @Override
@@ -51,8 +49,7 @@ public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDeco
          return MAP_CODEC;
       }
 
-      @Override
-      public SpecialModelRenderer<?> bake(final SpecialModelRenderer.BakingContext context) {
+      public DecoratedPotSpecialRenderer bake(final SpecialModelRenderer.BakingContext context) {
          return new DecoratedPotSpecialRenderer(new DecoratedPotRenderer(context));
       }
    }

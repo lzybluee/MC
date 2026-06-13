@@ -13,19 +13,22 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletionException;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
-import net.minecraft.core.LayeredRegistryAccess;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.RegistryLayer;
-import net.minecraft.world.level.storage.PrimaryLevelData;
+import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.storage.LevelDataAndDimensions;
+import net.minecraft.world.level.storage.LevelStorageSource;
+import net.minecraft.world.level.storage.WorldData;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -43,20 +46,22 @@ public class RealmsCreateWorldFlow {
       CreateWorldScreen.openFresh(
          minecraft,
          () -> minecraft.setScreen(returnScreen),
-         (createWorldScreen, finalLayers, worldData, tempDataPackDir) -> {
+         (createWorldScreen, finalLayers, worldDataAndGenSettings, gameRules, tempDataPackDir) -> {
             Path worldFolder;
             try {
-               worldFolder = createTemporaryWorldFolder(finalLayers, worldData, tempDataPackDir);
+               worldFolder = createTemporaryWorldFolder(finalLayers.compositeAccess(), worldDataAndGenSettings, gameRules, tempDataPackDir);
             } catch (IOException e) {
-               LOGGER.warn("Failed to create temporary world folder.");
+               LOGGER.warn("Failed to create temporary world folder", e);
                minecraft.setScreen(new RealmsGenericErrorScreen(Component.translatable("mco.create.world.failed"), lastScreen));
                return true;
             }
 
             RealmsWorldOptions realmsWorldOptions = RealmsWorldOptions.createFromSettings(
-               worldData.getLevelSettings(), SharedConstants.getCurrentVersion().name()
+               worldDataAndGenSettings.data().getLevelSettings(), SharedConstants.getCurrentVersion().name()
             );
-            RealmsSlot realmsSlot = new RealmsSlot(slot, realmsWorldOptions, List.of(RealmsSetting.hardcoreSetting(worldData.getLevelSettings().hardcore())));
+            RealmsSlot realmsSlot = new RealmsSlot(
+               slot, realmsWorldOptions, List.of(RealmsSetting.hardcoreSetting(worldDataAndGenSettings.data().isHardcore()))
+            );
             RealmsWorldUpload realmsWorldUpload = new RealmsWorldUpload(
                worldFolder, realmsSlot, minecraft.getUser(), realmsServer.id, RealmsWorldUploadStatusTracker.noOp()
             );
@@ -108,18 +113,27 @@ public class RealmsCreateWorldFlow {
    }
 
    private static Path createTemporaryWorldFolder(
-      final LayeredRegistryAccess<RegistryLayer> finalLayers, final PrimaryLevelData worldData, final @Nullable Path tempDataPackDir
+      final RegistryAccess registryAccess,
+      final LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings,
+      final Optional<GameRules> gameRulesOpt,
+      final @Nullable Path tempDataPackDir
    ) throws IOException {
       Path worldFolder = Files.createTempDirectory("minecraft_realms_world_upload");
       if (tempDataPackDir != null) {
          Files.move(tempDataPackDir, worldFolder.resolve("datapacks"));
       }
 
-      CompoundTag dataTag = worldData.createTag(finalLayers.compositeAccess(), null);
+      WorldData worldData = worldDataAndGenSettings.data();
+      CompoundTag dataTag = worldData.createTag(null);
       CompoundTag root = new CompoundTag();
       root.put("Data", dataTag);
       Path levelDat = Files.createFile(worldFolder.resolve("level.dat"));
       NbtIo.writeCompressed(root, levelDat);
+      LevelStorageSource.writeWorldGenSettings(registryAccess, worldFolder, worldDataAndGenSettings.genSettings());
+      if (gameRulesOpt.isPresent()) {
+         LevelStorageSource.writeGameRules(worldData, worldFolder, gameRulesOpt.get());
+      }
+
       return worldFolder;
    }
 }

@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import java.util.OptionalInt;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 
@@ -80,14 +81,14 @@ public record BiomeSpecialEffects(
       DARK_FOREST("dark_forest") {
          @Override
          public int modifyColor(final double x, final double z, final int baseColor) {
-            return (baseColor & 16711422) + 2634762 >> 1;
+            return ARGB.opaque((baseColor & 16711422) + 2634762 >> 1);
          }
       },
       SWAMP("swamp") {
          @Override
          public int modifyColor(final double x, final double z, final int baseColor) {
             double groundValue = Biome.BIOME_INFO_NOISE.getValue(x * 0.0225, z * 0.0225, false);
-            return groundValue < -0.1 ? 5011004 : 6975545;
+            return groundValue < -0.1 ? -11766212 : -9801671;
          }
       };
 

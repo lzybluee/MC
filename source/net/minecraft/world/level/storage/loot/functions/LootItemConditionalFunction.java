@@ -2,15 +2,16 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.Products.P1;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
@@ -25,7 +26,7 @@ public abstract class LootItemConditionalFunction implements LootItemFunction {
    }
 
    @Override
-   public abstract LootItemFunctionType<? extends LootItemConditionalFunction> getType();
+   public abstract MapCodec<? extends LootItemConditionalFunction> codec();
 
    protected static <T extends LootItemConditionalFunction> P1<Mu<T>, List<LootItemCondition>> commonFields(final Instance<T> i) {
       return i.group(LootItemCondition.DIRECT_CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(f -> f.predicates));
@@ -40,10 +41,7 @@ public abstract class LootItemConditionalFunction implements LootItemFunction {
    @Override
    public void validate(final ValidationContext context) {
       LootItemFunction.super.validate(context);
-
-      for (int i = 0; i < this.predicates.size(); i++) {
-         this.predicates.get(i).validate(context.forChild(new ProblemReporter.IndexedFieldPathElement("conditions", i)));
-      }
+      Validatable.validate(context, "conditions", this.predicates);
    }
 
    protected static LootItemConditionalFunction.Builder<?> simpleBuilder(final Function<List<LootItemCondition>, LootItemFunction> constructor) {

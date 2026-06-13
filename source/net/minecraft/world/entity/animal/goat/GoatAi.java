@@ -3,11 +3,12 @@ package net.minecraft.world.entity.animal.goat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -48,8 +49,8 @@ public class GoatAi {
    private static final UniformInt TIME_BETWEEN_RAMS_SCREAMER = UniformInt.of(100, 300);
    private static final TargetingConditions RAM_TARGET_CONDITIONS = TargetingConditions.forCombat()
       .selector(
-         (target, level) -> !target.getType().equals(EntityType.GOAT)
-            && (level.getGameRules().get(GameRules.MOB_GRIEFING) || !target.getType().equals(EntityType.ARMOR_STAND))
+         (target, level) -> !target.is(EntityType.GOAT)
+            && (level.getGameRules().get(GameRules.MOB_GRIEFING) || !target.is(EntityType.ARMOR_STAND))
             && level.getWorldBorder().isWithinBounds(target.getBoundingBox())
       );
    private static final float SPEED_MULTIPLIER_WHEN_RAMMING = 3.0F;
@@ -62,19 +63,12 @@ public class GoatAi {
       body.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, TIME_BETWEEN_RAMS.sample(random));
    }
 
-   protected static Brain<?> makeBrain(final Brain<Goat> brain) {
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initLongJumpActivity(brain);
-      initRamActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Goat>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initLongJumpActivity(), initRamActivity());
    }
 
-   private static void initCoreActivity(final Brain<Goat> brain) {
-      brain.addActivity(
+   private static ActivityData<Goat> initCoreActivity() {
+      return ActivityData.create(
          Activity.CORE,
          0,
          ImmutableList.of(
@@ -89,8 +83,8 @@ public class GoatAi {
       );
    }
 
-   private static void initIdleActivity(final Brain<Goat> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Goat> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          ImmutableList.of(
             Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
@@ -112,8 +106,8 @@ public class GoatAi {
       );
    }
 
-   private static void initLongJumpActivity(final Brain<Goat> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Goat> initLongJumpActivity() {
+      return ActivityData.create(
          Activity.LONG_JUMP,
          ImmutableList.of(
             Pair.of(0, new LongJumpMidJump(TIME_BETWEEN_LONG_JUMPS, SoundEvents.GOAT_STEP)),
@@ -133,8 +127,8 @@ public class GoatAi {
       );
    }
 
-   private static void initRamActivity(final Brain<Goat> brain) {
-      brain.addActivityWithConditions(
+   private static ActivityData<Goat> initRamActivity() {
+      return ActivityData.create(
          Activity.RAM,
          ImmutableList.of(
             Pair.of(
@@ -145,13 +139,13 @@ public class GoatAi {
                   3.0F,
                   goat -> goat.isBaby() ? 1.0 : 2.5,
                   goat -> goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_RAM_IMPACT : SoundEvents.GOAT_RAM_IMPACT,
-                  goat -> SoundEvents.GOAT_HORN_BREAK
+                  var0 -> SoundEvents.GOAT_HORN_BREAK
                )
             ),
             Pair.of(
                1,
                new PrepareRamNearestTarget<>(
-                  goat -> goat.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER.getMinValue() : TIME_BETWEEN_RAMS.getMinValue(),
+                  mob -> mob.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER.minInclusive() : TIME_BETWEEN_RAMS.minInclusive(),
                   4,
                   7,
                   1.25F,

@@ -24,7 +24,7 @@ public class RandomSequences extends SavedData {
          .apply(i, RandomSequences::new)
    );
    public static final SavedDataType<RandomSequences> TYPE = new SavedDataType<>(
-      "random_sequences", RandomSequences::new, CODEC, DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES
+      Identifier.withDefaultNamespace("random_sequences"), RandomSequences::new, CODEC, DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES
    );
    private int salt;
    private boolean includeWorldSeed = true;

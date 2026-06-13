@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -10,7 +10,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.RecipeBookMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
@@ -51,26 +51,26 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-         this.renderBackground(graphics, mouseX, mouseY, a);
+         this.extractBackground(graphics, mouseX, mouseY, a);
       } else {
-         super.renderContents(graphics, mouseX, mouseY, a);
+         super.extractContents(graphics, mouseX, mouseY, a);
       }
 
       graphics.nextStratum();
-      this.recipeBookComponent.render(graphics, mouseX, mouseY, a);
+      this.recipeBookComponent.extractRenderState(graphics, mouseX, mouseY, a);
       graphics.nextStratum();
-      this.renderCarriedItem(graphics, mouseX, mouseY);
-      this.renderSnapbackItem(graphics);
-      this.renderTooltip(graphics, mouseX, mouseY);
-      this.recipeBookComponent.renderTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
+      this.extractCarriedItem(graphics, mouseX, mouseY);
+      this.extractSnapbackItem(graphics);
+      this.extractTooltip(graphics, mouseX, mouseY);
+      this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
    }
 
    @Override
-   protected void renderSlots(final GuiGraphics graphics, final int mouseX, final int mouseY) {
-      super.renderSlots(graphics, mouseX, mouseY);
-      this.recipeBookComponent.renderGhostRecipe(graphics, this.isBiggerResultSlot());
+   protected void extractSlots(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
+      super.extractSlots(graphics, mouseX, mouseY);
+      this.recipeBookComponent.extractGhostRecipe(graphics, this.isBiggerResultSlot());
    }
 
    protected boolean isBiggerResultSlot() {
@@ -114,8 +114,8 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
    }
 
    @Override
-   protected void slotClicked(final Slot slot, final int slotId, final int buttonNum, final ClickType clickType) {
-      super.slotClicked(slot, slotId, buttonNum, clickType);
+   protected void slotClicked(final Slot slot, final int slotId, final int buttonNum, final ContainerInput containerInput) {
+      super.slotClicked(slot, slotId, buttonNum, containerInput);
       this.recipeBookComponent.slotClicked(slot);
    }
 

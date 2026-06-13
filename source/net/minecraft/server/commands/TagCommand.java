@@ -58,7 +58,7 @@ public class TagCommand {
       Set<String> result = Sets.newHashSet();
 
       for (Entity entity : entities) {
-         result.addAll(entity.getTags());
+         result.addAll(entity.entityTags());
       }
 
       return result;
@@ -112,7 +112,7 @@ public class TagCommand {
       Set<String> tags = Sets.newHashSet();
 
       for (Entity entity : targets) {
-         tags.addAll(entity.getTags());
+         tags.addAll(entity.entityTags());
       }
 
       if (targets.size() == 1) {

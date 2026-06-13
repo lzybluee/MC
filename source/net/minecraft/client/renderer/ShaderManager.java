@@ -49,11 +49,13 @@ public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.
    private final TextureManager textureManager;
    private final Consumer<Exception> recoveryHandler;
    private ShaderManager.CompilationCache compilationCache = new ShaderManager.CompilationCache(ShaderManager.Configs.EMPTY);
-   private final CachedOrthoProjectionMatrixBuffer postChainProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("post", 0.1F, 1000.0F, false);
+   private final Projection postChainProjection = new Projection();
+   private final ProjectionMatrixBuffer postChainProjectionMatrixBuffer = new ProjectionMatrixBuffer("post");
 
    public ShaderManager(final TextureManager textureManager, final Consumer<Exception> recoveryHandler) {
       this.textureManager = textureManager;
       this.recoveryHandler = recoveryHandler;
+      this.postChainProjection.setupOrtho(0.1F, 1000.0F, 1.0F, 1.0F, false);
    }
 
    protected ShaderManager.Configs prepare(final ResourceManager manager, final ProfilerFiller profiler) {
@@ -226,7 +228,14 @@ public class ShaderManager extends SimplePreparableReloadListener<ShaderManager.
          if (config == null) {
             throw new ShaderManager.CompilationException("Could not find post chain with id: " + id);
          } else {
-            return PostChain.load(config, ShaderManager.this.textureManager, allowedTargets, id, ShaderManager.this.postChainProjectionMatrixBuffer);
+            return PostChain.load(
+               config,
+               ShaderManager.this.textureManager,
+               allowedTargets,
+               id,
+               ShaderManager.this.postChainProjection,
+               ShaderManager.this.postChainProjectionMatrixBuffer
+            );
          }
       }
 

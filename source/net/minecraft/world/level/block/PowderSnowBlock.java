@@ -137,7 +137,7 @@ public class PowderSnowBlock extends Block implements BucketPickup {
    }
 
    public static boolean canEntityWalkOnPowderSnow(final Entity entity) {
-      if (entity.getType().is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
+      if (entity.is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
          return true;
       } else {
          return entity instanceof LivingEntity ? ((LivingEntity)entity).getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS) : false;

@@ -16,7 +16,7 @@ public class TimelineTagsProvider extends KeyTagProvider<Timeline> {
    @Override
    protected void addTags(final HolderLookup.Provider registries) {
       this.tag(TimelineTags.UNIVERSAL).add(Timelines.VILLAGER_SCHEDULE);
-      this.tag(TimelineTags.IN_OVERWORLD).addTag(TimelineTags.UNIVERSAL).add(Timelines.DAY, Timelines.MOON, Timelines.EARLY_GAME);
+      this.tag(TimelineTags.IN_OVERWORLD).addTag(TimelineTags.UNIVERSAL).add(Timelines.OVERWORLD_DAY, Timelines.MOON, Timelines.EARLY_GAME);
       this.tag(TimelineTags.IN_NETHER).addTag(TimelineTags.UNIVERSAL);
       this.tag(TimelineTags.IN_END).addTag(TimelineTags.UNIVERSAL);
    }

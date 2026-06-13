@@ -216,7 +216,7 @@ public class CloneCommands {
          throw ERROR_OVERLAP.create();
       }
 
-      int area = from.getXSpan() * from.getYSpan() * from.getZSpan();
+      long area = (long)from.getXSpan() * from.getYSpan() * from.getZSpan();
       int limit = source.getLevel().getGameRules().get(GameRules.MAX_BLOCK_MODIFICATIONS);
       if (area > limit) {
          throw ERROR_AREA_TOO_LARGE.create(limit, area);
@@ -320,14 +320,14 @@ public class CloneCommands {
          }
 
          toDimension.getBlockTicks().copyAreaFrom(fromDimension.getBlockTicks(), from, offset);
-      } catch (Throwable var35) {
+      } catch (Throwable var36) {
          try {
             reporter.close();
-         } catch (Throwable var34) {
-            var35.addSuppressed(var34);
+         } catch (Throwable var35) {
+            var36.addSuppressed(var35);
          }
 
-         throw var35;
+         throw var36;
       }
 
       reporter.close();

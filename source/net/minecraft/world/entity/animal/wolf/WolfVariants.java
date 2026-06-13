@@ -51,11 +51,19 @@ public class WolfVariants {
       Identifier wildTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName);
       Identifier tameTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_tame");
       Identifier angryTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_angry");
+      Identifier babyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_baby");
+      Identifier tameBabyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_tame_baby");
+      Identifier angryBabyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_angry_baby");
       context.register(
          name,
          new WolfVariant(
             new WolfVariant.AssetInfo(
                new ClientAsset.ResourceTexture(wildTexture), new ClientAsset.ResourceTexture(tameTexture), new ClientAsset.ResourceTexture(angryTexture)
+            ),
+            new WolfVariant.AssetInfo(
+               new ClientAsset.ResourceTexture(babyTexture),
+               new ClientAsset.ResourceTexture(tameBabyTexture),
+               new ClientAsset.ResourceTexture(angryBabyTexture)
             ),
             selectors
          )

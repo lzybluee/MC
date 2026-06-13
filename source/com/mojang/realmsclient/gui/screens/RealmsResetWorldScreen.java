@@ -15,8 +15,7 @@ import com.mojang.realmsclient.util.task.SwitchSlotTask;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.GridLayout;
@@ -221,9 +220,7 @@ public class RealmsResetWorldScreen extends RealmsScreen {
          )
       );
       this.layout.addToFooter(Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -278,7 +275,7 @@ public class RealmsResetWorldScreen extends RealmsScreen {
       }
 
       @Override
-      public void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+      public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
          boolean hoveredOrFocused = this.isHoveredOrFocused();
          int color = -1;
          if (hoveredOrFocused) {
@@ -290,7 +287,7 @@ public class RealmsResetWorldScreen extends RealmsScreen {
          graphics.blit(RenderPipelines.GUI_TEXTURED, this.image, x + 2, y + 2, 0.0F, 0.0F, 56, 56, 56, 56, 56, 56, color);
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_FRAME_SPRITE, x, y, 60, 60, color);
          int textColor = hoveredOrFocused ? -6250336 : -1;
-         graphics.drawCenteredString(RealmsResetWorldScreen.this.font, this.getMessage(), x + 28, y - 14, textColor);
+         graphics.centeredText(RealmsResetWorldScreen.this.font, this.getMessage(), x + 28, y - 14, textColor);
       }
    }
 }

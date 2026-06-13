@@ -102,7 +102,7 @@ public class ForceLoadCommand {
       ChunkPos chunkPos = pos.toChunkPos();
       ServerLevel level = source.getLevel();
       ResourceKey<Level> dimension = level.dimension();
-      boolean result = level.getForceLoadedChunks().contains(chunkPos.toLong());
+      boolean result = level.getForceLoadedChunks().contains(chunkPos.pack());
       if (result) {
          source.sendSuccess(
             () -> Component.translatable(
@@ -122,7 +122,7 @@ public class ForceLoadCommand {
       LongSet forcedChunks = level.getForceLoadedChunks();
       int chunkCount = forcedChunks.size();
       if (chunkCount > 0) {
-         String chunkList = Joiner.on(", ").join(forcedChunks.stream().sorted().map(ChunkPos::new).map(ChunkPos::toString).iterator());
+         String chunkList = Joiner.on(", ").join(forcedChunks.stream().sorted().map(ChunkPos::unpack).map(ChunkPos::toString).iterator());
          if (chunkCount == 1) {
             source.sendSuccess(
                () -> Component.translatable("commands.forceload.list.single", Component.translationArg(dimension.identifier()), chunkList), false

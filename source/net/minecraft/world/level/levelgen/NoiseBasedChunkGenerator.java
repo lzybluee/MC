@@ -127,6 +127,39 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
       return (NoiseColumn)result.get();
    }
 
+   @VisibleForTesting
+   public double getInterpolatedNoiseValue(final RandomState randomState, final DensityFunction.FunctionContext context) {
+      NoiseSettings noiseSettings = this.settings.value().noiseSettings();
+      int cellWidth = noiseSettings.getCellWidth();
+      int cellHeight = noiseSettings.getCellHeight();
+      int minY = noiseSettings.minY();
+      int blockX = context.blockX();
+      int blockY = context.blockY();
+      int blockZ = context.blockZ();
+      if (blockY >= minY && blockY < minY + noiseSettings.height()) {
+         NoiseChunk noiseChunk = new NoiseChunk(
+            1,
+            randomState,
+            blockX - Math.floorMod(blockX, cellWidth),
+            blockZ - Math.floorMod(blockZ, cellWidth),
+            noiseSettings,
+            DensityFunctions.BeardifierMarker.INSTANCE,
+            this.settings.value(),
+            this.globalFluidPicker.get(),
+            context.getBlender()
+         );
+         noiseChunk.initializeForFirstCellX();
+         noiseChunk.advanceCellX(0);
+         noiseChunk.selectCellYZ(Math.floorDiv(blockY - minY, cellHeight), 0);
+         noiseChunk.updateForY(blockY, (double)Math.floorMod(blockY - minY, cellHeight) / cellHeight);
+         noiseChunk.updateForX(blockX, (double)Math.floorMod(blockX, cellWidth) / cellWidth);
+         noiseChunk.updateForZ(blockZ, (double)Math.floorMod(blockZ, cellWidth) / cellWidth);
+         return noiseChunk.getInterpolatedDensity();
+      } else {
+         return Double.NaN;
+      }
+   }
+
    @Override
    public void addDebugScreenInfo(final List<String> result, final RandomState randomState, final BlockPos feetPos) {
       DecimalFormat format = new DecimalFormat("0.000", DecimalFormatSymbols.getInstance(Locale.ROOT));
@@ -134,7 +167,9 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
       DensityFunction.SinglePointContext context = new DensityFunction.SinglePointContext(feetPos.getX(), feetPos.getY(), feetPos.getZ());
       double weirdness = router.ridges().compute(context);
       result.add(
-         "NoiseRouter T: "
+         "NoiseRouter N: "
+            + format.format(this.getInterpolatedNoiseValue(randomState, context))
+            + " T: "
             + format.format(router.temperature().compute(context))
             + " V: "
             + format.format(router.vegetation().compute(context))
@@ -150,8 +185,6 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
             + format.format(NoiseRouterData.peaksAndValleys((float)weirdness))
             + " PS: "
             + format.format(router.preliminarySurfaceLevel().compute(context))
-            + " N: "
-            + format.format(router.finalDensity().compute(context))
       );
    }
 
@@ -287,8 +320,8 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
 
          for (int dx = -8; dx <= 8; dx++) {
             for (int dz = -8; dz <= 8; dz++) {
-               ChunkPos sourcePos = new ChunkPos(pos.x + dx, pos.z + dz);
-               ChunkAccess carverCenterChunk = region.getChunk(sourcePos.x, sourcePos.z);
+               ChunkPos sourcePos = new ChunkPos(pos.x() + dx, pos.z() + dz);
+               ChunkAccess carverCenterChunk = region.getChunk(sourcePos.x(), sourcePos.z());
                BiomeGenerationSettings sourceBiomeGenerationSettings = carverCenterChunk.carverBiome(
                   () -> this.getBiomeGenerationSettings(
                      this.biomeSource
@@ -300,7 +333,7 @@ public final class NoiseBasedChunkGenerator extends ChunkGenerator {
 
                for (Holder<ConfiguredWorldCarver<?>> carverHolder : carvers) {
                   ConfiguredWorldCarver<?> carver = carverHolder.value();
-                  random.setLargeFeatureSeed(seed + index, sourcePos.x, sourcePos.z);
+                  random.setLargeFeatureSeed(seed + index, sourcePos.x(), sourcePos.z());
                   if (carver.isStartChunk(random)) {
                      carver.carve(context, chunk, correctBiomeManager::getBiome, random, aquifer, sourcePos, mask);
                   }

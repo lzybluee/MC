@@ -115,7 +115,7 @@ public class MultifaceSpreader {
    }
 
    public static class DefaultSpreaderConfig implements MultifaceSpreader.SpreadConfig {
-      protected MultifaceBlock block;
+      protected final MultifaceBlock block;
 
       public DefaultSpreaderConfig(final MultifaceBlock block) {
          this.block = block;

@@ -11,7 +11,7 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class DynamicLoot extends LootPoolSingletonContainer {
-   public static final MapCodec<DynamicLoot> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<DynamicLoot> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(Identifier.CODEC.fieldOf("name").forGetter(e -> e.name)).and(singletonFields(i)).apply(i, DynamicLoot::new)
    );
    private final Identifier name;
@@ -24,8 +24,8 @@ public class DynamicLoot extends LootPoolSingletonContainer {
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.DYNAMIC;
+   public MapCodec<DynamicLoot> codec() {
+      return MAP_CODEC;
    }
 
    @Override

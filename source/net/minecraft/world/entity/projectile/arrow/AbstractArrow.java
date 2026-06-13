@@ -454,7 +454,7 @@ public abstract class AbstractArrow extends Projectile {
          livingOwner.setLastHurtMob(entity);
       }
 
-      boolean isEnderman = entity.getType() == EntityType.ENDERMAN;
+      boolean isEnderman = entity.is(EntityType.ENDERMAN);
       int remainingFireTicks = entity.getRemainingFireTicks();
       if (this.isOnFire() && !isEnderman) {
          entity.igniteForSeconds(5.0F);
@@ -678,7 +678,7 @@ public abstract class AbstractArrow extends Projectile {
 
    @Override
    public boolean isAttackable() {
-      return this.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
+      return this.is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
    }
 
    public void setCritArrow(final boolean critArrow) {

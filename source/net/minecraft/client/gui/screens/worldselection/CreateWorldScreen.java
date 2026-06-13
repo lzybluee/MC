@@ -23,8 +23,7 @@ import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -53,6 +52,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -75,10 +75,10 @@ import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPresets;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
+import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
-import net.minecraft.world.level.storage.WorldData;
 import net.minecraft.world.level.validation.DirectoryValidator;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jspecify.annotations.Nullable;
@@ -99,9 +99,7 @@ public class CreateWorldScreen extends Screen {
    public static final Identifier TAB_HEADER_BACKGROUND = Identifier.withDefaultNamespace("textures/gui/tab_header_background.png");
    private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
    private final WorldCreationUiState uiState;
-   private final TabManager tabManager = new TabManager(x$0 -> {
-      AbstractWidget var10000 = this.addRenderableWidget(x$0);
-   }, x$0 -> this.removeWidget(x$0));
+   private final TabManager tabManager = new TabManager(x$0 -> this.addRenderableWidget(x$0), x$0 -> this.removeWidget(x$0));
    private boolean recreated;
    private final DirectoryValidator packValidator;
    private final CreateWorldCallback createWorldCallback;
@@ -111,7 +109,13 @@ public class CreateWorldScreen extends Screen {
    private @Nullable TabNavigationBar tabNavigationBar;
 
    public static void openFresh(final Minecraft minecraft, final Runnable onClose) {
-      openFresh(minecraft, onClose, (createWorldScreen, finalLayers, worldData, tempDataPackDir) -> createWorldScreen.createNewWorld(finalLayers, worldData));
+      openFresh(
+         minecraft,
+         onClose,
+         (createWorldScreen, finalLayers, worldDataAndGenSettings, gameRules, tempDataPackDir) -> createWorldScreen.createNewWorld(
+            finalLayers, worldDataAndGenSettings, gameRules
+         )
+      );
    }
 
    public static void openFresh(final Minecraft minecraft, final Runnable onClose, final CreateWorldCallback createWorld) {
@@ -146,7 +150,9 @@ public class CreateWorldScreen extends Screen {
          worldGenSettings,
          worldCreationContext,
          WorldPresets.FLAT,
-         (createWorldScreen, finalLayers, worldData, tempDataPackDir) -> createWorldScreen.createNewWorld(finalLayers, worldData)
+         (createWorldScreen, finalLayers, worldDataAndGenSettings, gameRules, tempDataPackDir) -> createWorldScreen.createNewWorld(
+            finalLayers, worldDataAndGenSettings, gameRules
+         )
       );
    }
 
@@ -159,6 +165,7 @@ public class CreateWorldScreen extends Screen {
       final CreateWorldCallback createWorld
    ) {
       queueLoadScreen(minecraft, PREPARING_WORLD_DATA);
+      long start = Util.getMillis();
       PackRepository vanillaOnlyPackRepository = new PackRepository(new ServerPacksSource(minecraft.directoryValidator()));
       WorldDataConfiguration dataConfig = SharedConstants.IS_RUNNING_IN_IDE
          ? new WorldDataConfiguration(new DataPackConfig(List.of("vanilla", "tests"), List.of()), FeatureFlags.DEFAULT_FLAGS)
@@ -177,6 +184,8 @@ public class CreateWorldScreen extends Screen {
          minecraft
       );
       minecraft.managedBlock(loadResult::isDone);
+      long end = Util.getMillis();
+      LOGGER.debug("Resource load for world creation blocked for {} ms", end - start);
       minecraft.setScreen(new CreateWorldScreen(minecraft, onClose, loadResult.join(), Optional.of(worldPreset), OptionalLong.empty(), createWorld));
    }
 
@@ -193,14 +202,16 @@ public class CreateWorldScreen extends Screen {
          worldCreationContext,
          WorldPresets.fromSettings(worldCreationContext.selectedDimensions()),
          OptionalLong.of(worldCreationContext.options().seed()),
-         (createWorldScreen, finalLayers, worldData, tempDataPackDir) -> createWorldScreen.createNewWorld(finalLayers, worldData)
+         (createWorldScreen, finalLayers, worldDataAndGenSettings, gameRules, tempDataPackDir) -> createWorldScreen.createNewWorld(
+            finalLayers, worldDataAndGenSettings, gameRules
+         )
       );
       result.recreated = true;
       result.uiState.setName(levelSettings.levelName());
       result.uiState.setAllowCommands(levelSettings.allowCommands());
-      result.uiState.setDifficulty(levelSettings.difficulty());
-      result.uiState.getGameRules().setAll(levelSettings.gameRules(), null);
-      if (levelSettings.hardcore()) {
+      result.uiState.setDifficulty(levelSettings.difficultySettings().difficulty());
+      result.uiState.getGameRules().setAll(worldCreationContext.initialWorldCreationOptions().gameRuleOverwrites(), null);
+      if (levelSettings.difficultySettings().hardcore()) {
          result.uiState.setGameMode(WorldCreationUiState.SelectedGameMode.HARDCORE);
       } else if (levelSettings.gameType().isSurvival()) {
          result.uiState.setGameMode(WorldCreationUiState.SelectedGameMode.SURVIVAL);
@@ -256,8 +267,7 @@ public class CreateWorldScreen extends Screen {
    @Override
    public void repositionElements() {
       if (this.tabNavigationBar != null) {
-         this.tabNavigationBar.setWidth(this.width);
-         this.tabNavigationBar.arrangeElements();
+         this.tabNavigationBar.updateWidth(this.width);
          int tabAreaTop = this.tabNavigationBar.getRectangle().bottom();
          ScreenRectangle tabArea = new ScreenRectangle(0, tabAreaTop, this.width, this.height - this.layout.getFooterHeight() - tabAreaTop);
          this.tabManager.setTabArea(tabArea);
@@ -272,29 +282,51 @@ public class CreateWorldScreen extends Screen {
 
    private void onCreate() {
       WorldCreationContext context = this.uiState.getSettings();
-      WorldDimensions.Complete finalDimensions = context.selectedDimensions().bake(context.datapackDimensions());
+      WorldDimensions worldDimensions = context.selectedDimensions();
+      WorldDimensions.Complete finalDimensions = worldDimensions.bake(context.datapackDimensions());
       LayeredRegistryAccess<RegistryLayer> finalLayers = context.worldgenRegistries()
          .replaceFrom(RegistryLayer.DIMENSIONS, finalDimensions.dimensionsRegistryAccess());
-      Lifecycle lifecycleFromFeatures = FeatureFlags.isExperimental(context.dataConfiguration().enabledFeatures())
-         ? Lifecycle.experimental()
-         : Lifecycle.stable();
+      FeatureFlagSet enabledFeatures = context.dataConfiguration().enabledFeatures();
+      Lifecycle lifecycleFromFeatures = FeatureFlags.isExperimental(enabledFeatures) ? Lifecycle.experimental() : Lifecycle.stable();
       Lifecycle lifecycleFromRegistries = finalLayers.compositeAccess().allRegistriesLifecycle();
       Lifecycle lifecycle = lifecycleFromRegistries.add(lifecycleFromFeatures);
       boolean skipWarning = !this.recreated && lifecycleFromRegistries == Lifecycle.stable();
-      LevelSettings levelSettings = this.createLevelSettings(finalDimensions.specialWorldProperty() == PrimaryLevelData.SpecialWorldProperty.DEBUG);
-      PrimaryLevelData worldData = new PrimaryLevelData(levelSettings, this.uiState.getSettings().options(), finalDimensions.specialWorldProperty(), lifecycle);
-      WorldOpenFlows.confirmWorldCreation(this.minecraft, this, lifecycle, () -> this.createWorldAndCleanup(finalLayers, worldData), skipWarning);
+      boolean isDebug = finalDimensions.specialWorldProperty() == PrimaryLevelData.SpecialWorldProperty.DEBUG;
+      LevelSettings levelSettings = this.createLevelSettings(isDebug);
+      GameRules gameRules;
+      if (isDebug) {
+         gameRules = MinecraftServer.DEFAULT_GAME_RULES.get();
+         gameRules.set(GameRules.ADVANCE_TIME, false, null);
+      } else {
+         gameRules = this.uiState.getGameRules().copy(enabledFeatures);
+      }
+
+      PrimaryLevelData worldData = new PrimaryLevelData(levelSettings, finalDimensions.specialWorldProperty(), lifecycle);
+      WorldOptions options = this.uiState.getSettings().options();
+      WorldGenSettings worldGenSettings = new WorldGenSettings(options, worldDimensions);
+      LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings = new LevelDataAndDimensions.WorldDataAndGenSettings(worldData, worldGenSettings);
+      WorldOpenFlows.confirmWorldCreation(
+         this.minecraft, this, lifecycle, () -> this.createWorldAndCleanup(finalLayers, worldDataAndGenSettings, Optional.of(gameRules)), skipWarning
+      );
    }
 
-   private void createWorldAndCleanup(final LayeredRegistryAccess<RegistryLayer> finalLayers, final PrimaryLevelData worldData) {
-      boolean worldCreationSuccessful = this.createWorldCallback.create(this, finalLayers, worldData, this.tempDataPackDir);
+   private void createWorldAndCleanup(
+      final LayeredRegistryAccess<RegistryLayer> finalLayers,
+      final LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings,
+      final Optional<GameRules> gameRules
+   ) {
+      boolean worldCreationSuccessful = this.createWorldCallback.create(this, finalLayers, worldDataAndGenSettings, gameRules, this.tempDataPackDir);
       this.removeTempDataPackDir();
       if (!worldCreationSuccessful) {
          this.popScreen();
       }
    }
 
-   private boolean createNewWorld(final LayeredRegistryAccess<RegistryLayer> finalLayers, final WorldData worldData) {
+   private boolean createNewWorld(
+      final LayeredRegistryAccess<RegistryLayer> finalLayers,
+      final LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings,
+      final Optional<GameRules> gameRules
+   ) {
       String worldFolder = this.uiState.getTargetFolder();
       WorldCreationContext context = this.uiState.getSettings();
       queueLoadScreen(this.minecraft, PREPARING_WORLD_DATA);
@@ -303,28 +335,26 @@ public class CreateWorldScreen extends Screen {
          SystemToast.onPackCopyFailure(this.minecraft, worldFolder);
          return false;
       } else {
-         this.minecraft.createWorldOpenFlows().createLevelFromExistingSettings(newWorldAccess.get(), context.dataPackResources(), finalLayers, worldData);
+         this.minecraft
+            .createWorldOpenFlows()
+            .createLevelFromExistingSettings(newWorldAccess.get(), context.dataPackResources(), finalLayers, worldDataAndGenSettings, gameRules);
          return true;
       }
    }
 
    private LevelSettings createLevelSettings(final boolean isDebug) {
       String name = this.uiState.getName().trim();
-      if (isDebug) {
-         GameRules debugGameRules = new GameRules(WorldDataConfiguration.DEFAULT.enabledFeatures());
-         debugGameRules.set(GameRules.ADVANCE_TIME, false, null);
-         return new LevelSettings(name, GameType.SPECTATOR, false, Difficulty.PEACEFUL, true, debugGameRules, WorldDataConfiguration.DEFAULT);
-      } else {
-         return new LevelSettings(
+      return isDebug
+         ? new LevelSettings(
+            name, GameType.SPECTATOR, new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT
+         )
+         : new LevelSettings(
             name,
             this.uiState.getGameMode().gameType,
-            this.uiState.isHardcore(),
-            this.uiState.getDifficulty(),
+            new LevelSettings.DifficultySettings(this.uiState.getDifficulty(), this.uiState.isHardcore(), false),
             this.uiState.isAllowCommands(),
-            this.uiState.getGameRules(),
             this.uiState.getSettings().dataConfiguration()
          );
-      }
    }
 
    @Override
@@ -352,15 +382,15 @@ public class CreateWorldScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       graphics.blit(RenderPipelines.GUI_TEXTURED, Screen.FOOTER_SEPARATOR, 0, this.height - this.layout.getFooterHeight() - 2, 0.0F, 0.0F, this.width, 2, 32, 2);
    }
 
    @Override
-   protected void renderMenuBackground(final GuiGraphics graphics) {
+   protected void extractMenuBackground(final GuiGraphicsExtractor graphics) {
       graphics.blit(RenderPipelines.GUI_TEXTURED, TAB_HEADER_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.layout.getHeaderHeight(), 16, 16);
-      this.renderMenuBackground(graphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
+      this.extractMenuBackground(graphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
    }
 
    private @Nullable Path getOrCreateTempDataPackDir() {
@@ -444,7 +474,8 @@ public class CreateWorldScreen extends Screen {
 
                WorldCreationContext existingContext = this.uiState.getSettings();
                DynamicOps<JsonElement> writeOps = existingContext.worldgenLoadContext().createSerializationContext(JsonOps.INSTANCE);
-               DataResult<JsonElement> encoded = WorldGenSettings.encode(writeOps, existingContext.options(), existingContext.selectedDimensions())
+               DataResult<JsonElement> encoded = WorldGenSettings.CODEC
+                  .encodeStart(writeOps, new WorldGenSettings(existingContext.options(), existingContext.selectedDimensions()))
                   .setLifecycle(Lifecycle.stable());
                DynamicOps<JsonElement> readOps = context.datapackWorldgen().createSerializationContext(JsonOps.INSTANCE);
                WorldGenSettings settings = (WorldGenSettings)encoded.flatMap(r -> WorldGenSettings.CODEC.parse(readOps, r))
@@ -698,7 +729,7 @@ public class CreateWorldScreen extends Screen {
       private void openGameRulesScreen() {
          CreateWorldScreen.this.minecraft
             .setScreen(
-               new EditGameRulesScreen(
+               new WorldCreationGameRulesScreen(
                   CreateWorldScreen.this.uiState.getGameRules().copy(CreateWorldScreen.this.uiState.getSettings().dataConfiguration().enabledFeatures()),
                   gameRules -> {
                      CreateWorldScreen.this.minecraft.setScreen(CreateWorldScreen.this);

@@ -115,8 +115,8 @@ public class TagLoader<T> {
       return newTags;
    }
 
-   public static <T> void loadTagsFromNetwork(final TagNetworkSerialization.NetworkPayload tags, final WritableRegistry<T> registry) {
-      tags.resolve(registry).tags.forEach(registry::bindTag);
+   public static <T> Map<TagKey<T>, List<Holder<T>>> loadTagsFromNetwork(final TagNetworkSerialization.NetworkPayload tags, final Registry<T> registry) {
+      return tags.resolve(registry).tags;
    }
 
    public static List<Registry.PendingTags<?>> loadTagsForExistingRegistries(final ResourceManager manager, final RegistryAccess layer) {
@@ -124,9 +124,14 @@ public class TagLoader<T> {
    }
 
    public static <T> void loadTagsForRegistry(final ResourceManager manager, final WritableRegistry<T> registry) {
-      ResourceKey<? extends Registry<T>> key = registry.key();
-      TagLoader<Holder<T>> loader = new TagLoader<>(TagLoader.ElementLookup.fromWritableRegistry(registry), Registries.tagsDirPath(key));
-      loader.build(loader.load(manager)).forEach((tagId, values) -> registry.bindTag(TagKey.create(key, tagId), (List<Holder<T>>)values));
+      loadTagsForRegistry(manager, registry.key(), TagLoader.ElementLookup.fromWritableRegistry(registry));
+   }
+
+   public static <T> Map<TagKey<T>, List<Holder<T>>> loadTagsForRegistry(
+      final ResourceManager manager, final ResourceKey<? extends Registry<T>> registryKey, final TagLoader.ElementLookup<Holder<T>> lookup
+   ) {
+      TagLoader<Holder<T>> loader = new TagLoader<>(lookup, Registries.tagsDirPath(registryKey));
+      return wrapTags(registryKey, loader.build(loader.load(manager)));
    }
 
    private static <T> Map<TagKey<T>, List<Holder<T>>> wrapTags(
@@ -173,8 +178,13 @@ public class TagLoader<T> {
       }
 
       static <T> TagLoader.ElementLookup<Holder<T>> fromWritableRegistry(final WritableRegistry<T> registry) {
-         HolderGetter<T> registrationLookup = registry.createRegistrationLookup();
-         return (id, required) -> (required ? registrationLookup : registry).get(ResourceKey.create(registry.key(), id));
+         return fromGetters(registry.key(), registry.createRegistrationLookup(), registry);
+      }
+
+      static <T> TagLoader.ElementLookup<Holder<T>> fromGetters(
+         final ResourceKey<? extends Registry<T>> registryKey, final HolderGetter<T> writable, final HolderGetter<T> immutable
+      ) {
+         return (id, required) -> (required ? writable : immutable).get(ResourceKey.create(registryKey, id));
       }
    }
 

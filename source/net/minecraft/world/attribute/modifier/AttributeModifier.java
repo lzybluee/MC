@@ -59,6 +59,18 @@ public interface AttributeModifier<Subject, Argument> {
       AttributeModifier.OperationId.BLEND_TO_GRAY,
       ColorModifier.BLEND_TO_GRAY
    );
+   Map<AttributeModifier.OperationId, AttributeModifier<Integer, ?>> INTEGER_LIBRARY = Map.of(
+      AttributeModifier.OperationId.ADD,
+      IntegerModifier.ADD,
+      AttributeModifier.OperationId.SUBTRACT,
+      IntegerModifier.SUBTRACT,
+      AttributeModifier.OperationId.MULTIPLY,
+      IntegerModifier.MULTIPLY,
+      AttributeModifier.OperationId.MINIMUM,
+      IntegerModifier.MINIMUM,
+      AttributeModifier.OperationId.MAXIMUM,
+      IntegerModifier.MAXIMUM
+   );
 
    static <Value> AttributeModifier<Value, Value> override() {
       return AttributeModifier.OverrideModifier.INSTANCE;

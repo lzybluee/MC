@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -93,7 +93,7 @@ public class PauseScreen extends Screen {
          this.addFeedbackSubscreenAndCustomDialogButtons(this.minecraft, (Holder<Dialog>)additions.get(), helper);
       }
 
-      helper.addChild(this.openScreenButton(OPTIONS, () -> new OptionsScreen(this, this.minecraft.options)));
+      helper.addChild(this.openScreenButton(OPTIONS, () -> new OptionsScreen(this, this.minecraft.options, true)));
       if (this.minecraft.hasSingleplayerServer() && !this.minecraft.getSingleplayerServer().isPublished()) {
          helper.addChild(this.openScreenButton(SHARE_TO_LAN, () -> new ShareToLanScreen(this)));
       } else {
@@ -164,10 +164,10 @@ public class PauseScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       if (this.rendersNowPlayingToast()) {
-         NowPlayingToast.renderToast(graphics, this.font);
+         NowPlayingToast.extractToast(graphics, this.font);
       }
 
       if (this.showPauseMenu && this.minecraft.getReportingContext().hasDraftReport() && this.disconnectButton != null) {
@@ -183,9 +183,9 @@ public class PauseScreen extends Screen {
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       if (this.showPauseMenu) {
-         super.renderBackground(graphics, mouseX, mouseY, a);
+         super.extractBackground(graphics, mouseX, mouseY, a);
       }
    }
 

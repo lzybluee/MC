@@ -3,7 +3,7 @@ package net.minecraft.client.gui.spectator;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.spectator.categories.SpectatorPage;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
@@ -34,7 +34,7 @@ public class SpectatorMenu {
       }
 
       @Override
-      public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+      public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
       }
 
       @Override
@@ -126,7 +126,7 @@ public class SpectatorMenu {
       }
 
       @Override
-      public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+      public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
          graphics.blitSprite(
             RenderPipelines.GUI_TEXTURED, SpectatorMenu.CLOSE_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(alpha, brightness, brightness, brightness)
          );
@@ -158,7 +158,7 @@ public class SpectatorMenu {
       }
 
       @Override
-      public void renderIcon(final GuiGraphics graphics, final float brightness, final float alpha) {
+      public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
          int color = ARGB.colorFromFloat(alpha, brightness, brightness, brightness);
          if (this.direction < 0) {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.SCROLL_LEFT_SPRITE, 0, 0, 16, 16, color);

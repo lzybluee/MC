@@ -1,39 +1,39 @@
 package net.minecraft.world.level.storage.loot.predicates;
 
-import com.google.common.collect.Sets;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.IntRange;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 
-public record ValueCheckCondition(NumberProvider provider, IntRange range) implements LootItemCondition {
-   public static final MapCodec<ValueCheckCondition> CODEC = RecordCodecBuilder.mapCodec(
+public record ValueCheckCondition(NumberProvider value, IntRange range) implements LootItemCondition {
+   public static final MapCodec<ValueCheckCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
-            NumberProviders.CODEC.fieldOf("value").forGetter(ValueCheckCondition::provider),
-            IntRange.CODEC.fieldOf("range").forGetter(ValueCheckCondition::range)
+            NumberProviders.CODEC.fieldOf("value").forGetter(ValueCheckCondition::value), IntRange.CODEC.fieldOf("range").forGetter(ValueCheckCondition::range)
          )
          .apply(i, ValueCheckCondition::new)
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.VALUE_CHECK;
+   public MapCodec<ValueCheckCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return Sets.union(this.provider.getReferencedContextParams(), this.range.getReferencedContextParams());
+   public void validate(final ValidationContext context) {
+      LootItemCondition.super.validate(context);
+      Validatable.validate(context, "value", this.value);
+      Validatable.validate(context, "range", this.range);
    }
 
    public boolean test(final LootContext context) {
-      return this.range.test(context, this.provider.getInt(context));
+      return this.range.test(context, this.value.getInt(context));
    }
 
-   public static LootItemCondition.Builder hasValue(final NumberProvider target, final IntRange range) {
-      return () -> new ValueCheckCondition(target, range);
+   public static LootItemCondition.Builder hasValue(final NumberProvider value, final IntRange range) {
+      return () -> new ValueCheckCondition(value, range);
    }
 }

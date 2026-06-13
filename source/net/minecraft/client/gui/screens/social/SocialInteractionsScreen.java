@@ -8,8 +8,7 @@ import java.util.stream.Collectors;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -135,9 +134,7 @@ public class SocialInteractionsScreen extends Screen {
       this.addWidget(this.socialInteractionsPlayerList);
       this.showPage(this.page);
       this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).width(200).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 
@@ -217,29 +214,29 @@ public class SocialInteractionsScreen extends Screen {
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.renderBackground(graphics, mouseX, mouseY, a);
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
       int marginX = this.marginX() + 3;
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, marginX, 64, 236, this.windowHeight() + 16);
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SEARCH_SPRITE, marginX + 10, 76, 12, 12);
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       this.updateServerLabel(this.minecraft);
       if (this.serverLabel != null) {
-         graphics.drawString(this.minecraft.font, this.serverLabel, this.marginX() + 8, 35, -1);
+         graphics.text(this.minecraft.font, this.serverLabel, this.marginX() + 8, 35, -1);
       }
 
       if (!this.socialInteractionsPlayerList.isEmpty()) {
-         this.socialInteractionsPlayerList.render(graphics, mouseX, mouseY, a);
+         this.socialInteractionsPlayerList.extractRenderState(graphics, mouseX, mouseY, a);
       } else if (!this.searchBox.getValue().isEmpty()) {
-         graphics.drawCenteredString(this.minecraft.font, EMPTY_SEARCH, this.width / 2, (72 + this.listEnd()) / 2, -1);
+         graphics.centeredText(this.minecraft.font, EMPTY_SEARCH, this.width / 2, (72 + this.listEnd()) / 2, -1);
       } else if (this.page == SocialInteractionsScreen.Page.HIDDEN) {
-         graphics.drawCenteredString(this.minecraft.font, EMPTY_HIDDEN, this.width / 2, (72 + this.listEnd()) / 2, -1);
+         graphics.centeredText(this.minecraft.font, EMPTY_HIDDEN, this.width / 2, (72 + this.listEnd()) / 2, -1);
       } else if (this.page == SocialInteractionsScreen.Page.BLOCKED) {
-         graphics.drawCenteredString(this.minecraft.font, EMPTY_BLOCKED, this.width / 2, (72 + this.listEnd()) / 2, -1);
+         graphics.centeredText(this.minecraft.font, EMPTY_BLOCKED, this.width / 2, (72 + this.listEnd()) / 2, -1);
       }
 
       this.blockingHintButton.visible = this.page == SocialInteractionsScreen.Page.BLOCKED;

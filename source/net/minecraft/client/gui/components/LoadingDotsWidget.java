@@ -2,7 +2,7 @@ package net.minecraft.client.gui.components;
 
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.screens.LoadingDotsText;
@@ -20,13 +20,13 @@ public class LoadingDotsWidget extends AbstractWidget {
    }
 
    @Override
-   protected void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   protected void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       int centerX = this.getX() + this.getWidth() / 2;
       int centerY = this.getY() + this.getHeight() / 2;
       Component message = this.getMessage();
-      graphics.drawString(this.font, message, centerX - this.font.width(message) / 2, centerY - 9, -1);
+      graphics.text(this.font, message, centerX - this.font.width(message) / 2, centerY - 9, -1);
       String dots = LoadingDotsText.get(Util.getMillis());
-      graphics.drawString(this.font, dots, centerX - this.font.width(dots) / 2, centerY + 9, -8355712);
+      graphics.text(this.font, dots, centerX - this.font.width(dots) / 2, centerY + 9, -8355712);
    }
 
    @Override

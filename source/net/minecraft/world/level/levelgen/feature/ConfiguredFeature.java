@@ -23,8 +23,8 @@ public record ConfiguredFeature<FC extends FeatureConfiguration, F extends Featu
       return this.feature.place(this.config, level, chunkGenerator, random, origin);
    }
 
-   public Stream<ConfiguredFeature<?, ?>> getFeatures() {
-      return Stream.concat(Stream.of(this), this.config.getFeatures());
+   public Stream<Holder<ConfiguredFeature<?, ?>>> getSubFeatures() {
+      return this.config.getSubFeatures();
    }
 
    @Override

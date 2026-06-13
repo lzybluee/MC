@@ -120,7 +120,7 @@ public interface VibrationSystem {
    }
 
    final class Data {
-      public static Codec<VibrationSystem.Data> CODEC = RecordCodecBuilder.create(
+      public static final Codec<VibrationSystem.Data> CODEC = RecordCodecBuilder.create(
          i -> i.group(
                VibrationInfo.CODEC.lenientOptionalFieldOf("event").forGetter(o -> Optional.ofNullable(o.currentVibration)),
                VibrationSelector.CODEC.fieldOf("selector").forGetter(VibrationSystem.Data::getSelectionStrategy),
@@ -360,11 +360,11 @@ public interface VibrationSystem {
       }
 
       private static boolean areAdjacentChunksTicking(final Level level, final BlockPos listenerPos) {
-         ChunkPos listenerChunkPos = new ChunkPos(listenerPos);
+         ChunkPos listenerChunkPos = ChunkPos.containing(listenerPos);
 
-         for (int x = listenerChunkPos.x - 1; x <= listenerChunkPos.x + 1; x++) {
-            for (int z = listenerChunkPos.z - 1; z <= listenerChunkPos.z + 1; z++) {
-               if (!level.shouldTickBlocksAt(ChunkPos.asLong(x, z)) || level.getChunkSource().getChunkNow(x, z) == null) {
+         for (int x = listenerChunkPos.x() - 1; x <= listenerChunkPos.x() + 1; x++) {
+            for (int z = listenerChunkPos.z() - 1; z <= listenerChunkPos.z() + 1; z++) {
+               if (!level.shouldTickBlocksAt(ChunkPos.pack(x, z)) || level.getChunkSource().getChunkNow(x, z) == null) {
                   return false;
                }
             }

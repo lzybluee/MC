@@ -44,8 +44,17 @@ public interface NeighborUpdater {
    ) {
       BlockState currentState = level.getBlockState(pos);
       if ((updateFlags & 128) == 0 || !currentState.is(Blocks.REDSTONE_WIRE)) {
-         BlockState newState = currentState.updateShape(level, level, pos, direction, neighborPos, neighborState, level.getRandom());
-         Block.updateOrDestroy(currentState, newState, level, pos, updateFlags, updateLimit);
+         try {
+            BlockState newState = currentState.updateShape(level, level, pos, direction, neighborPos, neighborState, level.getRandom());
+            Block.updateOrDestroy(currentState, newState, level, pos, updateFlags, updateLimit);
+         } catch (Throwable t) {
+            CrashReport report = CrashReport.forThrowable(t, "Exception while updating neighbour shapes");
+            CrashReportCategory ownCategory = report.addCategory("Block being updated");
+            CrashReportCategory.populateBlockDetails(ownCategory, level, pos, currentState);
+            CrashReportCategory neighborCategory = report.addCategory("Neighbor block");
+            CrashReportCategory.populateBlockDetails(neighborCategory, level, neighborPos, neighborState);
+            throw new ReportedException(report);
+         }
       }
    }
 

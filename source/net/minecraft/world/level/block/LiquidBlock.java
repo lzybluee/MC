@@ -15,6 +15,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
@@ -51,10 +53,10 @@ public class LiquidBlock extends Block implements BucketPickup {
    public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL;
    protected final FlowingFluid fluid;
    private final List<FluidState> stateCache;
-   public static final VoxelShape SHAPE_STABLE = Block.column(16.0, 0.0, 8.0);
    public static final ImmutableList<Direction> POSSIBLE_FLOW_DIRECTIONS = ImmutableList.of(
       Direction.DOWN, Direction.SOUTH, Direction.NORTH, Direction.EAST, Direction.WEST
    );
+   private static final int BUBBLE_COLUMN_CHECK_DELAY = 20;
 
    @Override
    public MapCodec<LiquidBlock> codec() {
@@ -80,12 +82,22 @@ public class LiquidBlock extends Block implements BucketPickup {
       if (context.alwaysCollideWithFluid()) {
          return Shapes.block();
       } else {
-         return context.isAbove(SHAPE_STABLE, pos, true)
-               && state.getValue(LEVEL) == 0
-               && context.canStandOnFluid(level.getFluidState(pos.above()), state.getFluidState())
-            ? SHAPE_STABLE
-            : Shapes.empty();
+         return state.getValue(LEVEL) != 0
+            ? Shapes.empty()
+            : this.ifMobIsColliding(context)
+               .map(LivingEntity::getLiquidCollisionShape)
+               .filter(
+                  liquidStableShape -> context.isAbove(liquidStableShape, pos, true)
+                     && context.canStandOnFluid(level.getFluidState(pos.above()), state.getFluidState())
+               )
+               .orElse(Shapes.empty());
       }
+   }
+
+   private Optional<LivingEntity> ifMobIsColliding(final CollisionContext context) {
+      return context instanceof EntityCollisionContext entityCollisionContext && entityCollisionContext.getEntity() instanceof LivingEntity mob
+         ? Optional.of(mob)
+         : Optional.empty();
    }
 
    @Override
@@ -139,6 +151,19 @@ public class LiquidBlock extends Block implements BucketPickup {
       if (this.shouldSpreadLiquid(level, pos, state)) {
          level.scheduleTick(pos, state.getFluidState().getType(), this.fluid.getTickDelay(level));
       }
+
+      if (shouldBubbleColumnOccupy(state)) {
+         BlockState stateBelow = level.getBlockState(pos.below());
+         this.tryScheduleBubbleBlockColumn(level, pos, stateBelow);
+      }
+   }
+
+   @Override
+   protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+      if (shouldBubbleColumnOccupy(state)) {
+         BlockState stateBelow = level.getBlockState(pos.below());
+         BubbleColumnBlock.updateColumn(Blocks.BUBBLE_COLUMN, level, pos, stateBelow);
+      }
    }
 
    @Override
@@ -156,7 +181,15 @@ public class LiquidBlock extends Block implements BucketPickup {
          ticks.scheduleTick(pos, state.getFluidState().getType(), this.fluid.getTickDelay(level));
       }
 
+      if (directionToNeighbour == Direction.DOWN && shouldBubbleColumnOccupy(state)) {
+         this.tryScheduleBubbleBlockColumn(ticks, pos, neighbourState);
+      }
+
       return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
+   }
+
+   private static boolean shouldBubbleColumnOccupy(final BlockState state) {
+      return state.getFluidState().is(FluidTags.BUBBLE_COLUMN_CAN_OCCUPY) && state.getFluidState().isSource() && state.getFluidState().isFull();
    }
 
    @Override
@@ -165,6 +198,17 @@ public class LiquidBlock extends Block implements BucketPickup {
    ) {
       if (this.shouldSpreadLiquid(level, pos, state)) {
          level.scheduleTick(pos, state.getFluidState().getType(), this.fluid.getTickDelay(level));
+      }
+
+      if (shouldBubbleColumnOccupy(state)) {
+         BlockState stateBelow = level.getBlockState(pos.below());
+         this.tryScheduleBubbleBlockColumn(level, pos, stateBelow);
+      }
+   }
+
+   private void tryScheduleBubbleBlockColumn(final ScheduledTickAccess ticks, final BlockPos pos, final BlockState stateBelow) {
+      if (stateBelow.is(BlockTags.ENABLES_BUBBLE_COLUMN_DRAG_DOWN) || stateBelow.is(BlockTags.ENABLES_BUBBLE_COLUMN_PUSH_UP)) {
+         ticks.scheduleTick(pos, this, 20);
       }
    }
 

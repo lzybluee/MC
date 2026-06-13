@@ -273,12 +273,13 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
       AABB targetBlockSearchArea = this.getTargetSearchArea(body);
       Set<GlobalPos> visitedPositions = getVisitedPositions(body);
       Set<GlobalPos> unreachablePositions = getUnreachablePositions(body);
-      List<ChunkPos> list = ChunkPos.rangeClosed(new ChunkPos(body.blockPosition()), Math.floorDiv(this.getHorizontalSearchDistance(body), 16) + 1).toList();
+      List<ChunkPos> list = ChunkPos.rangeClosed(ChunkPos.containing(body.blockPosition()), Math.floorDiv(this.getHorizontalSearchDistance(body), 16) + 1)
+         .toList();
       TransportItemsBetweenContainers.TransportItemTarget target = null;
       double closestDistance = Float.MAX_VALUE;
 
       for (ChunkPos chunkPos : list) {
-         LevelChunk levelChunk = level.getChunkSource().getChunkNow(chunkPos.x, chunkPos.z);
+         LevelChunk levelChunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
          if (levelChunk != null) {
             for (BlockEntity potentialTarget : levelChunk.getBlockEntities().values()) {
                if (potentialTarget instanceof ChestBlockEntity chestBlockEntity) {

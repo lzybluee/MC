@@ -2,16 +2,19 @@ package net.minecraft.client.gui.screens;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.multiplayer.RestrictionsScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.multiplayer.chat.ChatListener;
 import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -24,16 +27,25 @@ import org.jspecify.annotations.Nullable;
 public class ChatScreen extends Screen {
    public static final double MOUSE_SCROLL_SPEED = 7.0;
    private static final Component USAGE_TEXT = Component.translatable("chat_screen.usage");
+   private static final Component RESTRICTED_NARRATION_TEXT = Component.translatable("chat_screen.restricted.narration");
+   public static final int USAGE_BACKGROUND_COLOR = -805306368;
+   private final boolean closeOnSubmit;
    private String historyBuffer = "";
    private int historyPos = -1;
    protected EditBox input;
    protected String initial;
    protected boolean isDraft;
+   private ChatComponent.DisplayMode displayMode = ChatComponent.DisplayMode.FOREGROUND;
    protected ChatScreen.ExitReason exitReason = ChatScreen.ExitReason.INTERRUPTED;
    private CommandSuggestions commandSuggestions;
 
    public ChatScreen(final String initial, final boolean isDraft) {
+      this(initial, isDraft, true);
+   }
+
+   public ChatScreen(final String initial, final boolean isDraft, final boolean closeOnSubmit) {
       super(Component.translatable("chat_screen.title"));
+      this.closeOnSubmit = closeOnSubmit;
       this.initial = initial;
       this.isDraft = isDraft;
    }
@@ -57,6 +69,9 @@ public class ChatScreen extends Screen {
       this.commandSuggestions = new CommandSuggestions(this.minecraft, this, this.input, this.font, false, false, 1, 10, true, -805306368);
       this.commandSuggestions.setAllowHiding(false);
       this.commandSuggestions.setAllowSuggestions(false);
+      ChatAbilities chatAbilities = this.minecraft.player.chatAbilities();
+      this.displayMode = chatAbilities.hasAnyRestrictions() ? ChatComponent.DisplayMode.FOREGROUND_RESTRICTED : ChatComponent.DisplayMode.FOREGROUND;
+      this.commandSuggestions.setRestrictions(chatAbilities.canSendMessages(), chatAbilities.canSendCommands());
       this.commandSuggestions.updateCommandInfo();
    }
 
@@ -116,30 +131,40 @@ public class ChatScreen extends Screen {
       }
 
       if (event.isConfirmation()) {
+         if (!this.commandSuggestions.hasAllowedInput()) {
+            return true;
+         }
+
          this.handleChatInput(this.input.getValue(), true);
-         this.exitReason = ChatScreen.ExitReason.DONE;
-         this.minecraft.setScreen(null);
+         if (this.closeOnSubmit) {
+            this.exitReason = ChatScreen.ExitReason.DONE;
+            this.minecraft.setScreen(null);
+         } else {
+            this.input.setValue("");
+            this.minecraft.gui.getChat().resetChatScroll();
+         }
+
+         return true;
+      } else {
+         switch (event.key()) {
+            case 264:
+               this.moveInHistory(1);
+               break;
+            case 265:
+               this.moveInHistory(-1);
+               break;
+            case 266:
+               this.minecraft.gui.getChat().scrollChat(this.minecraft.gui.getChat().getLinesPerPage() - 1);
+               break;
+            case 267:
+               this.minecraft.gui.getChat().scrollChat(-this.minecraft.gui.getChat().getLinesPerPage() + 1);
+               break;
+            default:
+               return false;
+         }
+
          return true;
       }
-
-      switch (event.key()) {
-         case 264:
-            this.moveInHistory(1);
-            break;
-         case 265:
-            this.moveInHistory(-1);
-            break;
-         case 266:
-            this.minecraft.gui.getChat().scrollChat(this.minecraft.gui.getChat().getLinesPerPage() - 1);
-            break;
-         case 267:
-            this.minecraft.gui.getChat().scrollChat(-this.minecraft.gui.getChat().getLinesPerPage() + 1);
-            break;
-         default:
-            return false;
-      }
-
-      return true;
    }
 
    @Override
@@ -167,7 +192,7 @@ public class ChatScreen extends Screen {
          int screenHeight = this.minecraft.getWindow().getGuiScaledHeight();
          ActiveTextCollector.ClickableStyleFinder finder = new ActiveTextCollector.ClickableStyleFinder(this.getFont(), (int)event.x(), (int)event.y())
             .includeInsertions(this.insertionClickMode());
-         this.minecraft.gui.getChat().captureClickableText(finder, screenHeight, this.minecraft.gui.getGuiTicks(), true);
+         this.minecraft.gui.getChat().captureClickableText(finder, screenHeight, this.minecraft.gui.getGuiTicks(), this.displayMode);
          Style clicked = finder.result();
          if (clicked != null && this.handleComponentClicked(clicked, this.insertionClickMode())) {
             this.initial = this.input.getValue();
@@ -189,13 +214,18 @@ public class ChatScreen extends Screen {
             this.insertText(clicked.getInsertion(), false);
          }
       } else if (event != null) {
-         if (event instanceof ClickEvent.Custom customEvent && customEvent.id().equals(ChatComponent.QUEUE_EXPAND_ID)) {
-            ChatListener chatListener = this.minecraft.getChatListener();
-            if (chatListener.queueSize() != 0L) {
-               chatListener.acceptNextDelayedMessage();
-            }
-         } else {
-            defaultHandleGameClickEvent(event, this.minecraft, this);
+         switch (event) {
+            case ClickEvent.Custom customEvent when customEvent.id().equals(ChatComponent.QUEUE_EXPAND_ID):
+               ChatListener chatListener = this.minecraft.getChatListener();
+               if (chatListener.queueSize() != 0L) {
+                  chatListener.acceptNextDelayedMessage();
+               }
+               break;
+            case ClickEvent.Custom customEvent when customEvent.id().equals(ChatComponent.GO_TO_RESTRICTIONS_SCREEN):
+               this.minecraft.setScreen(new RestrictionsScreen(this, this.minecraft.player.chatAbilities()));
+               break;
+            default:
+               defaultHandleGameClickEvent(event, this.minecraft, this);
          }
 
          return true;
@@ -238,15 +268,18 @@ public class ChatScreen extends Screen {
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       graphics.fill(2, this.height - 14, this.width - 2, this.height - 2, this.minecraft.options.getBackgroundColor(Integer.MIN_VALUE));
-      this.minecraft.gui.getChat().render(graphics, this.font, this.minecraft.gui.getGuiTicks(), mouseX, mouseY, true, this.insertionClickMode());
-      super.render(graphics, mouseX, mouseY, a);
-      this.commandSuggestions.render(graphics, mouseX, mouseY);
+      this.minecraft
+         .gui
+         .getChat()
+         .extractRenderState(graphics, this.font, this.minecraft.gui.getGuiTicks(), mouseX, mouseY, this.displayMode, this.insertionClickMode());
+      super.extractRenderState(graphics, mouseX, mouseY, a);
+      this.commandSuggestions.extractRenderState(graphics, mouseX, mouseY);
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
    }
 
    @Override
@@ -262,7 +295,12 @@ public class ChatScreen extends Screen {
    @Override
    protected void updateNarrationState(final NarrationElementOutput output) {
       output.add(NarratedElementType.TITLE, this.getTitle());
-      output.add(NarratedElementType.USAGE, USAGE_TEXT);
+      if (this.displayMode.showRestrictedPrompt) {
+         output.add(NarratedElementType.USAGE, CommonComponents.joinForNarration(USAGE_TEXT, RESTRICTED_NARRATION_TEXT));
+      } else {
+         output.add(NarratedElementType.USAGE, USAGE_TEXT);
+      }
+
       String value = this.input.getValue();
       if (!value.isEmpty()) {
          output.nest().add(NarratedElementType.TITLE, Component.translatable("chat_screen.message", value));

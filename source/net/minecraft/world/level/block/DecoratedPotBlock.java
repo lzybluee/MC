@@ -88,7 +88,7 @@ public class DecoratedPotBlock extends BaseEntityBlock implements SimpleWaterlog
       FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
       return this.defaultBlockState()
          .setValue(HORIZONTAL_FACING, context.getHorizontalDirection())
-         .setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER)
+         .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER))
          .setValue(CRACKED, false);
    }
 
@@ -226,7 +226,7 @@ public class DecoratedPotBlock extends BaseEntityBlock implements SimpleWaterlog
    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
       if (level.getBlockEntity(pos) instanceof DecoratedPotBlockEntity decoratedPotBlockEntity) {
          PotDecorations decorations = decoratedPotBlockEntity.getDecorations();
-         return DecoratedPotBlockEntity.createDecoratedPotItem(decorations);
+         return DecoratedPotBlockEntity.createDecoratedPotInstance(decorations);
       } else {
          return super.getCloneItemStack(level, pos, state, includeData);
       }

@@ -19,9 +19,10 @@ public record TestData<EnvironmentType>(
    boolean manualOnly,
    int maxAttempts,
    int requiredSuccesses,
-   boolean skyAccess
+   boolean skyAccess,
+   int padding
 ) {
-   public static final MapCodec<TestData<Holder<TestEnvironmentDefinition>>> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<TestData<Holder<TestEnvironmentDefinition<?>>>> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
             TestEnvironmentDefinition.CODEC.fieldOf("environment").forGetter(TestData::environment),
             Identifier.CODEC.fieldOf("structure").forGetter(TestData::structure),
@@ -32,7 +33,8 @@ public record TestData<EnvironmentType>(
             Codec.BOOL.optionalFieldOf("manual_only", false).forGetter(TestData::manualOnly),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_attempts", 1).forGetter(TestData::maxAttempts),
             ExtraCodecs.POSITIVE_INT.optionalFieldOf("required_successes", 1).forGetter(TestData::requiredSuccesses),
-            Codec.BOOL.optionalFieldOf("sky_access", false).forGetter(TestData::skyAccess)
+            Codec.BOOL.optionalFieldOf("sky_access", false).forGetter(TestData::skyAccess),
+            ExtraCodecs.intRange(0, 128).optionalFieldOf("padding", 0).forGetter(TestData::padding)
          )
          .apply(i, TestData::new)
    );
@@ -40,7 +42,7 @@ public record TestData<EnvironmentType>(
    public TestData(
       final EnvironmentType environment, final Identifier structure, final int maxTicks, final int setupTicks, final boolean required, final Rotation rotation
    ) {
-      this(environment, structure, maxTicks, setupTicks, required, rotation, false, 1, 1, false);
+      this(environment, structure, maxTicks, setupTicks, required, rotation, false, 1, 1, false, 0);
    }
 
    public TestData(final EnvironmentType environment, final Identifier structure, final int maxTicks, final int setupTicks, final boolean required) {
@@ -58,7 +60,8 @@ public record TestData<EnvironmentType>(
          this.manualOnly,
          this.maxAttempts,
          this.requiredSuccesses,
-         this.skyAccess
+         this.skyAccess,
+         this.padding
       );
    }
 }

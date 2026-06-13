@@ -38,11 +38,11 @@ public class PlayerChunkSender {
    }
 
    public void markChunkPendingToSend(final LevelChunk chunk) {
-      this.pendingChunks.add(chunk.getPos().toLong());
+      this.pendingChunks.add(chunk.getPos().pack());
    }
 
    public void dropChunk(final ServerPlayer player, final ChunkPos pos) {
-      if (!this.pendingChunks.remove(pos.toLong()) && player.isAlive()) {
+      if (!this.pendingChunks.remove(pos.pack()) && player.isAlive()) {
          player.connection.send(new ClientboundForgetLevelChunkPacket(pos));
       }
    }
@@ -105,7 +105,7 @@ public class PlayerChunkSender {
       }
 
       for (LevelChunk chunk : chunks) {
-         this.pendingChunks.remove(chunk.getPos().toLong());
+         this.pendingChunks.remove(chunk.getPos().pack());
       }
 
       return chunks;

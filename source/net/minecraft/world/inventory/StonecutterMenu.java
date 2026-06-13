@@ -154,7 +154,7 @@ public class StonecutterMenu extends AbstractContainerMenu {
 
       usedRecipe.ifPresentOrElse(recipe -> {
          this.resultContainer.setRecipeUsed((RecipeHolder<?>)recipe);
-         this.resultSlot.set(recipe.value().assemble(new SingleRecipeInput(this.container.getItem(0)), this.level.registryAccess()));
+         this.resultSlot.set(recipe.value().assemble(new SingleRecipeInput(this.container.getItem(0))));
       }, () -> {
          this.resultSlot.set(ItemStack.EMPTY);
          this.resultContainer.setRecipeUsed(null);

@@ -49,7 +49,7 @@ public class SmallDripleafBlock extends DoublePlantBlock implements SimpleWaterl
 
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
-      return state.is(BlockTags.SMALL_DRIPLEAF_PLACEABLE)
+      return state.is(BlockTags.SUPPORTS_SMALL_DRIPLEAF)
          || level.getFluidState(pos.above()).isSourceOfType(Fluids.WATER) && super.mayPlaceOn(state, level, pos);
    }
 

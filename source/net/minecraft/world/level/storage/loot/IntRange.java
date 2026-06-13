@@ -1,23 +1,19 @@
 package net.minecraft.world.level.storage.loot;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.util.Mth;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 import org.jspecify.annotations.Nullable;
 
-public class IntRange {
+public class IntRange implements LootContextUser {
    private static final Codec<IntRange> RECORD_CODEC = RecordCodecBuilder.create(
       i -> i.group(
             NumberProviders.CODEC.optionalFieldOf("min").forGetter(r -> Optional.ofNullable(r.min)),
@@ -35,17 +31,16 @@ public class IntRange {
    private final IntRange.IntLimiter limiter;
    private final IntRange.IntChecker predicate;
 
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      Builder<ContextKey<?>> result = ImmutableSet.builder();
+   @Override
+   public void validate(final ValidationContext context) {
+      LootContextUser.super.validate(context);
       if (this.min != null) {
-         result.addAll(this.min.getReferencedContextParams());
+         Validatable.validate(context, "min", this.min);
       }
 
       if (this.max != null) {
-         result.addAll(this.max.getReferencedContextParams());
+         Validatable.validate(context, "max", this.max);
       }
-
-      return result.build();
    }
 
    private IntRange(final Optional<NumberProvider> min, final Optional<NumberProvider> max) {

@@ -2,19 +2,18 @@ package net.minecraft.world.level.storage.loot.predicates;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public record InvertedLootItemCondition(LootItemCondition term) implements LootItemCondition {
-   public static final MapCodec<InvertedLootItemCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<InvertedLootItemCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(LootItemCondition.DIRECT_CODEC.fieldOf("term").forGetter(InvertedLootItemCondition::term)).apply(i, InvertedLootItemCondition::new)
    );
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.INVERTED;
+   public MapCodec<InvertedLootItemCondition> codec() {
+      return MAP_CODEC;
    }
 
    public boolean test(final LootContext context) {
@@ -22,14 +21,9 @@ public record InvertedLootItemCondition(LootItemCondition term) implements LootI
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.term.getReferencedContextParams();
-   }
-
-   @Override
    public void validate(final ValidationContext output) {
       LootItemCondition.super.validate(output);
-      this.term.validate(output);
+      Validatable.validate(output, "term", this.term);
    }
 
    public static LootItemCondition.Builder invert(final LootItemCondition.Builder term) {

@@ -19,4 +19,10 @@ public abstract class KeyTagProvider<T> extends TagsProvider<T> {
       TagBuilder builder = this.getOrCreateRawBuilder(tag);
       return TagAppender.forBuilder(builder);
    }
+
+   protected TagAppender<ResourceKey<T>, T> tag(final TagKey<T> tag, final boolean replace) {
+      TagBuilder builder = this.getOrCreateRawBuilder(tag);
+      builder.setReplace(replace);
+      return TagAppender.forBuilder(builder);
+   }
 }

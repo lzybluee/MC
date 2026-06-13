@@ -96,7 +96,7 @@ public class CreakingHeartBlockEntity extends BlockEntity {
          }
 
          if (entity.ticker-- < 0) {
-            entity.ticker = entity.level == null ? 20 : entity.level.random.nextInt(5) + 20;
+            entity.ticker = entity.level == null ? 20 : entity.level.getRandom().nextInt(5) + 20;
             BlockState updatedState = updateCreakingState(level, state, pos, entity);
             if (updatedState != state) {
                level.setBlock(pos, updatedState, 3);
@@ -245,9 +245,10 @@ public class CreakingHeartBlockEntity extends BlockEntity {
    }
 
    private Optional<BlockPos> spreadResin(final ServerLevel level) {
+      RandomSource random = level.getRandom();
       Mutable<BlockPos> placedResin = new MutableObject(null);
       BlockPos.breadthFirstTraversal(this.worldPosition, 2, 64, (pos, acceptor) -> {
-         for (Direction dir : Util.shuffledCopy(Direction.values(), level.random)) {
+         for (Direction dir : Util.shuffledCopy(Direction.values(), random)) {
             BlockPos neighbourPos = pos.relative(dir);
             if (level.getBlockState(neighbourPos).is(BlockTags.PALE_OAK_LOGS)) {
                acceptor.accept(neighbourPos);
@@ -258,7 +259,7 @@ public class CreakingHeartBlockEntity extends BlockEntity {
             return BlockPos.TraversalNodeStatus.ACCEPT;
          }
 
-         for (Direction dir : Util.shuffledCopy(Direction.values(), level.random)) {
+         for (Direction dir : Util.shuffledCopy(Direction.values(), random)) {
             BlockPos neightbourPos = pos.relative(dir);
             BlockState neighbourState = level.getBlockState(neightbourPos);
             Direction opposite = dir.getOpposite();
@@ -283,7 +284,7 @@ public class CreakingHeartBlockEntity extends BlockEntity {
    private void emitParticles(final ServerLevel serverLevel, final int count, final boolean towardsCreaking) {
       if (this.getCreakingProtector().orElse(null) instanceof Creaking creaking) {
          int color = towardsCreaking ? 16545810 : 6250335;
-         RandomSource random = serverLevel.random;
+         RandomSource random = serverLevel.getRandom();
 
          for (double i = 0.0; i < count; i++) {
             AABB box = creaking.getBoundingBox();

@@ -15,7 +15,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.stats.Stats;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -31,7 +30,7 @@ public record BlocksAttacks(
    float disableCooldownScale,
    List<BlocksAttacks.DamageReduction> damageReductions,
    BlocksAttacks.ItemDamageFunction itemDamage,
-   Optional<TagKey<DamageType>> bypassedBy,
+   Optional<HolderSet<DamageType>> bypassedBy,
    Optional<Holder<SoundEvent>> blockSound,
    Optional<Holder<SoundEvent>> disableSound
 ) {
@@ -46,7 +45,7 @@ public record BlocksAttacks(
             BlocksAttacks.ItemDamageFunction.CODEC
                .optionalFieldOf("item_damage", BlocksAttacks.ItemDamageFunction.DEFAULT)
                .forGetter(BlocksAttacks::itemDamage),
-            TagKey.hashedCodec(Registries.DAMAGE_TYPE).optionalFieldOf("bypassed_by").forGetter(BlocksAttacks::bypassedBy),
+            RegistryCodecs.homogeneousList(Registries.DAMAGE_TYPE).optionalFieldOf("bypassed_by").forGetter(BlocksAttacks::bypassedBy),
             SoundEvent.CODEC.optionalFieldOf("block_sound").forGetter(BlocksAttacks::blockSound),
             SoundEvent.CODEC.optionalFieldOf("disabled_sound").forGetter(BlocksAttacks::disableSound)
          )
@@ -61,7 +60,7 @@ public record BlocksAttacks(
       BlocksAttacks::damageReductions,
       BlocksAttacks.ItemDamageFunction.STREAM_CODEC,
       BlocksAttacks::itemDamage,
-      TagKey.streamCodec(Registries.DAMAGE_TYPE).apply(ByteBufCodecs::optional),
+      ByteBufCodecs.holderSet(Registries.DAMAGE_TYPE).apply(ByteBufCodecs::optional),
       BlocksAttacks::bypassedBy,
       SoundEvent.STREAM_CODEC.apply(ByteBufCodecs::optional),
       BlocksAttacks::blockSound,
@@ -74,7 +73,7 @@ public record BlocksAttacks(
       this.blockSound
          .ifPresent(
             sound -> level.playSound(
-               null, user.getX(), user.getY(), user.getZ(), (Holder<SoundEvent>)sound, user.getSoundSource(), 1.0F, 0.8F + level.random.nextFloat() * 0.4F
+               null, user.getX(), user.getY(), user.getZ(), (Holder<SoundEvent>)sound, user.getSoundSource(), 1.0F, 0.8F + level.getRandom().nextFloat() * 0.4F
             )
          );
    }
@@ -90,7 +89,14 @@ public record BlocksAttacks(
          this.disableSound
             .ifPresent(
                sound -> level.playSound(
-                  null, user.getX(), user.getY(), user.getZ(), (Holder<SoundEvent>)sound, user.getSoundSource(), 0.8F, 0.8F + level.random.nextFloat() * 0.4F
+                  null,
+                  user.getX(),
+                  user.getY(),
+                  user.getZ(),
+                  (Holder<SoundEvent>)sound,
+                  user.getSoundSource(),
+                  0.8F,
+                  0.8F + level.getRandom().nextFloat() * 0.4F
                )
             );
       }

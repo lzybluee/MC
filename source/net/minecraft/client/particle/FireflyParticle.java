@@ -40,7 +40,7 @@ public class FireflyParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
+   public int getLightCoords(final float a) {
       return (int)(255.0F * getFadeAmount(this.getLifetimeProgress(this.age + a), 0.1F, 0.3F));
    }
 

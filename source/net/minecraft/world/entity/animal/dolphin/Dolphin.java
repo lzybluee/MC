@@ -39,7 +39,7 @@ import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.BreathAirGoal;
 import net.minecraft.world.entity.ai.goal.DolphinJumpGoal;
-import net.minecraft.world.entity.ai.goal.FollowBoatGoal;
+import net.minecraft.world.entity.ai.goal.FollowPlayerRiddenEntityGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
@@ -52,9 +52,11 @@ import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.animal.AgeableWaterCreature;
+import net.minecraft.world.entity.animal.nautilus.AbstractNautilus;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -154,7 +156,8 @@ public class Dolphin extends AgeableWaterCreature {
       this.goalSelector.addGoal(5, new DolphinJumpGoal(this, 10));
       this.goalSelector.addGoal(6, new MeleeAttackGoal(this, 1.2F, true));
       this.goalSelector.addGoal(8, new Dolphin.PlayWithItemsGoal());
-      this.goalSelector.addGoal(8, new FollowBoatGoal(this));
+      this.goalSelector.addGoal(8, new FollowPlayerRiddenEntityGoal(this, AbstractBoat.class));
+      this.goalSelector.addGoal(8, new FollowPlayerRiddenEntityGoal(this, AbstractNautilus.class));
       this.goalSelector.addGoal(9, new AvoidEntityGoal<>(this, Guardian.class, 8.0F, 1.0, 1.0));
       this.targetSelector.addGoal(1, new HurtByTargetGoal(this, Guardian.class).setAlertOthers());
    }
@@ -304,7 +307,7 @@ public class Dolphin extends AgeableWaterCreature {
             this.playSound(SoundEvents.DOLPHIN_EAT, 1.0F, 1.0F);
          }
 
-         if (this.isBaby()) {
+         if (this.canAgeUp()) {
             itemStack.consume(1, player);
             this.ageUp(getSpeedUpSecondsWhenFeeding(-this.age), true);
          } else {
@@ -444,7 +447,7 @@ public class Dolphin extends AgeableWaterCreature {
 
                this.dolphin.getLookControl().setLookAt(nextPos.x, nextPos.y, nextPos.z, this.dolphin.getMaxHeadYRot() + 20, this.dolphin.getMaxHeadXRot());
                this.dolphin.getNavigation().moveTo(nextPos.x, nextPos.y, nextPos.z, 1.3);
-               if (level.random.nextInt(this.adjustedTickDelay(80)) == 0) {
+               if (level.getRandom().nextInt(this.adjustedTickDelay(80)) == 0) {
                   level.broadcastEntityEvent(this.dolphin, (byte)38);
                }
             }
@@ -494,7 +497,7 @@ public class Dolphin extends AgeableWaterCreature {
             this.dolphin.getNavigation().moveTo(this.player, this.speedModifier);
          }
 
-         if (this.player.isSwimming() && this.player.level().random.nextInt(6) == 0) {
+         if (this.player.isSwimming() && this.player.level().getRandom().nextInt(6) == 0) {
             this.player.addEffect(new MobEffectInstance(MobEffects.DOLPHINS_GRACE, 100), this.dolphin);
          }
       }
@@ -502,6 +505,10 @@ public class Dolphin extends AgeableWaterCreature {
 
    private class PlayWithItemsGoal extends Goal {
       private int cooldown;
+
+      PlayWithItemsGoal() {
+         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+      }
 
       @Override
       public boolean canUse() {

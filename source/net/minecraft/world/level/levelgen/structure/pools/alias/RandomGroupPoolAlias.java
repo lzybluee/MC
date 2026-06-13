@@ -12,7 +12,7 @@ import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 public record RandomGroupPoolAlias(WeightedList<List<PoolAliasBinding>> groups) implements PoolAliasBinding {
-   static MapCodec<RandomGroupPoolAlias> CODEC = RecordCodecBuilder.mapCodec(
+   static final MapCodec<RandomGroupPoolAlias> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(WeightedList.nonEmptyCodec(Codec.list(PoolAliasBinding.CODEC)).fieldOf("groups").forGetter(RandomGroupPoolAlias::groups))
          .apply(i, RandomGroupPoolAlias::new)
    );
@@ -21,7 +21,7 @@ public record RandomGroupPoolAlias(WeightedList<List<PoolAliasBinding>> groups) 
    public void forEachResolved(
       final RandomSource random, final BiConsumer<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> aliasAndTargetConsumer
    ) {
-      this.groups.getRandom(random).ifPresent(combination -> combination.forEach(binding -> binding.forEachResolved(random, aliasAndTargetConsumer)));
+      this.groups.getRandomOrThrow(random).forEach(binding -> binding.forEachResolved(random, aliasAndTargetConsumer));
    }
 
    @Override

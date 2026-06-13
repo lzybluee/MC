@@ -47,11 +47,11 @@ import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.server.players.UserNameToIdResolver;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.debugchart.LocalSampleLogger;
 import net.minecraft.util.debugchart.SampleLogger;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.DataPackConfig;
@@ -62,9 +62,11 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldDimensions;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.storage.LevelData;
+import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import org.jspecify.annotations.Nullable;
@@ -83,6 +85,7 @@ public class GameTestServer extends MinecraftServer {
    private final LocalSampleLogger sampleLogger = new LocalSampleLogger(4);
    private final Optional<String> testSelection;
    private final boolean verify;
+   private final int repeatCount;
    private List<GameTestBatch> testBatches = new ArrayList<>();
    private final Stopwatch stopwatch = Stopwatch.createUnstarted();
    private static final WorldOptions WORLD_OPTIONS = new WorldOptions(0L, false, false);
@@ -93,16 +96,15 @@ public class GameTestServer extends MinecraftServer {
       final LevelStorageSource.LevelStorageAccess levelStorageSource,
       final PackRepository packRepository,
       final Optional<String> testSelection,
-      final boolean verify
+      final boolean verify,
+      final int repeatCount
    ) {
       packRepository.reload();
       ArrayList<String> enabledPacks = new ArrayList<>(packRepository.getAvailableIds());
       enabledPacks.remove("vanilla");
       enabledPacks.addFirst("vanilla");
       WorldDataConfiguration defaultTestConfig = new WorldDataConfiguration(new DataPackConfig(enabledPacks, List.of()), ENABLED_FEATURES);
-      LevelSettings testSettings = new LevelSettings(
-         "Test Level", GameType.CREATIVE, false, Difficulty.NORMAL, true, new GameRules(ENABLED_FEATURES), defaultTestConfig
-      );
+      LevelSettings testSettings = new LevelSettings("Test Level", GameType.CREATIVE, LevelSettings.DifficultySettings.DEFAULT, true, defaultTestConfig);
       WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, defaultTestConfig, false, true);
       WorldLoader.InitConfig initConfig = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, LevelBasedPermissionSet.OWNER);
 
@@ -114,14 +116,15 @@ public class GameTestServer extends MinecraftServer {
                   initConfig,
                   context -> {
                      Registry<LevelStem> noDatapackDimensions = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
-                     WorldDimensions.Complete dimensions = context.datapackWorldgen()
+                     WorldDimensions worldDimensions = context.datapackWorldgen()
                         .lookupOrThrow(Registries.WORLD_PRESET)
                         .getOrThrow(WorldPresets.FLAT)
                         .value()
-                        .createWorldDimensions()
-                        .bake(noDatapackDimensions);
+                        .createWorldDimensions();
+                     WorldDimensions.Complete dimensions = worldDimensions.bake(noDatapackDimensions);
+                     PrimaryLevelData levelData = new PrimaryLevelData(testSettings, dimensions.specialWorldProperty(), dimensions.lifecycle());
                      return new WorldLoader.DataLoadOutput<>(
-                        new PrimaryLevelData(testSettings, WORLD_OPTIONS, dimensions.specialWorldProperty(), dimensions.lifecycle()),
+                        new LevelDataAndDimensions.WorldDataAndGenSettings(levelData, new WorldGenSettings(WORLD_OPTIONS, worldDimensions)),
                         dimensions.dimensionsRegistryAccess()
                      );
                   },
@@ -133,7 +136,7 @@ public class GameTestServer extends MinecraftServer {
             .get();
          stopwatch.stop();
          LOGGER.debug("Finished resource loading after {} ms", stopwatch.elapsed(TimeUnit.MILLISECONDS));
-         return new GameTestServer(serverThread, levelStorageSource, packRepository, worldStem, testSelection, verify);
+         return new GameTestServer(serverThread, levelStorageSource, packRepository, worldStem, testSelection, verify, repeatCount);
       } catch (Exception e) {
          LOGGER.warn("Failed to load vanilla datapack, bit oops", e);
          System.exit(-1);
@@ -147,19 +150,23 @@ public class GameTestServer extends MinecraftServer {
       final PackRepository packRepository,
       final WorldStem worldStem,
       final Optional<String> testSelection,
-      final boolean verify
+      final boolean verify,
+      final int repeatCount
    ) {
       super(
          serverThread,
          levelStorageSource,
          packRepository,
          worldStem,
+         Optional.of(new GameRules(ENABLED_FEATURES)),
          Proxy.NO_PROXY,
          DataFixers.getDataFixer(),
          NO_SERVICES,
-         LoggingLevelLoadListener.forDedicatedServer()
+         LoggingLevelLoadListener.forDedicatedServer(),
+         false
       );
       this.testSelection = testSelection;
+      this.repeatCount = repeatCount;
       this.verify = verify;
    }
 
@@ -180,9 +187,20 @@ public class GameTestServer extends MinecraftServer {
       GameTestBatchFactory.TestDecorator decorator;
       if (this.testSelection.isPresent()) {
          tests = getTestsForSelection(level.registryAccess(), this.testSelection.get()).filter(test -> !test.value().manualOnly()).toList();
+         if (tests.isEmpty()) {
+            LOGGER.warn("Test selection matcher ({}) found no tests", this.testSelection.get());
+            System.exit(-1);
+         }
+
          if (this.verify) {
             decorator = GameTestServer::rotateAndMultiply;
             LOGGER.info("Verify requested. Will run each test that matches {} {} times", this.testSelection.get(), 100 * Rotation.values().length);
+         } else if (this.repeatCount > 0) {
+            decorator = this::multiplyTest;
+            LOGGER.info(
+               "Each test that matches {} will be run {} times (total: {})",
+               new Object[]{this.testSelection.get(), this.repeatCount, tests.size() * this.repeatCount}
+            );
          } else {
             decorator = GameTestBatchFactory.DIRECT;
             LOGGER.info("Will run tests matching {} ({} tests)", this.testSelection.get(), tests.size());
@@ -209,6 +227,16 @@ public class GameTestServer extends MinecraftServer {
 
    public static Stream<Holder.Reference<GameTestInstance>> getTestsForSelection(final RegistryAccess registries, final String selection) {
       return ResourceSelectorArgument.parse(new StringReader(selection), registries.lookupOrThrow(Registries.TEST_INSTANCE)).stream();
+   }
+
+   private Stream<GameTestInfo> multiplyTest(final Holder.Reference<GameTestInstance> test, final ServerLevel level) {
+      Builder<GameTestInfo> builder = Stream.builder();
+
+      for (int i = 0; i < this.repeatCount; i++) {
+         builder.add(new GameTestInfo(test, Rotation.NONE, level, RetryOptions.noRetries()));
+      }
+
+      return builder.build();
    }
 
    @Override
@@ -291,9 +319,8 @@ public class GameTestServer extends MinecraftServer {
    }
 
    private void startTests(final ServerLevel level) {
-      BlockPos startPos = new BlockPos(
-         level.random.nextIntBetweenInclusive(-14999992, 14999992), -59, level.random.nextIntBetweenInclusive(-14999992, 14999992)
-      );
+      RandomSource random = level.getRandom();
+      BlockPos startPos = new BlockPos(random.nextIntBetweenInclusive(-14999992, 14999992), -59, random.nextIntBetweenInclusive(-14999992, 14999992));
       level.setRespawnData(LevelData.RespawnData.of(level.dimension(), startPos, 0.0F, 0.0F));
       GameTestRunner runner = GameTestRunner.Builder.fromBatches(this.testBatches, level)
          .newStructureSpawner(new StructureGridSpawner(startPos, 8, false))

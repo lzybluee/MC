@@ -5,15 +5,15 @@ import java.util.List;
 import net.minecraft.util.Util;
 
 public class AnyOfCondition extends CompositeLootItemCondition {
-   public static final MapCodec<AnyOfCondition> CODEC = createCodec(AnyOfCondition::new);
+   public static final MapCodec<AnyOfCondition> MAP_CODEC = createCodec(AnyOfCondition::new);
 
    private AnyOfCondition(final List<LootItemCondition> terms) {
       super(terms, Util.anyOf(terms));
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.ANY_OF;
+   public MapCodec<AnyOfCondition> codec() {
+      return MAP_CODEC;
    }
 
    public static AnyOfCondition.Builder anyOf(final LootItemCondition.Builder... terms) {

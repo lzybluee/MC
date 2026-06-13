@@ -1,7 +1,6 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -12,12 +11,14 @@ import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.util.Util;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.SuspiciousStewEffects;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootContextUser;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
@@ -34,7 +35,7 @@ public class SetStewEffectFunction extends LootItemConditionalFunction {
 
       return DataResult.success(entries);
    });
-   public static final MapCodec<SetStewEffectFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetStewEffectFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i).and(EFFECTS_LIST.optionalFieldOf("effects", List.of()).forGetter(f -> f.effects)).apply(i, SetStewEffectFunction::new)
    );
    private final List<SetStewEffectFunction.EffectEntry> effects;
@@ -45,13 +46,14 @@ public class SetStewEffectFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetStewEffectFunction> getType() {
-      return LootItemFunctions.SET_STEW_EFFECT;
+   public MapCodec<SetStewEffectFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.effects.stream().flatMap(p -> p.duration().getReferencedContextParams().stream()).collect(ImmutableSet.toImmutableSet());
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      Validatable.validate(context, "effects", this.effects);
    }
 
    @Override
@@ -94,7 +96,7 @@ public class SetStewEffectFunction extends LootItemConditionalFunction {
       }
    }
 
-   private record EffectEntry(Holder<MobEffect> effect, NumberProvider duration) {
+   private record EffectEntry(Holder<MobEffect> effect, NumberProvider duration) implements LootContextUser {
       public static final Codec<SetStewEffectFunction.EffectEntry> CODEC = RecordCodecBuilder.create(
          i -> i.group(
                MobEffect.CODEC.fieldOf("type").forGetter(SetStewEffectFunction.EffectEntry::effect),
@@ -102,5 +104,11 @@ public class SetStewEffectFunction extends LootItemConditionalFunction {
             )
             .apply(i, SetStewEffectFunction.EffectEntry::new)
       );
+
+      @Override
+      public void validate(final ValidationContext context) {
+         LootContextUser.super.validate(context);
+         Validatable.validate(context, "duration", this.duration);
+      }
    }
 }

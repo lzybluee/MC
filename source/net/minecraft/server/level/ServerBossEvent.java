@@ -6,10 +6,10 @@ import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
-import net.minecraft.util.Mth;
 import net.minecraft.world.BossEvent;
 
 public class ServerBossEvent extends BossEvent {
@@ -17,14 +17,15 @@ public class ServerBossEvent extends BossEvent {
    private final Set<ServerPlayer> unmodifiablePlayers = Collections.unmodifiableSet(this.players);
    private boolean visible = true;
 
-   public ServerBossEvent(final Component name, final BossEvent.BossBarColor color, final BossEvent.BossBarOverlay overlay) {
-      super(Mth.createInsecureUUID(), name, color, overlay);
+   public ServerBossEvent(final UUID id, final Component name, final BossEvent.BossBarColor color, final BossEvent.BossBarOverlay overlay) {
+      super(id, name, color, overlay);
    }
 
    @Override
    public void setProgress(final float progress) {
       if (progress != this.progress) {
          super.setProgress(progress);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdateProgressPacket);
       }
    }
@@ -33,6 +34,7 @@ public class ServerBossEvent extends BossEvent {
    public void setColor(final BossEvent.BossBarColor color) {
       if (color != this.color) {
          super.setColor(color);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdateStylePacket);
       }
    }
@@ -41,6 +43,7 @@ public class ServerBossEvent extends BossEvent {
    public void setOverlay(final BossEvent.BossBarOverlay overlay) {
       if (overlay != this.overlay) {
          super.setOverlay(overlay);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdateStylePacket);
       }
    }
@@ -49,6 +52,7 @@ public class ServerBossEvent extends BossEvent {
    public BossEvent setDarkenScreen(final boolean darkenScreen) {
       if (darkenScreen != this.darkenScreen) {
          super.setDarkenScreen(darkenScreen);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdatePropertiesPacket);
       }
 
@@ -59,6 +63,7 @@ public class ServerBossEvent extends BossEvent {
    public BossEvent setPlayBossMusic(final boolean playBossMusic) {
       if (playBossMusic != this.playBossMusic) {
          super.setPlayBossMusic(playBossMusic);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdatePropertiesPacket);
       }
 
@@ -69,6 +74,7 @@ public class ServerBossEvent extends BossEvent {
    public BossEvent setCreateWorldFog(final boolean createWorldFog) {
       if (createWorldFog != this.createWorldFog) {
          super.setCreateWorldFog(createWorldFog);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdatePropertiesPacket);
       }
 
@@ -79,6 +85,7 @@ public class ServerBossEvent extends BossEvent {
    public void setName(final Component name) {
       if (!Objects.equal(name, this.name)) {
          super.setName(name);
+         this.setDirty();
          this.broadcast(ClientboundBossEventPacket::createUpdateNamePacket);
       }
    }
@@ -120,6 +127,7 @@ public class ServerBossEvent extends BossEvent {
    public void setVisible(final boolean visible) {
       if (visible != this.visible) {
          this.visible = visible;
+         this.setDirty();
 
          for (ServerPlayer player : this.players) {
             player.connection.send(visible ? ClientboundBossEventPacket.createAddPacket(this) : ClientboundBossEventPacket.createRemovePacket(this.getId()));
@@ -129,5 +137,8 @@ public class ServerBossEvent extends BossEvent {
 
    public Collection<ServerPlayer> getPlayers() {
       return this.unmodifiablePlayers;
+   }
+
+   protected void setDirty() {
    }
 }

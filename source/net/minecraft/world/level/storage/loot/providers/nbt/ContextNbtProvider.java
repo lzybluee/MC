@@ -28,8 +28,8 @@ public class ContextNbtProvider implements NbtProvider {
    }
 
    @Override
-   public LootNbtProviderType getType() {
-      return NbtProviders.CONTEXT;
+   public MapCodec<ContextNbtProvider> codec() {
+      return MAP_CODEC;
    }
 
    @Override

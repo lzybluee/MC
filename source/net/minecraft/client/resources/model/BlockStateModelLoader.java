@@ -13,8 +13,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
@@ -49,15 +49,15 @@ public class BlockStateModelLoader {
                            }
 
                            List<Resource> stack = resourceStack.getValue();
-                           List<BlockStateModelLoader.LoadedBlockModelDefinition> loadedStack = new ArrayList<>(stack.size());
+                           List<BlockStateModelLoader.LoadedBlockStateModelDispatcher> loadedStack = new ArrayList<>(stack.size());
 
                            for (Resource resource : stack) {
                               try (Reader reader = resource.openAsReader()) {
                                  JsonElement element = StrictJsonParser.parse(reader);
-                                 BlockModelDefinition definition = (BlockModelDefinition)BlockModelDefinition.CODEC
+                                 BlockStateModelDispatcher definition = (BlockStateModelDispatcher)BlockStateModelDispatcher.CODEC
                                     .parse(JsonOps.INSTANCE, element)
                                     .getOrThrow(JsonParseException::new);
-                                 loadedStack.add(new BlockStateModelLoader.LoadedBlockModelDefinition(resource.sourcePackId(), definition));
+                                 loadedStack.add(new BlockStateModelLoader.LoadedBlockStateModelDispatcher(resource.sourcePackId(), definition));
                               } catch (Exception e) {
                                  LOGGER.error(
                                     "Failed to load blockstate definition {} from pack {}", new Object[]{stateDefinitionId, resource.sourcePackId(), e}
@@ -95,18 +95,18 @@ public class BlockStateModelLoader {
    private static BlockStateModelLoader.LoadedModels loadBlockStateDefinitionStack(
       final Identifier stateDefinitionId,
       final StateDefinition<Block, BlockState> stateDefinition,
-      final List<BlockStateModelLoader.LoadedBlockModelDefinition> definitionStack
+      final List<BlockStateModelLoader.LoadedBlockStateModelDispatcher> definitionStack
    ) {
       Map<BlockState, BlockStateModel.UnbakedRoot> result = new IdentityHashMap<>();
 
-      for (BlockStateModelLoader.LoadedBlockModelDefinition definition : definitionStack) {
+      for (BlockStateModelLoader.LoadedBlockStateModelDispatcher definition : definitionStack) {
          result.putAll(definition.contents.instantiate(stateDefinition, () -> stateDefinitionId + "/" + definition.source));
       }
 
       return new BlockStateModelLoader.LoadedModels(result);
    }
 
-   private record LoadedBlockModelDefinition(String source, BlockModelDefinition contents) {
+   private record LoadedBlockStateModelDispatcher(String source, BlockStateModelDispatcher contents) {
    }
 
    public record LoadedModels(Map<BlockState, BlockStateModel.UnbakedRoot> models) {

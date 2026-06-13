@@ -24,6 +24,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.VaultBlock;
@@ -121,7 +122,7 @@ public class VaultBlockEntity extends BlockEntity {
          final Level clientLevel, final BlockPos pos, final BlockState blockState, final VaultSharedData sharedData, final ParticleOptions flameParticle
       ) {
          emitConnectionParticlesForNearbyPlayers(clientLevel, pos, blockState, sharedData);
-         RandomSource random = clientLevel.random;
+         RandomSource random = clientLevel.getRandom();
 
          for (int i = 0; i < 20; i++) {
             Vec3 particlePos = randomPosInsideCage(pos, random);
@@ -131,7 +132,7 @@ public class VaultBlockEntity extends BlockEntity {
       }
 
       public static void emitDeactivationParticles(final Level clientLevel, final BlockPos pos, final ParticleOptions flameParticle) {
-         RandomSource random = clientLevel.random;
+         RandomSource random = clientLevel.getRandom();
 
          for (int i = 0; i < 20; i++) {
             Vec3 particlePos = randomPosCenterOfCage(pos, random);
@@ -152,7 +153,7 @@ public class VaultBlockEntity extends BlockEntity {
       }
 
       private static void emitConnectionParticlesForPlayer(final Level level, final Vec3 flyTowards, final Player player) {
-         RandomSource random = level.random;
+         RandomSource random = level.getRandom();
          Vec3 direction = flyTowards.vectorTo(player.position().add(0.0, player.getBbHeight() / 2.0F, 0.0));
          int particleCount = Mth.nextInt(random, 2, 5);
 
@@ -328,7 +329,7 @@ public class VaultBlockEntity extends BlockEntity {
       }
 
       private static List<ItemStack> resolveItemsToEject(
-         final ServerLevel serverLevel, final VaultConfig config, final BlockPos pos, final Player player, final ItemStack insertedStack
+         final ServerLevel serverLevel, final VaultConfig config, final BlockPos pos, final Player player, final ItemInstance insertedStack
       ) {
          LootTable lootTable = serverLevel.getServer().reloadableRegistries().getLootTable(config.lootTable());
          LootParams params = new LootParams.Builder(serverLevel)

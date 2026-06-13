@@ -7,8 +7,8 @@ import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ComponentRenderUtils;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -39,7 +39,7 @@ public class EffectsInInventory {
       return availableWidth >= 32;
    }
 
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
       int xo = this.screen.leftPos + this.screen.imageWidth + 2;
       int availableWidth = this.screen.width - xo;
       Collection<MobEffectInstance> activeEffects = this.minecraft.player.getActiveEffects();
@@ -50,12 +50,12 @@ public class EffectsInInventory {
             yStep = 132 / (activeEffects.size() - 1);
          }
 
-         this.renderEffects(graphics, activeEffects, xo, yStep, mouseX, mouseY, maxWidth);
+         this.extractEffects(graphics, activeEffects, xo, yStep, mouseX, mouseY, maxWidth);
       }
    }
 
-   private void renderEffects(
-      final GuiGraphics graphics,
+   private void extractEffects(
+      final GuiGraphicsExtractor graphics,
       final Collection<MobEffectInstance> activeEffects,
       final int x0,
       final int yStep,
@@ -71,15 +71,15 @@ public class EffectsInInventory {
          boolean isAmbient = effect.isAmbient();
          Component effectText = this.getEffectName(effect);
          Component duration = MobEffectUtil.formatDuration(effect, 1.0F, this.minecraft.level.tickRateManager().tickrate());
-         int textureWidth = this.renderBackground(graphics, font, effectText, duration, x0, y0, isAmbient, maxWidth);
-         this.renderText(graphics, effectText, duration, font, x0, y0, textureWidth, yStep, mouseX, mouseY);
+         int textureWidth = this.extractBackground(graphics, font, effectText, duration, x0, y0, isAmbient, maxWidth);
+         this.extractText(graphics, effectText, duration, font, x0, y0, textureWidth, yStep, mouseX, mouseY);
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, Gui.getMobEffectSprite(effect.getEffect()), x0 + 7, y0 + 7, 18, 18);
          y0 += yStep;
       }
    }
 
-   private int renderBackground(
-      final GuiGraphics graphics,
+   private int extractBackground(
+      final GuiGraphicsExtractor graphics,
       final Font font,
       final Component effectName,
       final Component duration,
@@ -95,8 +95,8 @@ public class EffectsInInventory {
       return textureWidth;
    }
 
-   private void renderText(
-      final GuiGraphics graphics,
+   private void extractText(
+      final GuiGraphicsExtractor graphics,
       final Component effectText,
       final Component duration,
       final Font font,
@@ -113,9 +113,9 @@ public class EffectsInInventory {
       boolean isCompact;
       if (maxTextWidth > 0) {
          boolean shouldClip = font.width(effectText) > maxTextWidth;
-         FormattedCharSequence clippedText = shouldClip ? StringWidget.clipText(effectText, font, maxTextWidth) : effectText.getVisualOrderText();
-         graphics.drawString(font, clippedText, textX, textY, -1);
-         graphics.drawString(font, duration, textX, textY + 9, -8355712);
+         FormattedCharSequence clippedText = shouldClip ? ComponentRenderUtils.clipText(effectText, font, maxTextWidth) : effectText.getVisualOrderText();
+         graphics.text(font, clippedText, textX, textY, -1);
+         graphics.text(font, duration, textX, textY + 9, -8355712);
          isCompact = shouldClip;
       } else {
          isCompact = true;

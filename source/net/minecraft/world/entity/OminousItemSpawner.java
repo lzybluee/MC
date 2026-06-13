@@ -36,7 +36,7 @@ public class OminousItemSpawner extends Entity {
 
    public static OminousItemSpawner create(final Level level, final ItemStack item) {
       OminousItemSpawner itemSpawner = new OminousItemSpawner(EntityType.OMINOUS_ITEM_SPAWNER, level);
-      itemSpawner.spawnItemAfterTicks = level.random.nextIntBetweenInclusive(60, 120);
+      itemSpawner.spawnItemAfterTicks = level.getRandom().nextIntBetweenInclusive(60, 120);
       itemSpawner.setItem(item);
       return itemSpawner;
    }

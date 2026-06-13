@@ -18,6 +18,7 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.PreeditEvent;
 import org.joml.Vector2i;
 import org.jspecify.annotations.Nullable;
 
@@ -93,12 +94,26 @@ public interface ContainerEventHandler extends GuiEventListener {
       return this.getFocused() != null && this.getFocused().charTyped(event);
    }
 
+   @Override
+   default boolean preeditUpdated(final @Nullable PreeditEvent event) {
+      return this.getFocused() != null && this.getFocused().preeditUpdated(event);
+   }
+
+   @Override
+   default ScreenRectangle getBorderForArrowNavigation(final ScreenDirection opposite) {
+      GuiEventListener focused = this.getFocused();
+      return focused != null ? focused.getBorderForArrowNavigation(opposite) : GuiEventListener.super.getBorderForArrowNavigation(opposite);
+   }
+
    @Nullable GuiEventListener getFocused();
 
    void setFocused(final @Nullable GuiEventListener focused);
 
    @Override
    default void setFocused(final boolean focused) {
+      if (!focused) {
+         this.setFocused(null);
+      }
    }
 
    @Override
@@ -161,13 +176,19 @@ public interface ContainerEventHandler extends GuiEventListener {
 
    private @Nullable ComponentPath handleArrowNavigation(final FocusNavigationEvent.ArrowNavigation arrowNavigation) {
       GuiEventListener focus = this.getFocused();
+      ScreenDirection direction = arrowNavigation.direction();
       if (focus == null) {
-         ScreenDirection direction = arrowNavigation.direction();
-         ScreenRectangle borderRectangle = this.getBorderForArrowNavigation(direction.getOpposite());
-         return ComponentPath.path(this, this.nextFocusPathInDirection(borderRectangle, direction, null, arrowNavigation));
+         if (arrowNavigation.previousFocus() instanceof ScreenRectangle previousFocus) {
+            return ComponentPath.path(this, this.nextFocusPathInDirection(previousFocus, arrowNavigation.direction(), null, arrowNavigation));
+         } else {
+            ScreenRectangle borderRectangle = this.getBorderForArrowNavigation(direction.getOpposite());
+            return ComponentPath.path(this, this.nextFocusPathInDirection(borderRectangle, direction, null, arrowNavigation));
+         }
       } else {
-         ScreenRectangle focusedRectangle = focus.getRectangle();
-         return ComponentPath.path(this, this.nextFocusPathInDirection(focusedRectangle, arrowNavigation.direction(), focus, arrowNavigation));
+         ScreenRectangle focusedRectangle = focus.getBorderForArrowNavigation(direction);
+         return ComponentPath.path(
+            this, this.nextFocusPathInDirection(focusedRectangle, arrowNavigation.direction(), focus, arrowNavigation.with(focusedRectangle))
+         );
       }
    }
 
@@ -175,7 +196,7 @@ public interface ContainerEventHandler extends GuiEventListener {
       final ScreenRectangle focusedRectangle,
       final ScreenDirection direction,
       final @Nullable GuiEventListener excluded,
-      final FocusNavigationEvent navigationEvent
+      final FocusNavigationEvent.ArrowNavigation navigationEvent
    ) {
       ScreenAxis axis = direction.getAxis();
       ScreenAxis otherAxis = axis.orthogonal();

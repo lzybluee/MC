@@ -5,11 +5,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
-import java.util.Set;
 import net.minecraft.util.Mth;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
@@ -17,7 +17,7 @@ import org.slf4j.Logger;
 
 public class SetItemDamageFunction extends LootItemConditionalFunction {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final MapCodec<SetItemDamageFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetItemDamageFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(i.group(NumberProviders.CODEC.fieldOf("damage").forGetter(f -> f.damage), Codec.BOOL.fieldOf("add").orElse(false).forGetter(f -> f.add)))
          .apply(i, SetItemDamageFunction::new)
@@ -32,13 +32,14 @@ public class SetItemDamageFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetItemDamageFunction> getType() {
-      return LootItemFunctions.SET_DAMAGE;
+   public MapCodec<SetItemDamageFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
-   public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.damage.getReferencedContextParams();
+   public void validate(final ValidationContext context) {
+      super.validate(context);
+      Validatable.validate(context, "damage", this.damage);
    }
 
    @Override

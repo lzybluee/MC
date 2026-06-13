@@ -86,15 +86,11 @@ public class DebugEntityNameGenerator {
    }
 
    public static String getEntityName(final UUID uuid) {
-      RandomSource random = getRandom(uuid);
+      RandomSource random = RandomSource.createThreadLocalInstance(uuid.hashCode() >> 2);
       return getRandomString(random, NAMES_FIRST_PART) + getRandomString(random, NAMES_SECOND_PART);
    }
 
    private static String getRandomString(final RandomSource random, final String[] names) {
       return Util.getRandom(names, random);
-   }
-
-   private static RandomSource getRandom(final UUID uuid) {
-      return RandomSource.create(uuid.hashCode() >> 2);
    }
 }

@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.ScrollableLayout;
@@ -68,9 +67,7 @@ public class ExperimentsScreen extends Screen {
       LinearLayout footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
       footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.onDone()).build());
       footer.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).build());
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

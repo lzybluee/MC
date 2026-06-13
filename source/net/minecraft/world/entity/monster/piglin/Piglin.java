@@ -1,7 +1,5 @@
 package net.minecraft.world.entity.monster.piglin;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -24,12 +22,15 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -37,7 +38,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
@@ -74,62 +74,27 @@ public class Piglin extends AbstractPiglin implements CrossbowAttackMob, Invento
    private static final float CHANCE_OF_WEARING_EACH_ARMOUR_ITEM = 0.1F;
    private static final int MAX_PASSENGERS_ON_ONE_HOGLIN = 3;
    private static final float PROBABILITY_OF_SPAWNING_AS_BABY = 0.2F;
-   private static final EntityDimensions BABY_DIMENSIONS = EntityType.PIGLIN.getDimensions().scale(0.5F).withEyeHeight(0.97F);
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.99F)
+      .withEyeHeight(0.78F)
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, 0.0F, 0.1875F, 0.0F));
    private static final double PROBABILITY_OF_SPAWNING_WITH_CROSSBOW_INSTEAD_OF_SWORD = 0.5;
    private static final boolean DEFAULT_IS_BABY = false;
    private static final boolean DEFAULT_CANNOT_HUNT = false;
+   private static final int INVENTORY_SLOT_OFFSET = 300;
+   private static final int INVENTORY_SIZE = 8;
    private final SimpleContainer inventory = new SimpleContainer(8);
    private boolean cannotHunt = false;
-   protected static final ImmutableList<SensorType<? extends Sensor<? super Piglin>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_SPECIFIC_SENSOR
-   );
-   protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.DOORS_TO_CLOSE,
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS,
-      MemoryModuleType.NEARBY_ADULT_PIGLINS,
-      MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM,
-      MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS,
-      MemoryModuleType.HURT_BY,
-      MemoryModuleType.HURT_BY_ENTITY,
-      new MemoryModuleType[]{
-         MemoryModuleType.WALK_TARGET,
-         MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-         MemoryModuleType.ATTACK_TARGET,
-         MemoryModuleType.ATTACK_COOLING_DOWN,
-         MemoryModuleType.INTERACTION_TARGET,
-         MemoryModuleType.PATH,
-         MemoryModuleType.ANGRY_AT,
+   private static final Brain.Provider<Piglin> BRAIN_PROVIDER = Brain.provider(
+      List.of(
          MemoryModuleType.UNIVERSAL_ANGER,
-         MemoryModuleType.AVOID_TARGET,
-         MemoryModuleType.ADMIRING_ITEM,
-         MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM,
-         MemoryModuleType.ADMIRING_DISABLED,
-         MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM,
-         MemoryModuleType.CELEBRATE_LOCATION,
-         MemoryModuleType.DANCING,
-         MemoryModuleType.HUNTED_RECENTLY,
-         MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN,
-         MemoryModuleType.NEAREST_VISIBLE_NEMESIS,
-         MemoryModuleType.NEAREST_VISIBLE_ZOMBIFIED,
-         MemoryModuleType.RIDE_TARGET,
-         MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT,
-         MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT,
-         MemoryModuleType.NEAREST_VISIBLE_HUNTABLE_HOGLIN,
-         MemoryModuleType.NEAREST_TARGETABLE_PLAYER_NOT_WEARING_GOLD,
-         MemoryModuleType.NEAREST_PLAYER_HOLDING_WANTED_ITEM,
          MemoryModuleType.ATE_RECENTLY,
-         MemoryModuleType.NEAREST_REPELLENT,
          MemoryModuleType.SPEAR_FLEEING_TIME,
          MemoryModuleType.SPEAR_FLEEING_POSITION,
          MemoryModuleType.SPEAR_CHARGE_POSITION,
-         MemoryModuleType.SPEAR_ENGAGE_TIME,
-         MemoryModuleType.SPEAR_STATUS
-      }
+         MemoryModuleType.SPEAR_ENGAGE_TIME
+      ),
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_SPECIFIC_SENSOR),
+      PiglinAi::getActivities
    );
 
    public Piglin(final EntityType<? extends AbstractPiglin> type, final Level level) {
@@ -171,6 +136,12 @@ public class Piglin extends AbstractPiglin implements CrossbowAttackMob, Invento
 
    protected boolean canAddToInventory(final ItemStack itemStack) {
       return this.inventory.canAddItem(itemStack);
+   }
+
+   @Override
+   public @Nullable SlotAccess getSlot(final int slot) {
+      int inventorySlot = slot - 300;
+      return inventorySlot >= 0 && inventorySlot < this.inventory.getContainerSize() ? this.inventory.getSlot(inventorySlot) : super.getSlot(slot);
    }
 
    @Override
@@ -240,18 +211,13 @@ public class Piglin extends AbstractPiglin implements CrossbowAttackMob, Invento
    }
 
    @Override
-   protected Brain.Provider<Piglin> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return PiglinAi.makeBrain(this, this.brainProvider().makeBrain(input));
+   protected Brain<Piglin> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
    public Brain<Piglin> getBrain() {
-      return (Brain<Piglin>)super.getBrain();
+      return super.getBrain();
    }
 
    @Override
@@ -436,7 +402,7 @@ public class Piglin extends AbstractPiglin implements CrossbowAttackMob, Invento
 
    @Override
    public boolean startRiding(Entity entityToRide, final boolean force, final boolean sendEventAndTriggers) {
-      if (this.isBaby() && entityToRide.getType() == EntityType.HOGLIN) {
+      if (this.isBaby() && entityToRide.is(EntityType.HOGLIN)) {
          entityToRide = this.getTopPassenger(entityToRide, 3);
       }
 

@@ -92,13 +92,13 @@ public class SugarCaneBlock extends Block {
          return true;
       }
 
-      if (stateBelow.is(BlockTags.DIRT) || stateBelow.is(BlockTags.SAND)) {
+      if (stateBelow.is(BlockTags.SUPPORTS_SUGAR_CANE)) {
          BlockPos below = pos.below();
 
          for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockState blockState = level.getBlockState(below.relative(direction));
             FluidState fluidState = level.getFluidState(below.relative(direction));
-            if (fluidState.is(FluidTags.WATER) || blockState.is(Blocks.FROSTED_ICE)) {
+            if (fluidState.is(FluidTags.SUPPORTS_SUGAR_CANE_ADJACENTLY) || blockState.is(BlockTags.SUPPORTS_SUGAR_CANE_ADJACENTLY)) {
                return true;
             }
          }

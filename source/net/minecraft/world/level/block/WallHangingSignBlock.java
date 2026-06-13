@@ -36,7 +36,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public class WallHangingSignBlock extends SignBlock {
+public class WallHangingSignBlock extends SignBlock implements HangingSignBlock {
    public static final MapCodec<WallHangingSignBlock> CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(WoodType.CODEC.fieldOf("wood_type").forGetter(SignBlock::type), propertiesCodec()).apply(i, WallHangingSignBlock::new)
    );
@@ -125,7 +125,7 @@ public class WallHangingSignBlock extends SignBlock {
             Direction facing = direction.getOpposite();
             state = state.setValue(FACING, facing);
             if (state.canSurvive(level, pos) && this.canPlace(state, level, pos)) {
-               return state.setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+               return state.setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
             }
          }
       }
@@ -182,5 +182,10 @@ public class WallHangingSignBlock extends SignBlock {
    @Override
    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
       return createTickerHelper(type, BlockEntityType.HANGING_SIGN, SignBlockEntity::tick);
+   }
+
+   @Override
+   public HangingSignBlock.Attachment attachmentPoint(final BlockState state) {
+      return HangingSignBlock.Attachment.WALL;
    }
 }

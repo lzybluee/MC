@@ -1,6 +1,5 @@
 package net.minecraft.client.gui.screens.dialog;
 
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -40,9 +39,7 @@ public class WaitingForResponseScreen extends Screen {
       this.layout.addToContents(this.closeButton);
       this.closeButton.visible = false;
       this.closeButton.active = false;
-      this.layout.visitWidgets(x$0 -> {
-         AbstractWidget var10000 = this.addRenderableWidget(x$0);
-      });
+      this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
       this.repositionElements();
    }
 

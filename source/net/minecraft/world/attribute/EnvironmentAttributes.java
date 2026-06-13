@@ -68,12 +68,21 @@ public interface EnvironmentAttributes {
       "visual/star_brightness",
       EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.0F).valueRange(AttributeRange.UNIT_FLOAT).spatiallyInterpolated().syncable()
    );
+   EnvironmentAttribute<Integer> BLOCK_LIGHT_TINT = register(
+      "visual/block_light_tint", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-10100).spatiallyInterpolated().syncable()
+   );
    EnvironmentAttribute<Integer> SKY_LIGHT_COLOR = register(
       "visual/sky_light_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-1).spatiallyInterpolated().syncable()
    );
    EnvironmentAttribute<Float> SKY_LIGHT_FACTOR = register(
       "visual/sky_light_factor",
       EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(1.0F).valueRange(AttributeRange.UNIT_FLOAT).spatiallyInterpolated().syncable()
+   );
+   EnvironmentAttribute<Integer> NIGHT_VISION_COLOR = register(
+      "visual/night_vision_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-6710887).spatiallyInterpolated().syncable()
+   );
+   EnvironmentAttribute<Integer> AMBIENT_LIGHT_COLOR = register(
+      "visual/ambient_light_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-16777216).spatiallyInterpolated().syncable()
    );
    EnvironmentAttribute<ParticleOptions> DEFAULT_DRIPSTONE_PARTICLE = register(
       "visual/default_dripstone_particle",
@@ -121,7 +130,7 @@ public interface EnvironmentAttributes {
       "gameplay/eyeblossom_open", EnvironmentAttribute.builder(AttributeTypes.TRI_STATE).defaultValue(TriState.DEFAULT)
    );
    EnvironmentAttribute<Float> TURTLE_EGG_HATCH_CHANCE = register(
-      "gameplay/turtle_egg_hatch_chance", EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.0F).valueRange(AttributeRange.UNIT_FLOAT)
+      "gameplay/turtle_egg_hatch_chance", EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.002F).valueRange(AttributeRange.UNIT_FLOAT)
    );
    EnvironmentAttribute<Boolean> PIGLINS_ZOMBIFY = register(
       "gameplay/piglins_zombify", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(true).syncable()

@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
@@ -34,7 +35,7 @@ public class NoiseProvider extends NoiseBasedStateProvider {
    }
 
    @Override
-   public BlockState getState(final RandomSource random, final BlockPos pos) {
+   public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
       return this.getRandomState(this.states, pos, this.scale);
    }
 

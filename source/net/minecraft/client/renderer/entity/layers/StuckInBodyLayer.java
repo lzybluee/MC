@@ -49,9 +49,7 @@ public abstract class StuckInBodyLayer<M extends PlayerModel, S> extends RenderL
       float xRot = (float)(Math.atan2(directionY, directionXZ) * 180.0F / (float)Math.PI);
       poseStack.mulPose(Axis.YP.rotationDegrees(yRot - 90.0F));
       poseStack.mulPose(Axis.ZP.rotationDegrees(xRot));
-      submitNodeCollector.submitModel(
-         this.model, this.modelState, poseStack, this.model.renderType(this.texture), lightCoords, OverlayTexture.NO_OVERLAY, outlineColor, null
-      );
+      submitNodeCollector.submitModel(this.model, this.modelState, poseStack, this.texture, lightCoords, OverlayTexture.NO_OVERLAY, outlineColor, null);
    }
 
    public void submit(
@@ -64,7 +62,7 @@ public abstract class StuckInBodyLayer<M extends PlayerModel, S> extends RenderL
    ) {
       int count = this.numStuck(state);
       if (count > 0) {
-         RandomSource random = RandomSource.create(state.id);
+         RandomSource random = RandomSource.createThreadLocalInstance(state.id);
 
          for (int i = 0; i < count; i++) {
             poseStack.pushPose();

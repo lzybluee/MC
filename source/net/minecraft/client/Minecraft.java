@@ -13,16 +13,23 @@ import com.mojang.authlib.yggdrasil.ProfileActionType;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
 import com.mojang.blaze3d.TracyFrameCapture;
+import com.mojang.blaze3d.opengl.GlBackend;
 import com.mojang.blaze3d.pipeline.MainTarget;
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.platform.BackendOptions;
 import com.mojang.blaze3d.platform.ClientShutdownWatchdog;
 import com.mojang.blaze3d.platform.DisplayData;
 import com.mojang.blaze3d.platform.FramerateLimitTracker;
 import com.mojang.blaze3d.platform.GLX;
 import com.mojang.blaze3d.platform.IconSet;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.MessageBox;
+import com.mojang.blaze3d.platform.TextInputManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.WindowEventHandler;
+import com.mojang.blaze3d.shaders.GpuDebugOptions;
+import com.mojang.blaze3d.systems.BackendCreationException;
+import com.mojang.blaze3d.systems.GpuBackend;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.systems.TimerQuery;
@@ -58,7 +65,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
@@ -77,6 +83,7 @@ import net.minecraft.client.gui.components.LogoRenderer;
 import net.minecraft.client.gui.components.debug.DebugScreenEntries;
 import net.minecraft.client.gui.components.debug.DebugScreenEntryList;
 import net.minecraft.client.gui.components.debugchart.ProfilerPieChart;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.client.gui.components.toasts.TutorialToast;
@@ -85,7 +92,6 @@ import net.minecraft.client.gui.font.providers.FreeTypeUtil;
 import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.BanNoticeScreens;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.InBedChatScreen;
@@ -115,7 +121,9 @@ import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.multiplayer.ProfileKeyPairManager;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.multiplayer.chat.ChatListener;
+import net.minecraft.client.multiplayer.chat.ChatRestriction;
 import net.minecraft.client.multiplayer.chat.report.ReportEnvironment;
 import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.client.particle.ParticleEngine;
@@ -129,19 +137,18 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.GpuWarnlistManager;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MapRenderer;
-import net.minecraft.client.renderer.PanoramicScreenshotParameters;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.client.renderer.RenderBuffers;
 import net.minecraft.client.renderer.ShaderManager;
-import net.minecraft.client.renderer.VirtualScreen;
-import net.minecraft.client.renderer.block.BlockModelShaper;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.BlockStateModelSet;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.state.GameRenderState;
+import net.minecraft.client.renderer.state.WindowRenderState;
 import net.minecraft.client.renderer.texture.SkinTextureDownloader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -155,12 +162,13 @@ import net.minecraft.client.resources.SplashManager;
 import net.minecraft.client.resources.WaypointStyleManager;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.language.LanguageManager;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
 import net.minecraft.client.resources.model.ModelManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.client.resources.server.DownloadedPackSource;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.client.sounds.MusicManager;
+import net.minecraft.client.sounds.SoundBufferLibrary;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.telemetry.ClientTelemetryManager;
 import net.minecraft.client.telemetry.TelemetryProperty;
@@ -178,7 +186,6 @@ import net.minecraft.gizmos.SimpleGizmoCollector;
 import net.minecraft.network.Connection;
 import net.minecraft.network.PacketProcessor;
 import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.KeybindResolver;
 import net.minecraft.network.protocol.game.ServerboundClientTickEndPacket;
@@ -247,15 +254,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.validation.DirectoryValidator;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.apache.commons.io.FileUtils;
-import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.util.tinyfd.TinyFileDialogs;
 import org.slf4j.Logger;
 
 public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements WindowEventHandler {
@@ -276,14 +282,14 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    private final TextureManager textureManager;
    private final ShaderManager shaderManager;
    private final DataFixer fixerUpper;
-   private final VirtualScreen virtualScreen;
    private final Window window;
+   private final TextInputManager textInputManager;
    private final DeltaTracker.Timer deltaTracker = new DeltaTracker.Timer(20.0F, 0L, this::getTickTargetMillis);
    private final RenderBuffers renderBuffers;
    public final LevelRenderer levelRenderer;
    private final EntityRenderDispatcher entityRenderDispatcher;
+   private final BlockModelResolver blockModelResolver;
    private final ItemModelResolver itemModelResolver;
-   private final ItemRenderer itemRenderer;
    private final MapRenderer mapRenderer;
    public final ParticleEngine particleEngine;
    private final ParticleResources particleResources;
@@ -326,7 +332,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    private final SkinManager skinManager;
    private final AtlasManager atlasManager;
    private final ModelManager modelManager;
-   private final BlockRenderDispatcher blockRenderer;
    private final MapTextureManager mapTextureManager;
    private final WaypointStyleManager waypointStyles;
    private final ToastManager toastManager;
@@ -345,7 +350,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    private @Nullable IntegratedServer singleplayerServer;
    private @Nullable Connection pendingConnection;
    private boolean isLocalServer;
-   private @Nullable Entity cameraEntity;
    public @Nullable Entity crosshairPickEntity;
    public @Nullable HitResult hitResult;
    private int rightClickDelay;
@@ -354,19 +358,17 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    private long lastNanoTime = Util.getNanos();
    private long lastTime;
    private int frames;
-   public boolean noRender;
    public @Nullable Screen screen;
    private @Nullable Overlay overlay;
    private boolean clientLevelTeardownInProgress;
    private Thread gameThread;
    private volatile boolean running;
-   private @Nullable Supplier<CrashReport> delayedCrash;
    private static int fps;
    private long frameTimeNs;
    private final FramerateLimitTracker framerateLimitTracker;
    public boolean wireframe;
    public boolean smartCull = true;
-   private boolean windowActive;
+   private long lastActiveTime = Util.getMillis();
    private @Nullable CompletableFuture<Void> pendingReload;
    private @Nullable TutorialToast socialInteractionsToast;
    private int fpsPieRenderTicks;
@@ -389,7 +391,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    private List<SimpleGizmoCollector.GizmoInstance> drainedLatestTickGizmos = new ArrayList<>();
 
    public Minecraft(final GameConfig gameConfig) {
-      super("Client");
+      super("Client", true);
       instance = this;
       this.clientStartTimeMs = System.currentTimeMillis();
       this.gameDirectory = gameConfig.location.gameDirectory;
@@ -435,7 +437,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.fixerUpper = DataFixers.getDataFixer();
       this.gameThread = Thread.currentThread();
       this.options = new Options(this, this.gameDirectory);
-      this.debugEntries = new DebugScreenEntryList(this.gameDirectory);
+      this.debugEntries = new DebugScreenEntryList(this.gameDirectory, this.fixerUpper);
       this.toastManager = new ToastManager(this, this.options);
       boolean lastStartWasClean = this.options.startedCleanly;
       this.options.startedCleanly = false;
@@ -455,10 +457,41 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          LOGGER.warn("Detected unexpected shutdown during last game startup: resetting fullscreen mode");
       }
 
-      Util.timeSource = RenderSystem.initBackendSystem();
-      this.virtualScreen = new VirtualScreen(this);
-      this.window = this.virtualScreen.newWindow(displayData, this.options.fullscreenVideoModeString, this.createTitle());
-      this.setWindowActive(true);
+      Util.timeSource = RenderSystem.initBackendSystem(new BackendOptions(this.options.exclusiveFullscreen().get()));
+      GpuBackend[] backends = new GpuBackend[]{new GlBackend()};
+      StringBuilder errorMsgBuilder = new StringBuilder("No supported graphics backend was found.");
+      Window windowCandidate = null;
+      GpuDevice device = null;
+
+      for (GpuBackend backend : backends) {
+         try {
+            windowCandidate = new Window(this, displayData, this.options.fullscreenVideoModeString, this.createTitle(), backend);
+            device = windowCandidate.backend()
+               .createDevice(
+                  windowCandidate.handle(),
+                  (id, type) -> this.getShaderManager().getShader(id, type),
+                  new GpuDebugOptions(this.options.glDebugVerbosity, SharedConstants.DEBUG_SYNCHRONOUS_GL_LOGS, gameConfig.game.renderDebugLabels)
+               );
+            RenderSystem.initRenderer(device);
+            break;
+         } catch (BackendCreationException exception) {
+            LOGGER.error("Failed to create backend {}", backend.getName(), exception);
+            errorMsgBuilder.append("\n\n- Tried ").append(backend.getName()).append(": \n  ").append(exception.getMessage());
+            if (windowCandidate != null) {
+               windowCandidate.close();
+               windowCandidate = null;
+            }
+         }
+      }
+
+      if (windowCandidate == null) {
+         String errorMsg = errorMsgBuilder.toString();
+         MessageBox.error(errorMsg);
+         throw new Window.WindowInitFailed(errorMsg);
+      }
+
+      this.window = windowCandidate;
+      this.textInputManager = new TextInputManager(this.window);
       this.window.setWindowCloseCallback(new Runnable() {
          private boolean threadStarted;
 
@@ -466,7 +499,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          public void run() {
             if (!this.threadStarted) {
                this.threadStarted = true;
-               ClientShutdownWatchdog.startShutdownWatchdog(gameConfig.location.gameDirectory, Minecraft.this.gameThread.threadId());
+               ClientShutdownWatchdog.startShutdownWatchdog(Minecraft.this, gameConfig.location.gameDirectory, Minecraft.this.gameThread.threadId());
             }
          }
       });
@@ -482,13 +515,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.mouseHandler.setup(this.window);
       this.keyboardHandler = new KeyboardHandler(this);
       this.keyboardHandler.setup(this.window);
-      RenderSystem.initRenderer(
-         this.window.handle(),
-         this.options.glDebugVerbosity,
-         SharedConstants.DEBUG_SYNCHRONOUS_GL_LOGS,
-         (id, type) -> this.getShaderManager().getShader(id, type),
-         gameConfig.game.renderDebugLabels
-      );
       this.options.applyGraphicsPreset(this.options.graphicsPreset().get());
       LOGGER.info("Using optional rendering extensions: {}", String.join(", ", RenderSystem.getDevice().getEnabledExtensions()));
       this.mainRenderTarget = new MainTarget(this.window.getWidth(), this.window.getHeight());
@@ -535,8 +561,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.resourceManager.registerReloadListener(this.modelManager);
       EquipmentAssetManager equipmentAssets = new EquipmentAssetManager();
       this.resourceManager.registerReloadListener(equipmentAssets);
+      this.blockModelResolver = new BlockModelResolver(this.modelManager);
       this.itemModelResolver = new ItemModelResolver(this.modelManager);
-      this.itemRenderer = new ItemRenderer();
       this.mapTextureManager = new MapTextureManager(this.textureManager);
       this.mapRenderer = new MapRenderer(this.atlasManager, this.mapTextureManager);
 
@@ -545,26 +571,20 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          Tesselator.init();
          this.renderBuffers = new RenderBuffers(maxSectionBuilders);
       } catch (OutOfMemoryError e) {
-         TinyFileDialogs.tinyfd_messageBox(
-            "Minecraft",
+         MessageBox.error(
             "Oh no! The game was unable to allocate memory off-heap while trying to start. You may try to free some memory by closing other applications on your computer, check that your system meets the minimum requirements, and try again. If the problem persists, please visit: "
-               + CommonLinks.GENERAL_HELP,
-            "ok",
-            "error",
-            true
+               + CommonLinks.GENERAL_HELP
          );
          throw new SilentInitException("Unable to allocate render buffers", e);
       }
 
       this.playerSocialManager = new PlayerSocialManager(this, this.userApiService);
-      this.blockRenderer = new BlockRenderDispatcher(this.modelManager.getBlockModelShaper(), this.atlasManager, this.blockColors);
-      this.resourceManager.registerReloadListener(this.blockRenderer);
       this.entityRenderDispatcher = new EntityRenderDispatcher(
          this,
          this.textureManager,
+         this.blockModelResolver,
          this.itemModelResolver,
          this.mapRenderer,
-         this.blockRenderer,
          this.atlasManager,
          this.font,
          this.options,
@@ -576,9 +596,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.blockEntityRenderDispatcher = new BlockEntityRenderDispatcher(
          this.font,
          this.modelManager.entityModels(),
-         this.blockRenderer,
+         this.blockModelResolver,
          this.itemModelResolver,
-         this.itemRenderer,
          this.entityRenderDispatcher,
          this.atlasManager,
          this.playerSkinRenderCache
@@ -590,13 +609,16 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.particleResources.onReload(this.particleEngine::clearParticles);
       this.waypointStyles = new WaypointStyleManager();
       this.resourceManager.registerReloadListener(this.waypointStyles);
-      this.gameRenderer = new GameRenderer(this, this.entityRenderDispatcher.getItemInHandRenderer(), this.renderBuffers, this.blockRenderer);
+      this.gameRenderer = new GameRenderer(this, this.entityRenderDispatcher.getItemInHandRenderer(), this.renderBuffers, this.modelManager);
+      WindowRenderState windowRenderState = this.gameRenderer.getGameRenderState().windowRenderState;
+      windowRenderState.width = this.window.getWidth();
+      windowRenderState.height = this.window.getHeight();
       this.levelRenderer = new LevelRenderer(
          this,
          this.entityRenderDispatcher,
          this.blockEntityRenderDispatcher,
          this.renderBuffers,
-         this.gameRenderer.getLevelRenderState(),
+         this.gameRenderer.getGameRenderState(),
          this.gameRenderer.getFeatureRenderDispatcher()
       );
       this.resourceManager.registerReloadListener(this.levelRenderer);
@@ -618,16 +640,15 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          );
 
          try {
-            GpuDevice device = RenderSystem.getDevice();
             List<String> messages = device.getLastDebugMessages();
             if (!messages.isEmpty()) {
                message.append("\n\nReported GL debug messages:\n").append(String.join("\n", messages));
             }
-         } catch (Throwable var16) {
+         } catch (Throwable var21) {
          }
 
          this.window.setWindowed(this.mainRenderTarget.width, this.mainRenderTarget.height);
-         TinyFileDialogs.tinyfd_messageBox("Minecraft", message.toString(), "ok", "error", false);
+         MessageBox.error(message.toString());
       } else if (this.options.fullscreen().get() && !this.window.isFullscreen()) {
          if (lastStartWasClean) {
             this.window.toggleFullScreen();
@@ -641,7 +662,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.window.updateRawMouseInput(this.options.rawMouseInput().get());
       this.window.setAllowCursorChanges(this.options.allowCursorChanges().get());
       this.window.setDefaultErrorCallback();
-      this.resizeDisplay();
+      this.resizeGui();
       this.gameRenderer.preloadUiShader(this.vanillaPackResources.asProvider());
       this.telemetryManager = new ClientTelemetryManager(this, this.userApiService, this.user);
       this.profileKeyPairManager = this.offlineDeveloperMode
@@ -654,7 +675,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       this.reportingContext = ReportingContext.create(ReportEnvironment.local(), this.userApiService);
       TitleScreen.registerTextures(this.textureManager);
       LoadingOverlay.registerTextures(this.textureManager);
-      this.gameRenderer.getPanorama().registerTextures(this.textureManager);
+      this.gameRenderer.registerPanoramaTextures(this.textureManager);
       this.setScreen(new GenericMessageScreen(Component.translatable("gui.loadingMinecraft")));
       List<PackResources> packs = this.resourcePackRepository.openAllSelected();
       this.reloadStateTracker.startReload(ResourceLoadStateTracker.ReloadReason.INITIAL, packs);
@@ -881,8 +902,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          boolean oomRecovery = false;
 
          while (this.running) {
-            this.handleDelayedCrash();
-
             try {
                SingleTickProfiler tickProfiler = SingleTickProfiler.createTickProfiler("Renderer");
                boolean shouldCollectFrameProfile = this.getDebugOverlay().showProfilerChart();
@@ -890,6 +909,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
                try (Profiler.Scope ignored = Profiler.use(this.constructProfiler(shouldCollectFrameProfile, tickProfiler))) {
                   this.metricsRecorder.startTick();
                   tickFrame.start();
+                  this.window.resetIsResized();
+                  RenderSystem.pollEvents();
                   this.runTick(!oomRecovery);
                   tickFrame.end();
                   this.metricsRecorder.endTick();
@@ -938,50 +959,53 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       return this.versionType;
    }
 
+   @Override
    public void delayCrash(final CrashReport crash) {
-      this.delayedCrash = () -> this.fillReport(crash);
-   }
-
-   public void delayCrashRaw(final CrashReport crash) {
-      this.delayedCrash = () -> crash;
-   }
-
-   private void handleDelayedCrash() {
-      if (this.delayedCrash != null) {
-         crash(this, this.gameDirectory, this.delayedCrash.get());
-      }
+      super.delayCrash(this.fillReport(crash));
    }
 
    public void emergencySaveAndCrash(final CrashReport partialReport) {
       MemoryReserve.release();
       CrashReport finalReport = this.fillReport(partialReport);
+      int exitCode = saveReportAndShutdownSoundManager(this, this.gameDirectory, finalReport);
       this.emergencySave();
-      crash(this, this.gameDirectory, finalReport);
+      System.exit(exitCode);
    }
 
    public static int saveReport(final File gameDirectory, final CrashReport crash) {
       Path crashDir = gameDirectory.toPath().resolve("crash-reports");
       Path crashFile = crashDir.resolve("crash-" + Util.getFilenameFormattedDateTime() + "-client.txt");
       Bootstrap.realStdoutPrintln(crash.getFriendlyReport(ReportType.CRASH));
-      if (crash.getSaveFile() != null) {
-         Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + crash.getSaveFile().toAbsolutePath());
-         return -1;
-      } else if (crash.saveToFile(crashFile, ReportType.CRASH)) {
-         Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + crashFile.toAbsolutePath());
-         return -1;
-      } else {
-         Bootstrap.realStdoutPrintln("#@?@# Game crashed! Crash report could not be saved. #@?@#");
-         return -2;
+      LOGGER.debug("Disabling console - remaining logs will be available only in log file");
+
+      try {
+         if (crash.getSaveFile() != null) {
+            Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + crash.getSaveFile().toAbsolutePath());
+            return -1;
+         } else if (crash.saveToFile(crashFile, ReportType.CRASH)) {
+            Bootstrap.realStdoutPrintln("#@!@# Game crashed! Crash report saved to: #@!@# " + crashFile.toAbsolutePath());
+            return -1;
+         } else {
+            Bootstrap.realStdoutPrintln("#@?@# Game crashed! Crash report could not be saved. #@?@#");
+            return -2;
+         }
+      } finally {
+         Bootstrap.shutdownStdout();
       }
    }
 
    public static void crash(final @Nullable Minecraft minecraft, final File gameDirectory, final CrashReport crash) {
+      int exitCode = saveReportAndShutdownSoundManager(minecraft, gameDirectory, crash);
+      System.exit(exitCode);
+   }
+
+   private static int saveReportAndShutdownSoundManager(final @Nullable Minecraft minecraft, final File gameDirectory, final CrashReport crash) {
       int exitCode = saveReport(gameDirectory, crash);
       if (minecraft != null) {
          minecraft.soundManager.emergencyShutdown();
       }
 
-      System.exit(exitCode);
+      return exitCode;
    }
 
    public boolean isEnforceUnicode() {
@@ -1035,8 +1059,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
    private void selfTest() {
       boolean error = false;
-      BlockModelShaper blockModelShaper = this.getBlockRenderer().getBlockModelShaper();
-      BlockStateModel missingModel = blockModelShaper.getModelManager().getMissingBlockStateModel();
+      BlockStateModelSet blockModelSet = this.getModelManager().getBlockStateModelSet();
+      BlockStateModel missingModel = blockModelSet.missingModel();
 
       for (Block block : BuiltInRegistries.BLOCK) {
          UnmodifiableIterator blockx = block.getStateDefinition().getPossibleStates().iterator();
@@ -1044,7 +1068,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          while (blockx.hasNext()) {
             BlockState state = (BlockState)blockx.next();
             if (state.getRenderShape() == RenderShape.MODEL) {
-               BlockStateModel model = blockModelShaper.getBlockModel(state);
+               BlockStateModel model = blockModelSet.get(state);
                if (model == missingModel) {
                   LOGGER.debug("Missing model for: {}", state);
                   error = true;
@@ -1053,14 +1077,14 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          }
       }
 
-      TextureAtlasSprite missingIcon = missingModel.particleIcon();
+      TextureAtlasSprite missingIcon = missingModel.particleMaterial().sprite();
 
       for (Block block : BuiltInRegistries.BLOCK) {
          UnmodifiableIterator var15 = block.getStateDefinition().getPossibleStates().iterator();
 
          while (var15.hasNext()) {
             BlockState state = (BlockState)var15.next();
-            TextureAtlasSprite particleIcon = blockModelShaper.getParticleIcon(state);
+            TextureAtlasSprite particleIcon = blockModelSet.getParticleMaterial(state).sprite();
             if (!state.isAir() && particleIcon == missingIcon) {
                LOGGER.debug("Missing particle icon for: {}", state);
             }
@@ -1087,24 +1111,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public void openChatScreen(final ChatComponent.ChatMethod chatMethod) {
-      Minecraft.ChatStatus chatStatus = this.getChatStatus();
-      if (!chatStatus.isChatAllowed(this.isLocalServer())) {
-         if (this.gui.isShowingChatDisabledByPlayer()) {
-            this.gui.setChatDisabledByPlayerShown(false);
-            this.setScreen(new ConfirmLinkScreen(result -> {
-               if (result) {
-                  Util.getPlatform().openUri(CommonLinks.ACCOUNT_SETTINGS);
-               }
-
-               this.setScreen(null);
-            }, Minecraft.ChatStatus.INFO_DISABLED_BY_PROFILE, CommonLinks.ACCOUNT_SETTINGS, true));
-         } else {
-            Component message = chatStatus.getMessage();
-            this.gui.setOverlayMessage(message, false);
-            this.narrator.saySystemNow(message);
-            this.gui.setChatDisabledByPlayerShown(chatStatus == Minecraft.ChatStatus.DISABLED_BY_PROFILE);
-         }
-      } else {
+      if (this.player != null) {
          this.gui.getChat().openScreen(chatMethod, ChatScreen::new);
       }
    }
@@ -1147,8 +1154,8 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          this.mouseHandler.releaseMouse();
          KeyMapping.releaseAll();
          screen.init(this.window.getGuiScaledWidth(), this.window.getGuiScaledHeight());
-         this.noRender = false;
       } else {
+         this.textInputManager.stopTextInput();
          if (this.level != null) {
             KeyMapping.restoreToggleStatesOnScreenClosed();
          }
@@ -1189,7 +1196,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          this.close();
       } finally {
          Util.timeSource = System::nanoTime;
-         if (this.delayedCrash == null) {
+         if (!this.hasDelayedCrash()) {
             System.exit(0);
          }
       }
@@ -1225,7 +1232,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          LOGGER.error("Shutdown failure!", t);
          throw t;
       } finally {
-         this.virtualScreen.close();
          this.window.close();
       }
    }
@@ -1242,7 +1248,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          this.reloadResourcePacks().thenRun(() -> future.complete(null));
       }
 
-      int ticksToDo = this.deltaTracker.advanceTime(Util.getMillis(), advanceGameTime);
+      int ticksToDo = advanceGameTime ? this.deltaTracker.advanceGameTime(Util.getMillis()) : 0;
       ProfilerFiller profiler = Profiler.get();
       if (advanceGameTime) {
          try (Gizmos.TemporaryCollection ignored = this.collectPerTickGizmos()) {
@@ -1277,67 +1283,19 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       this.window.setErrorSection("Render");
 
-      boolean recordGpuUtilization;
       try (Gizmos.TemporaryCollection ignored = this.levelRenderer.collectPerFrameGizmos()) {
-         profiler.push("gpuAsync");
-         RenderSystem.executePendingTasks();
-         profiler.popPush("sound");
+         profiler.push("sound");
          this.soundManager.updateSource(this.gameRenderer.getMainCamera());
          profiler.popPush("toasts");
          this.toastManager.update();
          profiler.popPush("mouse");
          this.mouseHandler.handleAccumulatedMovement();
-         profiler.popPush("render");
-         long renderStartTimer = Util.getNanos();
-         if (!this.debugEntries.isCurrentlyEnabled(DebugScreenEntries.GPU_UTILIZATION) && !this.metricsRecorder.isRecording()) {
-            recordGpuUtilization = false;
-            this.gpuUtilization = 0.0;
-         } else {
-            recordGpuUtilization = (this.currentFrameProfile == null || this.currentFrameProfile.isDone()) && !TimerQuery.getInstance().isRecording();
-            if (recordGpuUtilization) {
-               TimerQuery.getInstance().beginProfile();
-            }
-         }
-
-         RenderTarget mainRenderTarget = this.getMainRenderTarget();
-         RenderSystem.getDevice()
-            .createCommandEncoder()
-            .clearColorAndDepthTextures(mainRenderTarget.getColorTexture(), 0, mainRenderTarget.getDepthTexture(), 1.0);
-         profiler.push("gameRenderer");
-         if (!this.noRender) {
-            this.gameRenderer.render(this.deltaTracker, advanceGameTime);
-         }
-
-         profiler.popPush("blit");
-         if (!this.window.isMinimized()) {
-            mainRenderTarget.blitToScreen();
-         }
-
-         this.frameTimeNs = Util.getNanos() - renderStartTimer;
-         if (recordGpuUtilization) {
-            this.currentFrameProfile = TimerQuery.getInstance().endProfile();
-         }
-
-         profiler.popPush("updateDisplay");
-         if (this.tracyFrameCapture != null) {
-            this.tracyFrameCapture.upload();
-            this.tracyFrameCapture.capture(mainRenderTarget);
-         }
-
-         this.window.updateDisplay(this.tracyFrameCapture);
-         int framerateLimit = this.framerateLimitTracker.getFramerateLimit();
-         if (framerateLimit < 260) {
-            RenderSystem.limitDisplayFPS(framerateLimit);
-         }
-
-         profiler.pop();
-         profiler.popPush("yield");
-         Thread.yield();
+         profiler.popPush("frame");
+         this.renderFrame(advanceGameTime);
          profiler.pop();
       }
 
       this.window.setErrorSection("Post render");
-      this.frames++;
       boolean previouslyPaused = this.pause;
       this.pause = this.hasSingleplayerServer()
          && (this.screen != null && this.screen.isPauseScreen() || this.overlay != null && this.overlay.isPauseScreen())
@@ -1348,6 +1306,65 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       this.deltaTracker.updatePauseState(this.pause);
       this.deltaTracker.updateFrozenState(!this.isLevelRunningNormally());
+   }
+
+   private void renderFrame(final boolean advanceGameTime) {
+      ProfilerFiller profiler = Profiler.get();
+      profiler.push("update");
+      this.deltaTracker.advanceRealTime(Util.getMillis());
+      boolean recordGpuUtilization;
+      if (!this.debugEntries.isCurrentlyEnabled(DebugScreenEntries.GPU_UTILIZATION) && !this.metricsRecorder.isRecording()) {
+         recordGpuUtilization = false;
+         this.gpuUtilization = 0.0;
+      } else {
+         recordGpuUtilization = (this.currentFrameProfile == null || this.currentFrameProfile.isDone()) && !TimerQuery.getInstance().isRecording();
+         if (recordGpuUtilization) {
+            TimerQuery.getInstance().beginProfile();
+         }
+      }
+
+      long renderStartTimer = Util.getNanos();
+      this.pauseIfInactive();
+      this.window.updateFullscreenIfChanged();
+      if (this.isGameLoadFinished() && advanceGameTime && this.level != null) {
+         this.level.update();
+      }
+
+      this.gameRenderer.update(this.deltaTracker, advanceGameTime);
+      float worldPartialTicks = this.deltaTracker.getGameTimeDeltaPartialTick(false);
+      this.pick(worldPartialTicks);
+      profiler.popPush("extract");
+      this.gameRenderer.getGameRenderState().framerateLimit = this.framerateLimitTracker.getFramerateLimit();
+      this.gameRenderer.extract(this.deltaTracker, advanceGameTime);
+      profiler.popPush("gpuAsync");
+      RenderSystem.executePendingTasks();
+      profiler.pop();
+      this.gameRenderer.render(this.deltaTracker, advanceGameTime);
+      profiler.push("present");
+      if (!this.gameRenderer.getGameRenderState().windowRenderState.isMinimized) {
+         this.mainRenderTarget.blitToScreen();
+      }
+
+      this.frameTimeNs = Util.getNanos() - renderStartTimer;
+      if (recordGpuUtilization) {
+         this.currentFrameProfile = TimerQuery.getInstance().endProfile();
+      }
+
+      profiler.popPush("swapBuffers");
+      if (this.tracyFrameCapture != null) {
+         this.tracyFrameCapture.upload();
+         this.tracyFrameCapture.capture(this.mainRenderTarget);
+      }
+
+      RenderSystem.flipFrame(this.tracyFrameCapture);
+      profiler.popPush("frameLimiter");
+      int framerateLimit = this.gameRenderer.getGameRenderState().framerateLimit;
+      if (framerateLimit < 260) {
+         FramerateLimiter.limitDisplayFPS(framerateLimit);
+      }
+
+      profiler.popPush("fpsUpdate");
+      this.frames++;
       long currentTime = Util.getNanos();
       long frameDuration = currentTime - this.lastNanoTime;
       if (recordGpuUtilization) {
@@ -1356,7 +1373,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       this.getDebugOverlay().logFrameDuration(frameDuration);
       this.lastNanoTime = currentTime;
-      profiler.push("fpsUpdate");
       if (this.currentFrameProfile != null && this.currentFrameProfile.isDone()) {
          this.gpuUtilization = this.currentFrameProfile.get() * 100.0 / this.savedCpuDuration;
       }
@@ -1368,6 +1384,16 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       }
 
       profiler.pop();
+   }
+
+   private void pauseIfInactive() {
+      if (!this.window.isFocused() && this.options.pauseOnLostFocus && (!this.options.touchscreen().get() || !this.mouseHandler.isRightPressed())) {
+         if (Util.getMillis() - this.lastActiveTime > 500L) {
+            this.pauseGame(false);
+         }
+      } else {
+         this.lastActiveTime = Util.getMillis();
+      }
    }
 
    private ProfilerFiller constructProfiler(final boolean shouldCollectFrameProfile, final @Nullable SingleTickProfiler tickProfiler) {
@@ -1412,16 +1438,13 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    @Override
-   public void resizeDisplay() {
+   public void resizeGui() {
       int guiScale = this.window.calculateScale(this.options.guiScale().get(), this.isEnforceUnicode());
       this.window.setGuiScale(guiScale);
       if (this.screen != null) {
          this.screen.resize(this.window.getGuiScaledWidth(), this.window.getGuiScaledHeight());
       }
 
-      RenderTarget mainRenderTarget = this.getMainRenderTarget();
-      mainRenderTarget.resize(this.window.getWidth(), this.window.getHeight());
-      this.gameRenderer.resize(this.window.getWidth(), this.window.getHeight());
       this.mouseHandler.setIgnoreFirstMove();
    }
 
@@ -1436,6 +1459,10 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
    public long getFrameTimeNs() {
       return this.frameTimeNs;
+   }
+
+   public void sendLowDiskSpaceWarning() {
+      this.execute(() -> SystemToast.onLowDiskSpace(this));
    }
 
    private void emergencySave() {
@@ -1618,53 +1645,58 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             return false;
          }
 
-         ItemStack heldItem = this.player.getItemInHand(InteractionHand.MAIN_HAND);
-         if (!heldItem.isItemEnabled(this.level.enabledFeatures())) {
-            return false;
-         }
+         if (this.gameMode.isSpectator()) {
+            if (this.hitResult instanceof EntityHitResult entityHitResult) {
+               this.gameMode.spectate(entityHitResult.getEntity());
+            }
 
-         if (this.player.cannotAttackWithItem(heldItem, 0)) {
-            return false;
-         }
-
-         boolean endAttack = false;
-         PiercingWeapon piercingWeapon = heldItem.get(DataComponents.PIERCING_WEAPON);
-         if (piercingWeapon != null && !this.gameMode.isSpectator()) {
-            this.gameMode.piercingAttack(piercingWeapon);
-            this.player.swing(InteractionHand.MAIN_HAND);
             return true;
-         }
+         } else {
+            ItemStack heldItem = this.player.getItemInHand(InteractionHand.MAIN_HAND);
+            if (!heldItem.isItemEnabled(this.level.enabledFeatures())) {
+               return false;
+            }
 
-         switch (this.hitResult.getType()) {
-            case ENTITY:
-               AttackRange customItemRange = heldItem.get(DataComponents.ATTACK_RANGE);
-               if (customItemRange == null || customItemRange.isInRange(this.player, this.hitResult.getLocation())) {
-                  this.gameMode.attack(this.player, ((EntityHitResult)this.hitResult).getEntity());
-               }
-               break;
-            case BLOCK:
-               BlockHitResult blockHit = (BlockHitResult)this.hitResult;
-               BlockPos pos = blockHit.getBlockPos();
-               if (!this.level.getBlockState(pos).isAir()) {
-                  this.gameMode.startDestroyBlock(pos, blockHit.getDirection());
-                  if (this.level.getBlockState(pos).isAir()) {
-                     endAttack = true;
+            if (this.player.cannotAttackWithItem(heldItem, 0)) {
+               return false;
+            }
+
+            boolean endAttack = false;
+            PiercingWeapon piercingWeapon = heldItem.get(DataComponents.PIERCING_WEAPON);
+            if (piercingWeapon != null) {
+               this.gameMode.piercingAttack(piercingWeapon);
+               this.player.swing(InteractionHand.MAIN_HAND);
+               return true;
+            }
+
+            switch (this.hitResult.getType()) {
+               case ENTITY:
+                  AttackRange customItemRange = heldItem.get(DataComponents.ATTACK_RANGE);
+                  if (customItemRange == null || customItemRange.isInRange(this.player, this.hitResult.getLocation())) {
+                     this.gameMode.attack(this.player, ((EntityHitResult)this.hitResult).getEntity());
                   }
                   break;
-               }
-            case MISS:
-               if (this.gameMode.hasMissTime()) {
-                  this.missTime = 10;
-               }
+               case BLOCK:
+                  BlockHitResult blockHit = (BlockHitResult)this.hitResult;
+                  BlockPos pos = blockHit.getBlockPos();
+                  if (!this.level.getBlockState(pos).isAir()) {
+                     this.gameMode.startDestroyBlock(pos, blockHit.getDirection());
+                     if (this.level.getBlockState(pos).isAir()) {
+                        endAttack = true;
+                     }
+                     break;
+                  }
+               case MISS:
+                  if (this.gameMode.hasMissTime()) {
+                     this.missTime = 10;
+                  }
 
-               this.player.resetAttackStrengthTicker();
-         }
+                  this.player.resetAttackStrengthTicker();
+            }
 
-         if (!this.player.isSpectator()) {
             this.player.swing(InteractionHand.MAIN_HAND);
+            return endAttack;
          }
-
-         return endAttack;
       }
    }
 
@@ -1691,19 +1723,13 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
                            return;
                         }
 
-                        if (this.player.isWithinEntityInteractionRange(entity, 0.0)) {
-                           InteractionResult result = this.gameMode.interactAt(this.player, entity, entityHit, hand);
-                           if (!result.consumesAction()) {
-                              result = this.gameMode.interact(this.player, entity, hand);
+                        if (this.player.isWithinEntityInteractionRange(entity, 0.0)
+                           && this.gameMode.interact(this.player, entity, entityHit, hand) instanceof InteractionResult.Success success) {
+                           if (success.swingSource() == InteractionResult.SwingSource.CLIENT) {
+                              this.player.swing(hand);
                            }
 
-                           if (result instanceof InteractionResult.Success success) {
-                              if (success.swingSource() == InteractionResult.SwingSource.CLIENT) {
-                                 this.player.swing(hand);
-                              }
-
-                              return;
-                           }
+                           return;
                         }
                         break;
                      case BLOCK:
@@ -1756,10 +1782,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       ProfilerFiller profiler = Profiler.get();
       profiler.push("gui");
+      this.textInputManager.tick();
       this.chatListener.tick();
       this.gui.tick(this.pause);
       profiler.pop();
-      this.gameRenderer.pick(1.0F);
+      this.pick(1.0F);
       this.tutorial.onLookAt(this.level, this.hitResult);
       profiler.push("gameMode");
       if (!this.pause && this.level != null) {
@@ -1898,6 +1925,14 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          this.options.smoothCamera = !this.options.smoothCamera;
       }
 
+      while (this.options.keyToggleGui.consumeClick()) {
+         this.options.hideGui = !this.options.hideGui;
+      }
+
+      while (this.options.keyToggleSpectatorShaderEffects.consumeClick()) {
+         this.gameRenderer.togglePostEffect();
+      }
+
       for (int i = 0; i < 9; i++) {
          boolean savePressed = this.options.keySaveHotbarActivator.isDown();
          boolean loadPressed = this.options.keyLoadHotbarActivator.isDown();
@@ -1914,7 +1949,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       while (this.options.keySocialInteractions.consumeClick()) {
          if (!this.isMultiplayerServer() && !SharedConstants.DEBUG_SOCIAL_INTERACTIONS) {
-            this.player.displayClientMessage(SOCIAL_INTERACTIONS_NOT_AVAILABLE, true);
+            this.chatListener.handleOverlay(SOCIAL_INTERACTIONS_NOT_AVAILABLE);
             this.narrator.saySystemNow(SOCIAL_INTERACTIONS_NOT_AVAILABLE);
          } else {
             if (this.socialInteractionsToast != null) {
@@ -1988,7 +2023,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          }
 
          while (this.options.keyPickItem.consumeClick()) {
-            this.pickBlock();
+            this.pickBlockOrEntity();
          }
 
          if (this.player.isSpectator()) {
@@ -2033,7 +2068,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public void doWorldLoad(
-      final LevelStorageSource.LevelStorageAccess levelSourceAccess, final PackRepository packRepository, final WorldStem worldStem, final boolean newWorld
+      final LevelStorageSource.LevelStorageAccess levelSourceAccess,
+      final PackRepository packRepository,
+      final WorldStem worldStem,
+      final Optional<GameRules> gameRules,
+      final boolean newWorld
    ) {
       this.disconnectWithProgressScreen();
       Instant worldLoadStart = Instant.now();
@@ -2043,20 +2082,21 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       int chunkStatusViewRadius = Math.max(5, 3) + ChunkLevel.RADIUS_AROUND_FULL_CHUNK + 1;
 
       try {
-         levelSourceAccess.saveDataTag(worldStem.registries().compositeAccess(), worldStem.worldData());
+         levelSourceAccess.saveDataTag(worldStem.worldDataAndGenSettings().data());
          LevelLoadListener loadListener = LevelLoadListener.compose(loadTracker, LoggingLevelLoadListener.forSingleplayer());
          this.singleplayerServer = MinecraftServer.spin(
-            thread -> new IntegratedServer(thread, this, levelSourceAccess, packRepository, worldStem, this.services, loadListener)
+            thread -> new IntegratedServer(thread, this, levelSourceAccess, packRepository, worldStem, gameRules, this.services, loadListener)
          );
          loadTracker.setServerChunkStatusView(this.singleplayerServer.createChunkLoadStatusView(chunkStatusViewRadius));
          this.isLocalServer = true;
          this.updateReportEnvironment(ReportEnvironment.local());
-         this.quickPlayLog.setWorldData(QuickPlayLog.Type.SINGLEPLAYER, levelSourceAccess.getLevelId(), worldStem.worldData().getLevelName());
+         this.quickPlayLog
+            .setWorldData(QuickPlayLog.Type.SINGLEPLAYER, levelSourceAccess.getLevelId(), worldStem.worldDataAndGenSettings().data().getLevelName());
       } catch (Throwable t) {
          CrashReport report = CrashReport.forThrowable(t, "Starting integrated server");
          CrashReportCategory category = report.addCategory("Starting integrated server");
          category.setDetail("Level ID", levelSourceAccess.getLevelId());
-         category.setDetail("Level Name", () -> worldStem.worldData().getLevelName());
+         category.setDetail("Level Name", () -> worldStem.worldDataAndGenSettings().data().getLevelName());
          throw new ReportedException(report);
       }
 
@@ -2071,10 +2111,9 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             this.overlay.tick();
          }
 
-         this.runTick(false);
+         this.renderFrame(false);
          this.runAllTasks();
          this.managedBlock(() -> Util.getNanos() > finishTime);
-         this.handleDelayedCrash();
       }
 
       profiler.pop();
@@ -2161,13 +2200,15 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
             this.gui.onDisconnected();
          }
 
+         this.level = null;
          if (server != null) {
+            server.halt(false);
             this.setScreen(new GenericMessageScreen(SAVING_LEVEL));
             ProfilerFiller profiler = Profiler.get();
             profiler.push("waitForServer");
 
             while (!server.isShutdown()) {
-               this.runTick(false);
+               this.renderFrame(false);
             }
 
             profiler.pop();
@@ -2175,7 +2216,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
          this.setScreenAndShow(screen);
          this.isLocalServer = false;
-         this.level = null;
          this.updateLevelInEngines(null, stopSound);
          this.player = null;
       } finally {
@@ -2217,7 +2257,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    public void setScreenAndShow(final Screen screen) {
       try (Zone ignored = Profiler.get().zone("forcedTick")) {
          this.setScreen(screen);
-         this.runTick(false);
+         this.renderFrame(false);
       }
    }
 
@@ -2272,19 +2312,33 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public boolean isBlocked(final UUID uuid) {
-      return this.getChatStatus().isChatAllowed(false)
-         ? this.playerSocialManager.shouldHideMessageFrom(uuid)
-         : (this.player == null || !uuid.equals(this.player.getUUID())) && !uuid.equals(Util.NIL_UUID);
+      return !this.isLocalOrUnknownPlayer(uuid) && this.playerSocialManager.shouldHideMessageFrom(uuid);
    }
 
-   public Minecraft.ChatStatus getChatStatus() {
-      if (this.options.chatVisibility().get() == ChatVisiblity.HIDDEN) {
-         return Minecraft.ChatStatus.DISABLED_BY_OPTIONS;
-      } else if (!this.allowsChat) {
-         return Minecraft.ChatStatus.DISABLED_BY_LAUNCHER;
-      } else {
-         return !this.userProperties().flag(UserFlag.CHAT_ALLOWED) ? Minecraft.ChatStatus.DISABLED_BY_PROFILE : Minecraft.ChatStatus.ENABLED;
+   private boolean isLocalOrUnknownPlayer(final UUID uuid) {
+      return uuid.equals(Util.NIL_UUID) ? true : this.player != null && uuid.equals(this.player.getUUID());
+   }
+
+   public ChatAbilities computeChatAbilities() {
+      ChatAbilities.Builder builder = new ChatAbilities.Builder();
+      ChatVisiblity visiblityOption = this.options.chatVisibility().get();
+      if (visiblityOption == ChatVisiblity.HIDDEN) {
+         builder.addRestriction(ChatRestriction.CHAT_AND_COMMANDS_DISABLED_BY_OPTIONS);
+      } else if (visiblityOption == ChatVisiblity.SYSTEM) {
+         builder.addRestriction(ChatRestriction.CHAT_DISABLED_BY_OPTIONS);
       }
+
+      if (this.isMultiplayerServer()) {
+         if (!this.allowsChat) {
+            builder.addRestriction(ChatRestriction.DISABLED_BY_LAUNCHER);
+         }
+
+         if (SharedConstants.DEBUG_CHAT_DISABLED || !this.userProperties().flag(UserFlag.CHAT_ALLOWED)) {
+            builder.addRestriction(ChatRestriction.DISABLED_BY_PROFILE);
+         }
+      }
+
+      return builder.build();
    }
 
    public final boolean isDemo() {
@@ -2304,14 +2358,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public static boolean useShaderTransparency() {
-      return !instance.gameRenderer.isPanoramicMode() && instance.options.improvedTransparency().get();
+      GameRenderState gameRenderState = instance.gameRenderer.getGameRenderState();
+      return !gameRenderState.levelRenderState.cameraRenderState.isPanoramicMode && gameRenderState.optionsRenderState.improvedTransparency;
    }
 
-   public static boolean useAmbientOcclusion() {
-      return instance.options.ambientOcclusion().get();
-   }
-
-   private void pickBlock() {
+   private void pickBlockOrEntity() {
       if (this.hitResult != null && this.hitResult.getType() != HitResult.Type.MISS) {
          boolean includeData = this.hasControlDown();
          switch (this.hitResult) {
@@ -2413,6 +2464,11 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
       if (minecraft != null) {
          systemReport.setDetail("Resource Packs", () -> PackRepository.displayPackList(minecraft.getResourcePackRepository().getSelectedPacks()));
+         systemReport.setDetail("Sound Cache", () -> {
+            SoundBufferLibrary.DebugOutput.Counter counter = new SoundBufferLibrary.DebugOutput.Counter();
+            minecraft.getSoundManager().getSoundCacheDebugStats(counter);
+            return String.format(Locale.ROOT, "%d bytes in %d buffers", counter.totalSize(), counter.totalCount());
+         });
       }
 
       if (languageManager != null) {
@@ -2562,17 +2618,17 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public @Nullable Entity getCameraEntity() {
-      return this.cameraEntity;
+      return this.gameRenderer.getMainCamera().entity();
    }
 
    public void setCameraEntity(final @Nullable Entity cameraEntity) {
-      this.cameraEntity = cameraEntity;
+      this.gameRenderer.getMainCamera().setEntity(cameraEntity);
       this.gameRenderer.checkEntityPostEffect(cameraEntity);
    }
 
    public boolean shouldEntityAppearGlowing(final Entity entity) {
       return entity.isCurrentlyGlowing()
-         || this.player != null && this.player.isSpectator() && this.options.keySpectatorOutlines.isDown() && entity.getType() == EntityType.PLAYER;
+         || this.player != null && this.player.isSpectator() && this.options.keySpectatorOutlines.isDown() && entity.is(EntityType.PLAYER);
    }
 
    @Override
@@ -2590,20 +2646,12 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       return true;
    }
 
-   public BlockRenderDispatcher getBlockRenderer() {
-      return this.blockRenderer;
-   }
-
    public EntityRenderDispatcher getEntityRenderDispatcher() {
       return this.entityRenderDispatcher;
    }
 
    public BlockEntityRenderDispatcher getBlockEntityRenderDispatcher() {
       return this.blockEntityRenderDispatcher;
-   }
-
-   public ItemRenderer getItemRenderer() {
-      return this.itemRenderer;
    }
 
    public MapRenderer getMapRenderer() {
@@ -2635,7 +2683,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
    }
 
    public boolean isWindowActive() {
-      return this.windowActive;
+      return this.window.isFocused();
    }
 
    public HotbarManager getHotbarManager() {
@@ -2658,11 +2706,6 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       return this.waypointStyles;
    }
 
-   @Override
-   public void setWindowActive(final boolean windowActive) {
-      this.windowActive = windowActive;
-   }
-
    public Component grabPanoramixScreenshot(final File folder) {
       int downscaleFactor = 4;
       int width = 4096;
@@ -2675,9 +2718,10 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       float xRotO = this.player.xRotO;
       float yRotO = this.player.yRotO;
       this.gameRenderer.setRenderBlockOutline(false);
+      Camera camera = this.gameRenderer.getMainCamera();
 
       try {
-         this.gameRenderer.setPanoramicScreenshotParameters(new PanoramicScreenshotParameters(new Vector3f(this.gameRenderer.getMainCamera().forwardVector())));
+         camera.enablePanoramicMode();
          this.window.setWidth(4096);
          this.window.setHeight(4096);
          target.resize(4096, 4096);
@@ -2712,12 +2756,13 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
             this.player.yRotO = this.player.getYRot();
             this.player.xRotO = this.player.getXRot();
-            this.gameRenderer.updateCamera(DeltaTracker.ONE);
+            this.gameRenderer.update(DeltaTracker.ONE, true);
+            this.gameRenderer.extract(DeltaTracker.ONE, true);
             this.gameRenderer.renderLevel(DeltaTracker.ONE);
 
             try {
                Thread.sleep(10L);
-            } catch (InterruptedException var18) {
+            } catch (InterruptedException var19) {
             }
 
             Screenshot.grab(folder, "panorama_" + i + ".png", target, 4, result -> {});
@@ -2739,7 +2784,7 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
          this.window.setWidth(ow);
          this.window.setHeight(oh);
          target.resize(ow, oh);
-         this.gameRenderer.setPanoramicScreenshotParameters(null);
+         camera.disablePanoramicMode();
       }
    }
 
@@ -2757,6 +2802,21 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
 
    public Window getWindow() {
       return this.window;
+   }
+
+   public TextInputManager textInputManager() {
+      return this.textInputManager;
+   }
+
+   public void onTextInputFocusChange(final GuiEventListener element, final boolean isFocused) {
+      this.textInputManager.onTextInputFocusChange(isFocused);
+      if (this.screen != null) {
+         if (isFocused) {
+            this.keyboardHandler.resubmitLastPreeditEvent(element);
+         } else {
+            KeyboardHandler.submitPreeditEvent(element, null);
+         }
+      }
    }
 
    public FramerateLimitTracker getFramerateLimitTracker() {
@@ -2863,46 +2923,16 @@ public class Minecraft extends ReentrantBlockableEventLoop<Runnable> implements 
       return this.drainedLatestTickGizmos;
    }
 
-   public enum ChatStatus {
-      ENABLED(CommonComponents.EMPTY) {
-         @Override
-         public boolean isChatAllowed(final boolean isLocalServer) {
-            return true;
+   private void pick(final float partialTicks) {
+      Entity cameraEntity = this.getCameraEntity();
+      if (cameraEntity != null) {
+         if (this.level != null && this.player != null) {
+            Profiler.get().push("pick");
+            this.hitResult = this.player.raycastHitResult(partialTicks, cameraEntity);
+            this.crosshairPickEntity = this.hitResult instanceof EntityHitResult entityHitResult ? entityHitResult.getEntity() : null;
+            Profiler.get().pop();
          }
-      },
-      DISABLED_BY_OPTIONS(Component.translatable("chat.disabled.options").withStyle(ChatFormatting.RED)) {
-         @Override
-         public boolean isChatAllowed(final boolean isLocalServer) {
-            return false;
-         }
-      },
-      DISABLED_BY_LAUNCHER(Component.translatable("chat.disabled.launcher").withStyle(ChatFormatting.RED)) {
-         @Override
-         public boolean isChatAllowed(final boolean isLocalServer) {
-            return isLocalServer;
-         }
-      },
-      DISABLED_BY_PROFILE(
-         Component.translatable("chat.disabled.profile", Component.keybind(Minecraft.instance.options.keyChat.getName())).withStyle(ChatFormatting.RED)
-      ) {
-         @Override
-         public boolean isChatAllowed(final boolean isLocalServer) {
-            return isLocalServer;
-         }
-      };
-
-      private static final Component INFO_DISABLED_BY_PROFILE = Component.translatable("chat.disabled.profile.moreInfo");
-      private final Component message;
-
-      ChatStatus(final Component message) {
-         this.message = message;
       }
-
-      public Component getMessage() {
-         return this.message;
-      }
-
-      public abstract boolean isChatAllowed(final boolean isLocalServer);
    }
 
    private record GameLoadCookie(RealmsClient realmsClient, GameConfig.QuickPlayData quickPlayData) {

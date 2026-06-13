@@ -33,6 +33,10 @@ public class PackOutput {
       return this.createPathProvider(PackOutput.Target.DATA_PACK, Registries.tagsDirPath(registryKey));
    }
 
+   public PackOutput.PathProvider createRegistryComponentPathProvider(final ResourceKey<? extends Registry<?>> registryKey) {
+      return this.createPathProvider(PackOutput.Target.REPORTS, Registries.componentsDirPath(registryKey));
+   }
+
    public static class PathProvider {
       private final Path root;
       private final String kind;
@@ -43,15 +47,15 @@ public class PackOutput {
       }
 
       public Path file(final Identifier element, final String extension) {
-         return this.root.resolve(element.getNamespace()).resolve(this.kind).resolve(element.getPath() + "." + extension);
+         return element.withPath(path -> this.kind + "/" + path + "." + extension).resolveAgainst(this.root);
       }
 
       public Path json(final Identifier element) {
-         return this.root.resolve(element.getNamespace()).resolve(this.kind).resolve(element.getPath() + ".json");
+         return element.withPath(path -> this.kind + "/" + path + ".json").resolveAgainst(this.root);
       }
 
       public Path json(final ResourceKey<?> element) {
-         return this.root.resolve(element.identifier().getNamespace()).resolve(this.kind).resolve(element.identifier().getPath() + ".json");
+         return this.json(element.identifier());
       }
    }
 

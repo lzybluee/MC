@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.components.debugchart;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.debugchart.SampleStorage;
@@ -25,7 +25,7 @@ public abstract class AbstractDebugChart {
       return 60 + 9;
    }
 
-   public void drawChart(final GuiGraphics graphics, final int left, final int width) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int left, final int width) {
       int bottom = graphics.guiHeight();
       graphics.fill(left, bottom - 60, left + width, bottom, -1873784752);
       long avg = 0L;
@@ -41,50 +41,50 @@ public abstract class AbstractDebugChart {
          min = Math.min(min, valueForAggregation);
          max = Math.max(max, valueForAggregation);
          avg += valueForAggregation;
-         this.drawDimensions(graphics, bottom, currentX, sampleIndex);
+         this.extractSampleBars(graphics, bottom, currentX, sampleIndex);
       }
 
-      graphics.hLine(left, left + width - 1, bottom - 60, -1);
-      graphics.hLine(left, left + width - 1, bottom - 1, -1);
-      graphics.vLine(left, bottom - 60, bottom, -1);
-      graphics.vLine(left + width - 1, bottom - 60, bottom, -1);
+      graphics.horizontalLine(left, left + width - 1, bottom - 60, -1);
+      graphics.horizontalLine(left, left + width - 1, bottom - 1, -1);
+      graphics.verticalLine(left, bottom - 60, bottom, -1);
+      graphics.verticalLine(left + width - 1, bottom - 60, bottom, -1);
       if (sampleCount > 0) {
          String minText = this.toDisplayString(min) + " min";
          String avgText = this.toDisplayString((double)avg / sampleCount) + " avg";
          String maxText = this.toDisplayString(max) + " max";
-         graphics.drawString(this.font, minText, left + 2, bottom - 60 - 9, -2039584);
-         graphics.drawCenteredString(this.font, avgText, left + width / 2, bottom - 60 - 9, -2039584);
-         graphics.drawString(this.font, maxText, left + width - this.font.width(maxText) - 2, bottom - 60 - 9, -2039584);
+         graphics.text(this.font, minText, left + 2, bottom - 60 - 9, -2039584);
+         graphics.centeredText(this.font, avgText, left + width / 2, bottom - 60 - 9, -2039584);
+         graphics.text(this.font, maxText, left + width - this.font.width(maxText) - 2, bottom - 60 - 9, -2039584);
       }
 
-      this.renderAdditionalLinesAndLabels(graphics, left, width, bottom);
+      this.extractAdditionalLinesAndLabels(graphics, left, width, bottom);
    }
 
-   protected void drawDimensions(final GuiGraphics graphics, final int bottom, final int currentX, final int sampleIndex) {
-      this.drawMainDimension(graphics, bottom, currentX, sampleIndex);
-      this.drawAdditionalDimensions(graphics, bottom, currentX, sampleIndex);
+   protected void extractSampleBars(final GuiGraphicsExtractor graphics, final int bottom, final int currentX, final int sampleIndex) {
+      this.extractMainSampleBar(graphics, bottom, currentX, sampleIndex);
+      this.extractAdditionalSampleBars(graphics, bottom, currentX, sampleIndex);
    }
 
-   protected void drawMainDimension(final GuiGraphics graphics, final int bottom, final int currentX, final int sampleIndex) {
+   protected void extractMainSampleBar(final GuiGraphicsExtractor graphics, final int bottom, final int currentX, final int sampleIndex) {
       long value = this.sampleStorage.get(sampleIndex);
       int sampleHeight = this.getSampleHeight(value);
       int color = this.getSampleColor(value);
       graphics.fill(currentX, bottom - sampleHeight, currentX + 1, bottom, color);
    }
 
-   protected void drawAdditionalDimensions(final GuiGraphics graphics, final int bottom, final int currentX, final int sampleIndex) {
+   protected void extractAdditionalSampleBars(final GuiGraphicsExtractor graphics, final int bottom, final int currentX, final int sampleIndex) {
    }
 
    protected long getValueForAggregation(final int sampleIndex) {
       return this.sampleStorage.get(sampleIndex);
    }
 
-   protected void renderAdditionalLinesAndLabels(final GuiGraphics graphics, final int left, final int width, final int bottom) {
+   protected void extractAdditionalLinesAndLabels(final GuiGraphicsExtractor graphics, final int left, final int width, final int bottom) {
    }
 
-   protected void drawStringWithShade(final GuiGraphics graphics, final String str, final int x, final int y) {
+   protected void extractStringWithShade(final GuiGraphicsExtractor graphics, final String str, final int x, final int y) {
       graphics.fill(x, y, x + this.font.width(str) + 1, y + 9, -1873784752);
-      graphics.drawString(this.font, str, x + 1, y + 1, -2039584, false);
+      graphics.text(this.font, str, x + 1, y + 1, -2039584, false);
    }
 
    protected abstract String toDisplayString(double sample);

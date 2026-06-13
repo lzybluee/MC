@@ -10,15 +10,15 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class EmptyLootItem extends LootPoolSingletonContainer {
-   public static final MapCodec<EmptyLootItem> CODEC = RecordCodecBuilder.mapCodec(i -> singletonFields(i).apply(i, EmptyLootItem::new));
+   public static final MapCodec<EmptyLootItem> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> singletonFields(i).apply(i, EmptyLootItem::new));
 
    private EmptyLootItem(final int weight, final int quality, final List<LootItemCondition> conditions, final List<LootItemFunction> functions) {
       super(weight, quality, conditions, functions);
    }
 
    @Override
-   public LootPoolEntryType getType() {
-      return LootPoolEntries.EMPTY;
+   public MapCodec<EmptyLootItem> codec() {
+      return MAP_CODEC;
    }
 
    @Override

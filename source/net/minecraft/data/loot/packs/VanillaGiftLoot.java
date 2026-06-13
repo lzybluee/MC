@@ -12,7 +12,6 @@ import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.animal.chicken.ChickenVariant;
 import net.minecraft.world.entity.animal.chicken.ChickenVariants;
-import net.minecraft.world.item.EitherHolder;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
@@ -283,7 +282,7 @@ public record VanillaGiftLoot(HolderLookup.Provider registries) implements LootT
                                        DataComponentMatchers.Builder.components()
                                           .exact(
                                              DataComponentExactPredicate.expect(
-                                                DataComponents.CHICKEN_VARIANT, new EitherHolder<>(chickenVariants.getOrThrow(ChickenVariants.TEMPERATE))
+                                                DataComponents.CHICKEN_VARIANT, chickenVariants.getOrThrow(ChickenVariants.TEMPERATE)
                                              )
                                           )
                                           .build()
@@ -299,7 +298,7 @@ public record VanillaGiftLoot(HolderLookup.Provider registries) implements LootT
                                        DataComponentMatchers.Builder.components()
                                           .exact(
                                              DataComponentExactPredicate.expect(
-                                                DataComponents.CHICKEN_VARIANT, new EitherHolder<>(chickenVariants.getOrThrow(ChickenVariants.WARM))
+                                                DataComponents.CHICKEN_VARIANT, chickenVariants.getOrThrow(ChickenVariants.WARM)
                                              )
                                           )
                                           .build()
@@ -315,7 +314,7 @@ public record VanillaGiftLoot(HolderLookup.Provider registries) implements LootT
                                        DataComponentMatchers.Builder.components()
                                           .exact(
                                              DataComponentExactPredicate.expect(
-                                                DataComponents.CHICKEN_VARIANT, new EitherHolder<>(chickenVariants.getOrThrow(ChickenVariants.COLD))
+                                                DataComponents.CHICKEN_VARIANT, chickenVariants.getOrThrow(ChickenVariants.COLD)
                                              )
                                           )
                                           .build()

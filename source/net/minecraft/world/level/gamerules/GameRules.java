@@ -3,7 +3,9 @@ package net.minecraft.world.level.gamerules;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
@@ -15,8 +17,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class GameRules {
+   private static final Logger LOGGER = LogUtils.getLogger();
    public static final GameRule<Boolean> ADVANCE_TIME = registerBoolean("advance_time", GameRuleCategory.UPDATES, !SharedConstants.DEBUG_WORLD_RECREATE);
    public static final GameRule<Boolean> ADVANCE_WEATHER = registerBoolean("advance_weather", GameRuleCategory.UPDATES, !SharedConstants.DEBUG_WORLD_RECREATE);
    public static final GameRule<Boolean> ALLOW_ENTERING_NETHER_USING_PORTALS = registerBoolean(
@@ -93,12 +97,24 @@ public class GameRules {
    }
 
    public GameRules(final FeatureFlagSet enabledFeatures, final GameRuleMap map) {
-      this(enabledFeatures);
-      this.rules.setFromIf(map, this.rules::has);
+      BuiltInRegistries.GAME_RULE.stream().forEach(gameRule -> {
+         if (gameRule.isEnabled(enabledFeatures)) {
+            if (!map.has((GameRule<?>)gameRule)) {
+               map.reset((GameRule<?>)gameRule);
+            }
+         } else if (map.has((GameRule<?>)gameRule)) {
+            map.remove((GameRule<?>)gameRule);
+         }
+      });
+      this.rules = map;
    }
 
    public GameRules(final FeatureFlagSet enabledFeatures) {
       this.rules = GameRuleMap.of(BuiltInRegistries.GAME_RULE.filterFeatures(enabledFeatures).listElements().map(Holder::value));
+   }
+
+   public GameRules(final List<GameRule<?>> rules) {
+      this.rules = GameRuleMap.of(rules.stream());
    }
 
    public Stream<GameRule<?>> availableRules() {
@@ -108,7 +124,7 @@ public class GameRules {
    public <T> T get(final GameRule<T> gameRule) {
       T value = this.rules.get(gameRule);
       if (value == null) {
-         throw new IllegalArgumentException("Tried to access invalid game rule");
+         throw new IllegalArgumentException("Tried to access invalid game rule " + gameRule.getIdentifierWithFallback());
       } else {
          return value;
       }
@@ -116,17 +132,17 @@ public class GameRules {
 
    public <T> void set(final GameRule<T> gameRule, final T value, final @Nullable MinecraftServer server) {
       if (!this.rules.has(gameRule)) {
-         throw new IllegalArgumentException("Tried to set invalid game rule");
-      }
-
-      this.rules.set(gameRule, value);
-      if (server != null) {
-         server.onGameRuleChanged(gameRule, value);
+         LOGGER.warn("Tried to set invalid game rule '{}' to value '{}'", gameRule.getIdentifierWithFallback(), value);
+      } else {
+         this.rules.set(gameRule, value);
+         if (server != null) {
+            server.onGameRuleChanged(gameRule, value);
+         }
       }
    }
 
    public GameRules copy(final FeatureFlagSet enabledFeatures) {
-      return new GameRules(enabledFeatures, this.rules);
+      return new GameRules(enabledFeatures, GameRuleMap.copyOf(this.rules));
    }
 
    public void setAll(final GameRules other, final @Nullable MinecraftServer server) {

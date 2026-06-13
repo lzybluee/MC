@@ -9,6 +9,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.material.Fluid;
@@ -36,8 +37,8 @@ public class DripParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
-      return this.isGlowing ? 240 : super.getLightColor(a);
+   public int getLightCoords(final float a) {
+      return this.isGlowing ? LightCoordsUtil.withBlock(super.getLightCoords(a), 15) : super.getLightCoords(a);
    }
 
    @Override
@@ -57,7 +58,7 @@ public class DripParticle extends SingleQuadParticle {
             if (this.type != Fluids.EMPTY) {
                BlockPos pos = BlockPos.containing(this.x, this.y, this.z);
                FluidState fluidState = this.level.getFluidState(pos);
-               if (fluidState.getType() == this.type && this.y < pos.getY() + fluidState.getHeight(this.level, pos)) {
+               if (fluidState.is(this.type) && this.y < pos.getY() + fluidState.getHeight(this.level, pos)) {
                   this.remove();
                }
             }

@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,6 +31,6 @@ public class CactusFlowerBlock extends VegetationBlock {
    @Override
    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
       BlockState blockBelow = level.getBlockState(pos);
-      return blockBelow.is(Blocks.CACTUS) || blockBelow.is(Blocks.FARMLAND) || blockBelow.isFaceSturdy(level, pos, Direction.UP, SupportType.CENTER);
+      return blockBelow.is(BlockTags.SUPPORT_OVERRIDE_CACTUS_FLOWER) || blockBelow.isFaceSturdy(level, pos, Direction.UP, SupportType.CENTER);
    }
 }

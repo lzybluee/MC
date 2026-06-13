@@ -73,7 +73,7 @@ public class SnifferEggBlock extends Block {
          if (sniffer != null) {
             Vec3 spawnAt = position.getCenter();
             sniffer.setBaby(true);
-            sniffer.snapTo(spawnAt.x(), spawnAt.y(), spawnAt.z(), Mth.wrapDegrees(level.random.nextFloat() * 360.0F), 0.0F);
+            sniffer.snapTo(spawnAt.x(), spawnAt.y(), spawnAt.z(), Mth.wrapDegrees(level.getRandom().nextFloat() * 360.0F), 0.0F);
             level.addFreshEntity(sniffer);
          }
       }
@@ -89,7 +89,7 @@ public class SnifferEggBlock extends Block {
       int hatchTime = boosted ? 12000 : 24000;
       int progressionTickDelay = hatchTime / 3;
       level.gameEvent(GameEvent.BLOCK_PLACE, pos, GameEvent.Context.of(state));
-      level.scheduleTick(pos, this, progressionTickDelay + level.random.nextInt(300));
+      level.scheduleTick(pos, this, progressionTickDelay + level.getRandom().nextInt(300));
    }
 
    @Override

@@ -7,20 +7,21 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.jspecify.annotations.Nullable;
@@ -112,11 +113,6 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    }
 
    @Override
-   public void submitBlock(final PoseStack poseStack, final BlockState state, final int lightCoords, final int overlayCoords, final int outlineColor) {
-      this.order(0).submitBlock(poseStack, state, lightCoords, overlayCoords, outlineColor);
-   }
-
-   @Override
    public void submitMovingBlock(final PoseStack poseStack, final MovingBlockRenderState movingBlockRenderState) {
       this.order(0).submitMovingBlock(poseStack, movingBlockRenderState);
    }
@@ -125,15 +121,18 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    public void submitBlockModel(
       final PoseStack poseStack,
       final RenderType renderType,
-      final BlockStateModel model,
-      final float r,
-      final float g,
-      final float b,
+      final List<BlockStateModelPart> modelParts,
+      final int[] tintLayers,
       final int lightCoords,
       final int overlayCoords,
       final int outlineColor
    ) {
-      this.order(0).submitBlockModel(poseStack, renderType, model, r, g, b, lightCoords, overlayCoords, outlineColor);
+      this.order(0).submitBlockModel(poseStack, renderType, modelParts, tintLayers, lightCoords, overlayCoords, outlineColor);
+   }
+
+   @Override
+   public void submitBreakingBlockModel(final PoseStack poseStack, final BlockStateModel model, final long seed, final int progress) {
+      this.order(0).submitBreakingBlockModel(poseStack, model, seed, progress);
    }
 
    @Override
@@ -145,10 +144,9 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
       final int outlineColor,
       final int[] tintLayers,
       final List<BakedQuad> quads,
-      final RenderType renderType,
       final ItemStackRenderState.FoilType foilType
    ) {
-      this.order(0).submitItem(poseStack, displayContext, lightCoords, overlayCoords, outlineColor, tintLayers, quads, renderType, foilType);
+      this.order(0).submitItem(poseStack, displayContext, lightCoords, overlayCoords, outlineColor, tintLayers, quads, foilType);
    }
 
    @Override
@@ -177,11 +175,11 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    }
 
    public record BlockModelSubmit(
-      PoseStack.Pose pose, RenderType renderType, BlockStateModel model, float r, float g, float b, int lightCoords, int overlayCoords, int outlineColor
+      PoseStack.Pose pose, RenderType renderType, List<BlockStateModelPart> modelParts, int[] tintLayers, int lightCoords, int overlayCoords, int outlineColor
    ) {
    }
 
-   public record BlockSubmit(PoseStack.Pose pose, BlockState state, int lightCoords, int overlayCoords, int outlineColor) {
+   public record BreakingBlockModelSubmit(PoseStack.Pose pose, BlockStateModel model, long seed, int progress) {
    }
 
    public record CustomGeometrySubmit(PoseStack.Pose pose, SubmitNodeCollector.CustomGeometryRenderer customGeometryRenderer) {
@@ -198,7 +196,6 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
       int outlineColor,
       int[] tintLayers,
       List<BakedQuad> quads,
-      RenderType renderType,
       ItemStackRenderState.FoilType foilType
    ) {
    }
@@ -233,17 +230,17 @@ public class SubmitNodeStorage implements SubmitNodeCollector {
    ) {
    }
 
-   public record MovingBlockSubmit(Matrix4f pose, MovingBlockRenderState movingBlockRenderState) {
+   public record MovingBlockSubmit(Matrix4fc pose, MovingBlockRenderState movingBlockRenderState) {
    }
 
-   public record NameTagSubmit(Matrix4f pose, float x, float y, Component text, int lightCoords, int color, int backgroundColor, double distanceToCameraSq) {
+   public record NameTagSubmit(Matrix4fc pose, float x, float y, Component text, int lightCoords, int color, int backgroundColor, double distanceToCameraSq) {
    }
 
-   public record ShadowSubmit(Matrix4f pose, float radius, List<EntityRenderState.ShadowPiece> pieces) {
+   public record ShadowSubmit(Matrix4fc pose, float radius, List<EntityRenderState.ShadowPiece> pieces) {
    }
 
    public record TextSubmit(
-      Matrix4f pose,
+      Matrix4fc pose,
       float x,
       float y,
       FormattedCharSequence string,

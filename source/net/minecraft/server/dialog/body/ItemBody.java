@@ -5,13 +5,13 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
-public record ItemBody(ItemStack item, Optional<PlainMessage> description, boolean showDecorations, boolean showTooltip, int width, int height)
+public record ItemBody(ItemStackTemplate item, Optional<PlainMessage> description, boolean showDecorations, boolean showTooltip, int width, int height)
    implements DialogBody {
    public static final MapCodec<ItemBody> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> i.group(
-            ItemStack.STRICT_CODEC.fieldOf("item").forGetter(ItemBody::item),
+            ItemStackTemplate.CODEC.fieldOf("item").forGetter(ItemBody::item),
             PlainMessage.CODEC.optionalFieldOf("description").forGetter(ItemBody::description),
             Codec.BOOL.optionalFieldOf("show_decorations", true).forGetter(ItemBody::showDecorations),
             Codec.BOOL.optionalFieldOf("show_tooltip", true).forGetter(ItemBody::showTooltip),

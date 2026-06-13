@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 public class VaultSharedData {
    static final String TAG_NAME = "shared_data";
-   static Codec<VaultSharedData> CODEC = RecordCodecBuilder.create(
+   static final Codec<VaultSharedData> CODEC = RecordCodecBuilder.create(
       i -> i.group(
             ItemStack.lenientOptionalFieldOf("display_item").forGetter(vault -> vault.displayItem),
             UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("connected_players", Set.of()).forGetter(vault -> vault.connectedPlayers),

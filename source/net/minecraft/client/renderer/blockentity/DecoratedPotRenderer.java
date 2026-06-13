@@ -2,7 +2,9 @@ package net.minecraft.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.mojang.math.Transformation;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -21,23 +23,26 @@ import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.DecoratedPotBlockEntity;
 import net.minecraft.world.level.block.entity.DecoratedPotPatterns;
 import net.minecraft.world.level.block.entity.PotDecorations;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
 public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlockEntity, DecoratedPotRenderState> {
-   private final MaterialSet materials;
+   private static final Map<Direction, Transformation> TRANSFORMATIONS = Util.makeEnumMap(Direction.class, DecoratedPotRenderer::createModelTransformation);
+   private final SpriteGetter sprites;
    private static final String NECK = "neck";
    private static final String FRONT = "front";
    private static final String BACK = "back";
@@ -55,15 +60,15 @@ public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlo
    private static final float WOBBLE_AMPLITUDE = 0.125F;
 
    public DecoratedPotRenderer(final BlockEntityRendererProvider.Context context) {
-      this(context.entityModelSet(), context.materials());
+      this(context.entityModelSet(), context.sprites());
    }
 
    public DecoratedPotRenderer(final SpecialModelRenderer.BakingContext context) {
-      this(context.entityModelSet(), context.materials());
+      this(context.entityModelSet(), context.sprites());
    }
 
-   public DecoratedPotRenderer(final EntityModelSet entityModelSet, final MaterialSet materials) {
-      this.materials = materials;
+   public DecoratedPotRenderer(final EntityModelSet entityModelSet, final SpriteGetter sprites) {
+      this.sprites = sprites;
       ModelPart baseRoot = entityModelSet.bakeLayer(ModelLayers.DECORATED_POT_BASE);
       this.neck = baseRoot.getChild("neck");
       this.top = baseRoot.getChild("top");
@@ -106,9 +111,9 @@ public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlo
       return LayerDefinition.create(mesh, 16, 16);
    }
 
-   private static Material getSideMaterial(final Optional<Item> item) {
+   private static SpriteId getSideSprite(final Optional<Item> item) {
       if (item.isPresent()) {
-         Material result = Sheets.getDecoratedPotMaterial(DecoratedPotPatterns.getPatternFromItem(item.get()));
+         SpriteId result = Sheets.getDecoratedPotSprite(DecoratedPotPatterns.getPatternFromItem(item.get()));
          if (result != null) {
             return result;
          }
@@ -143,10 +148,7 @@ public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlo
       final DecoratedPotRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
    ) {
       poseStack.pushPose();
-      Direction entityDirection = state.direction;
-      poseStack.translate(0.5, 0.0, 0.5);
-      poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - entityDirection.toYRot()));
-      poseStack.translate(-0.5, 0.0, -0.5);
+      poseStack.mulPose(modelTransformation(state.direction));
       if (state.wobbleProgress >= 0.0F && state.wobbleProgress <= 1.0F) {
          if (state.wobbleStyle == DecoratedPotBlockEntity.WobbleStyle.POSITIVE) {
             float amplitude = 0.015625F;
@@ -166,6 +168,14 @@ public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlo
       poseStack.popPose();
    }
 
+   public static Transformation modelTransformation(final Direction facing) {
+      return TRANSFORMATIONS.get(facing);
+   }
+
+   private static Transformation createModelTransformation(final Direction entityDirection) {
+      return new Transformation(new Matrix4f().rotateAround(Axis.YP.rotationDegrees(180.0F - entityDirection.toYRot()), 0.5F, 0.5F, 0.5F));
+   }
+
    public void submit(
       final PoseStack poseStack,
       final SubmitNodeCollector submitNodeCollector,
@@ -175,60 +185,60 @@ public class DecoratedPotRenderer implements BlockEntityRenderer<DecoratedPotBlo
       final int outlineColor
    ) {
       RenderType renderType = Sheets.DECORATED_POT_BASE.renderType(RenderTypes::entitySolid);
-      TextureAtlasSprite sprite = this.materials.get(Sheets.DECORATED_POT_BASE);
+      TextureAtlasSprite sprite = this.sprites.get(Sheets.DECORATED_POT_BASE);
       submitNodeCollector.submitModelPart(this.neck, poseStack, renderType, lightCoords, overlayCoords, sprite, false, false, -1, null, outlineColor);
       submitNodeCollector.submitModelPart(this.top, poseStack, renderType, lightCoords, overlayCoords, sprite, false, false, -1, null, outlineColor);
       submitNodeCollector.submitModelPart(this.bottom, poseStack, renderType, lightCoords, overlayCoords, sprite, false, false, -1, null, outlineColor);
-      Material frontMaterial = getSideMaterial(decorations.front());
+      SpriteId frontSprite = getSideSprite(decorations.front());
       submitNodeCollector.submitModelPart(
          this.frontSide,
          poseStack,
-         frontMaterial.renderType(RenderTypes::entitySolid),
+         frontSprite.renderType(RenderTypes::entitySolid),
          lightCoords,
          overlayCoords,
-         this.materials.get(frontMaterial),
+         this.sprites.get(frontSprite),
          false,
          false,
          -1,
          null,
          outlineColor
       );
-      Material backMaterial = getSideMaterial(decorations.back());
+      SpriteId backSprite = getSideSprite(decorations.back());
       submitNodeCollector.submitModelPart(
          this.backSide,
          poseStack,
-         backMaterial.renderType(RenderTypes::entitySolid),
+         backSprite.renderType(RenderTypes::entitySolid),
          lightCoords,
          overlayCoords,
-         this.materials.get(backMaterial),
+         this.sprites.get(backSprite),
          false,
          false,
          -1,
          null,
          outlineColor
       );
-      Material leftMaterial = getSideMaterial(decorations.left());
+      SpriteId leftSprite = getSideSprite(decorations.left());
       submitNodeCollector.submitModelPart(
          this.leftSide,
          poseStack,
-         leftMaterial.renderType(RenderTypes::entitySolid),
+         leftSprite.renderType(RenderTypes::entitySolid),
          lightCoords,
          overlayCoords,
-         this.materials.get(leftMaterial),
+         this.sprites.get(leftSprite),
          false,
          false,
          -1,
          null,
          outlineColor
       );
-      Material rightMaterial = getSideMaterial(decorations.right());
+      SpriteId rightSprite = getSideSprite(decorations.right());
       submitNodeCollector.submitModelPart(
          this.rightSide,
          poseStack,
-         rightMaterial.renderType(RenderTypes::entitySolid),
+         rightSprite.renderType(RenderTypes::entitySolid),
          lightCoords,
          overlayCoords,
-         this.materials.get(rightMaterial),
+         this.sprites.get(rightSprite),
          false,
          false,
          -1,

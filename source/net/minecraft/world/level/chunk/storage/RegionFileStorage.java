@@ -31,7 +31,7 @@ public final class RegionFileStorage implements AutoCloseable {
    }
 
    private RegionFile getRegionFile(final ChunkPos pos) throws IOException {
-      long key = ChunkPos.asLong(pos.getRegionX(), pos.getRegionZ());
+      long key = ChunkPos.pack(pos.getRegionX(), pos.getRegionZ());
       RegionFile region = (RegionFile)this.regionCache.getAndMoveToFirst(key);
       if (region != null) {
          return region;

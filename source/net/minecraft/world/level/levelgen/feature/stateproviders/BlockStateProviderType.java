@@ -16,6 +16,9 @@ public class BlockStateProviderType<P extends BlockStateProvider> {
    public static final BlockStateProviderType<RandomizedIntStateProvider> RANDOMIZED_INT_STATE_PROVIDER = register(
       "randomized_int_state_provider", RandomizedIntStateProvider.CODEC
    );
+   public static final BlockStateProviderType<RuleBasedStateProvider> RULE_BASED_STATE_PROVIDER = register(
+      "rule_based_state_provider", RuleBasedStateProvider.CODEC
+   );
    private final MapCodec<P> codec;
 
    private static <P extends BlockStateProvider> BlockStateProviderType<P> register(final String name, final MapCodec<P> codec) {

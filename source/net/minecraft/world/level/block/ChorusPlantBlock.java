@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -49,7 +50,7 @@ public class ChorusPlantBlock extends PipeBlock {
       BlockState south = level.getBlockState(pos.south());
       BlockState west = level.getBlockState(pos.west());
       Block block = defaultState.getBlock();
-      return defaultState.trySetValue(DOWN, down.is(block) || down.is(Blocks.CHORUS_FLOWER) || down.is(Blocks.END_STONE))
+      return defaultState.trySetValue(DOWN, down.is(block) || down.is(Blocks.CHORUS_FLOWER) || down.is(BlockTags.SUPPORTS_CHORUS_PLANT))
          .trySetValue(UP, up.is(block) || up.is(Blocks.CHORUS_FLOWER))
          .trySetValue(NORTH, north.is(block) || north.is(Blocks.CHORUS_FLOWER))
          .trySetValue(EAST, east.is(block) || east.is(Blocks.CHORUS_FLOWER))
@@ -74,7 +75,7 @@ public class ChorusPlantBlock extends PipeBlock {
       } else {
          boolean connect = neighbourState.is(this)
             || neighbourState.is(Blocks.CHORUS_FLOWER)
-            || directionToNeighbour == Direction.DOWN && neighbourState.is(Blocks.END_STONE);
+            || directionToNeighbour == Direction.DOWN && neighbourState.is(BlockTags.SUPPORTS_CHORUS_PLANT);
          return state.setValue(PROPERTY_BY_DIRECTION.get(directionToNeighbour), connect);
       }
    }
@@ -100,13 +101,13 @@ public class ChorusPlantBlock extends PipeBlock {
             }
 
             BlockState below = level.getBlockState(neighborPos.below());
-            if (below.is(this) || below.is(Blocks.END_STONE)) {
+            if (below.is(this) || below.is(BlockTags.SUPPORTS_CHORUS_PLANT)) {
                return true;
             }
          }
       }
 
-      return belowState.is(this) || belowState.is(Blocks.END_STONE);
+      return belowState.is(this) || belowState.is(BlockTags.SUPPORTS_CHORUS_PLANT);
    }
 
    @Override

@@ -30,7 +30,7 @@ import net.minecraft.CrashReport;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.SelectableEntry;
 import net.minecraft.client.gui.components.StringWidget;
@@ -155,13 +155,13 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
    }
 
    @Override
-   public void renderWidget(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       List<LevelSummary> newLevels = this.pollLevelsIgnoreErrors();
       if (newLevels != this.currentlyDisplayedLevels) {
          this.handleNewLevels(newLevels);
       }
 
-      super.renderWidget(graphics, mouseX, mouseY, a);
+      super.extractWidgetRenderState(graphics, mouseX, mouseY, a);
    }
 
    private void handleNewLevels(final @Nullable List<LevelSummary> levels) {
@@ -360,14 +360,14 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          int labelX = (this.minecraft.screen.width - this.minecraft.font.width(LOADING_LABEL)) / 2;
          int labelY = this.getContentY() + (this.getContentHeight() - 9) / 2;
-         graphics.drawString(this.minecraft.font, LOADING_LABEL, labelX, labelY, -1);
+         graphics.text(this.minecraft.font, LOADING_LABEL, labelX, labelY, -1);
          String dots = LoadingDotsText.get(Util.getMillis());
          int dotsX = (this.minecraft.screen.width - this.minecraft.font.width(dots)) / 2;
          int dotsY = labelY + 9;
-         graphics.drawString(this.minecraft.font, dots, dotsX, dotsY, -8355712);
+         graphics.text(this.minecraft.font, dots, dotsX, dotsY, -8355712);
       }
 
       @Override
@@ -389,10 +389,10 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          this.stringWidget
             .setPosition(this.getContentXMiddle() - this.stringWidget.getWidth() / 2, this.getContentYMiddle() - this.stringWidget.getHeight() / 2);
-         this.stringWidget.render(graphics, mouseX, mouseY, a);
+         this.stringWidget.extractRenderState(graphics, mouseX, mouseY, a);
       }
    }
 
@@ -491,14 +491,14 @@ public class WorldSelectionList extends ObjectSelectionList<WorldSelectionList.E
       }
 
       @Override
-      public void renderContent(final GuiGraphics graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+      public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
          int textX = this.getTextX();
          this.worldNameText.setPosition(textX, this.getContentY() + 1);
-         this.worldNameText.render(graphics, mouseX, mouseY, a);
+         this.worldNameText.extractRenderState(graphics, mouseX, mouseY, a);
          this.idAndLastPlayedText.setPosition(textX, this.getContentY() + 9 + 3);
-         this.idAndLastPlayedText.render(graphics, mouseX, mouseY, a);
+         this.idAndLastPlayedText.extractRenderState(graphics, mouseX, mouseY, a);
          this.infoText.setPosition(textX, this.getContentY() + 9 + 9 + 3);
-         this.infoText.render(graphics, mouseX, mouseY, a);
+         this.infoText.extractRenderState(graphics, mouseX, mouseY, a);
          graphics.blit(RenderPipelines.GUI_TEXTURED, this.icon.textureLocation(), this.getContentX(), this.getContentY(), 0.0F, 0.0F, 32, 32, 32, 32);
          if (this.list.entryType == WorldSelectionList.EntryType.SINGLEPLAYER && (this.minecraft.options.touchscreen().get() || hovered)) {
             graphics.fill(this.getContentX(), this.getContentY(), this.getContentX() + 32, this.getContentY() + 32, -1601138544);

@@ -30,7 +30,7 @@ public class ExplorationMapFunction extends LootItemConditionalFunction {
    public static final byte DEFAULT_ZOOM = 2;
    public static final int DEFAULT_SEARCH_RADIUS = 50;
    public static final boolean DEFAULT_SKIP_EXISTING = true;
-   public static final MapCodec<ExplorationMapFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<ExplorationMapFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -66,8 +66,8 @@ public class ExplorationMapFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<ExplorationMapFunction> getType() {
-      return LootItemFunctions.EXPLORATION_MAP;
+   public MapCodec<ExplorationMapFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override

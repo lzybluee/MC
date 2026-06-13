@@ -81,7 +81,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
       LongIterator iterator = this.dirtyChunks.iterator();
 
       while (iterator.hasNext() && haveTime.getAsBoolean()) {
-         ChunkPos chunkPos = new ChunkPos(iterator.nextLong());
+         ChunkPos chunkPos = ChunkPos.unpack(iterator.nextLong());
          iterator.remove();
          this.writeChunk(chunkPos);
       }
@@ -98,7 +98,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
             Optional<SectionStorage.PackedChunk<P>> chunk = (Optional<SectionStorage.PackedChunk<P>>)((CompletableFuture)entry.getValue()).getNow(null);
             if (chunk != null) {
                long chunkKey = entry.getLongKey();
-               this.unpackChunk(new ChunkPos(chunkKey), chunk.orElse(null));
+               this.unpackChunk(ChunkPos.unpack(chunkKey), chunk.orElse(null));
                iterator.remove();
                this.loadedChunks.add(chunkKey);
             }
@@ -108,7 +108,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
 
    public void flushAll() {
       if (!this.dirtyChunks.isEmpty()) {
-         this.dirtyChunks.forEach(pos -> this.writeChunk(new ChunkPos(pos)));
+         this.dirtyChunks.forEach(pos -> this.writeChunk(ChunkPos.unpack(pos)));
          this.dirtyChunks.clear();
       }
    }
@@ -162,7 +162,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
 
    public CompletableFuture<?> prefetch(final ChunkPos chunkPos) {
       synchronized (this.loadLock) {
-         long chunkKey = chunkPos.toLong();
+         long chunkKey = chunkPos.pack();
          return this.loadedChunks.contains(chunkKey)
             ? CompletableFuture.completedFuture(null)
             : (CompletableFuture)this.pendingLoads.computeIfAbsent(chunkKey, k -> this.tryRead(chunkPos));
@@ -170,7 +170,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
    }
 
    private void unpackChunk(final ChunkPos chunkPos) {
-      long chunkKey = chunkPos.toLong();
+      long chunkKey = chunkPos.pack();
       CompletableFuture<Optional<SectionStorage.PackedChunk<P>>> future;
       synchronized (this.loadLock) {
          if (!this.loadedChunks.add(chunkKey)) {
@@ -273,7 +273,7 @@ public class SectionStorage<R, P> implements AutoCloseable {
    }
 
    private static long getKey(final ChunkPos chunkPos, final int sectionY) {
-      return SectionPos.asLong(chunkPos.x, sectionY, chunkPos.z);
+      return SectionPos.asLong(chunkPos.x(), sectionY, chunkPos.z());
    }
 
    protected void onSectionLoad(final long sectionPos) {
@@ -282,14 +282,14 @@ public class SectionStorage<R, P> implements AutoCloseable {
    protected void setDirty(final long sectionPos) {
       Optional<R> r = (Optional<R>)this.storage.get(sectionPos);
       if (r != null && !r.isEmpty()) {
-         this.dirtyChunks.add(ChunkPos.asLong(SectionPos.x(sectionPos), SectionPos.z(sectionPos)));
+         this.dirtyChunks.add(ChunkPos.pack(SectionPos.x(sectionPos), SectionPos.z(sectionPos)));
       } else {
          LOGGER.warn("No data for position: {}", SectionPos.of(sectionPos));
       }
    }
 
    public void flush(final ChunkPos chunkPos) {
-      if (this.dirtyChunks.remove(chunkPos.toLong())) {
+      if (this.dirtyChunks.remove(chunkPos.pack())) {
          this.writeChunk(chunkPos);
       }
    }

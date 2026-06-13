@@ -25,12 +25,7 @@ public record TextureSetup(
 
    public static TextureSetup singleTextureWithLightmap(final GpuTextureView texture, final GpuSampler sampler) {
       return new TextureSetup(
-         texture,
-         null,
-         Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(),
-         sampler,
-         null,
-         RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+         texture, null, Minecraft.getInstance().gameRenderer.lightmap(), sampler, null, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
       );
    }
 

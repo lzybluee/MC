@@ -1,7 +1,7 @@
 package net.minecraft.world.entity.animal.camel;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -40,10 +40,12 @@ import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.control.LookControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -57,7 +59,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Camel extends AbstractHorse {
-   public static final float BABY_SCALE = 0.45F;
+   public static final float BABY_SCALE = 0.6F;
    public static final int DASH_COOLDOWN_TICKS = 55;
    public static final int MAX_HEAD_Y_ROT = 30;
    private static final float RUNNING_SPEED_BONUS = 0.1F;
@@ -69,6 +71,9 @@ public class Camel extends AbstractHorse {
    private static final int IDLE_MINIMAL_DURATION_TICKS = 80;
    private static final float SITTING_HEIGHT_DIFFERENCE = 1.43F;
    private static final long DEFAULT_LAST_POSE_CHANGE_TICK = 0L;
+   private static final Brain.Provider<Camel> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT), var0 -> CamelAi.getActivities()
+   );
    public static final EntityDataAccessor<Boolean> DASH = SynchedEntityData.defineId(Camel.class, EntityDataSerializers.BOOLEAN);
    public static final EntityDataAccessor<Long> LAST_POSE_CHANGE_TICK = SynchedEntityData.defineId(Camel.class, EntityDataSerializers.LONG);
    public final AnimationState sitAnimationState = new AnimationState();
@@ -138,17 +143,17 @@ public class Camel extends AbstractHorse {
    }
 
    @Override
-   protected Brain.Provider<Camel> brainProvider() {
-      return CamelAi.brainProvider();
+   protected Brain<Camel> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
+   }
+
+   @Override
+   public Brain<Camel> getBrain() {
+      return super.getBrain();
    }
 
    @Override
    protected void registerGoals() {
-   }
-
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return CamelAi.makeBrain(this.brainProvider().makeBrain(input));
    }
 
    @Override
@@ -160,8 +165,8 @@ public class Camel extends AbstractHorse {
    protected void customServerAiStep(final ServerLevel level) {
       ProfilerFiller profiler = Profiler.get();
       profiler.push("camelBrain");
-      Brain<?> brain = this.getBrain();
-      ((Brain<Camel>)brain).tick(level, this);
+      Brain<Camel> brain = this.getBrain();
+      brain.tick(level, this);
       profiler.pop();
       profiler.push("camelActivityUpdate");
       CamelAi.updateActivity(this);
@@ -386,7 +391,7 @@ public class Camel extends AbstractHorse {
          this.doPlayerRide(player);
       }
 
-      return InteractionResult.CONSUME;
+      return this.isBaby() && player.isHolding(Items.GOLDEN_DANDELION) ? super.mobInteract(player, hand) : InteractionResult.CONSUME;
    }
 
    @Override
@@ -422,7 +427,7 @@ public class Camel extends AbstractHorse {
          this.setInLove(player);
       }
 
-      boolean couldAgeUp = this.isBaby();
+      boolean couldAgeUp = this.canAgeUp();
       if (couldAgeUp) {
          this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
          if (!this.level().isClientSide()) {
@@ -501,7 +506,7 @@ public class Camel extends AbstractHorse {
 
    @Override
    public float getAgeScale() {
-      return this.isBaby() ? 0.45F : 1.0F;
+      return this.isBaby() ? 0.6F : 1.0F;
    }
 
    private double getBodyAnchorAnimationYOffset(final boolean isFront, final float partialTicks, final EntityDimensions dimensions, final float scale) {

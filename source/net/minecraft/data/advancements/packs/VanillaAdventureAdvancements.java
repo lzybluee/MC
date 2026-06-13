@@ -81,7 +81,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.biome.Biome;
@@ -450,7 +449,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       AdvancementHolder raidOmen = Advancement.Builder.advancement()
          .parent(root)
          .display(
-            Raid.getOminousBannerInstance(patternLookup),
+            Raid.getOminousBannerTemplate(patternLookup),
             Component.translatable("advancements.adventure.voluntary_exile.title"),
             Component.translatable("advancements.adventure.voluntary_exile.description"),
             null,
@@ -471,7 +470,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       Advancement.Builder.advancement()
          .parent(raidOmen)
          .display(
-            Raid.getOminousBannerInstance(patternLookup),
+            Raid.getOminousBannerTemplate(patternLookup),
             Component.translatable("advancements.adventure.hero_of_the_village.title"),
             Component.translatable("advancements.adventure.hero_of_the_village.description"),
             null,
@@ -486,7 +485,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       Advancement.Builder.advancement()
          .parent(root)
          .display(
-            Blocks.HONEY_BLOCK.asItem(),
+            Items.HONEY_BLOCK,
             Component.translatable("advancements.adventure.honey_block_slide.title"),
             Component.translatable("advancements.adventure.honey_block_slide.description"),
             null,
@@ -500,7 +499,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       Advancement.Builder.advancement()
          .parent(shootArrow)
          .display(
-            Blocks.TARGET.asItem(),
+            Items.TARGET,
             Component.translatable("advancements.adventure.bullseye.title"),
             Component.translatable("advancements.adventure.bullseye.description"),
             null,
@@ -693,7 +692,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       Advancement.Builder.advancement()
          .parent(respectingTheRemnants)
          .display(
-            DecoratedPotBlockEntity.createDecoratedPotItem(
+            DecoratedPotBlockEntity.createDecoratedPotTemplate(
                new PotDecorations(Optional.empty(), Optional.of(Items.HEART_POTTERY_SHERD), Optional.empty(), Optional.of(Items.EXPLORER_POTTERY_SHERD))
             ),
             Component.translatable("advancements.adventure.craft_decorated_pot_using_only_sherds.title"),
@@ -720,7 +719,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       AdvancementHolder craftingANewLook = craftingANewLook(Advancement.Builder.advancement())
          .parent(root)
          .display(
-            new ItemStack(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE),
+            Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE,
             Component.translatable("advancements.adventure.trim_with_any_armor_pattern.title"),
             Component.translatable("advancements.adventure.trim_with_any_armor_pattern.description"),
             null,
@@ -733,7 +732,7 @@ public class VanillaAdventureAdvancements implements AdvancementSubProvider {
       smithingWithStyle(Advancement.Builder.advancement())
          .parent(craftingANewLook)
          .display(
-            new ItemStack(Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE),
+            Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE,
             Component.translatable("advancements.adventure.trim_with_all_exclusive_armor_patterns.title"),
             Component.translatable("advancements.adventure.trim_with_all_exclusive_armor_patterns.description"),
             null,

@@ -10,9 +10,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalInt;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.PoiTypeTags;
@@ -22,8 +22,6 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiRecord;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
-import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -31,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Raids extends SavedData {
-   private static final String RAID_FILE_ID = "raids";
+   private static final Identifier RAID_FILE_ID = Identifier.withDefaultNamespace("raids");
    public static final Codec<Raids> CODEC = RecordCodecBuilder.create(
       i -> i.group(
             Raids.RaidWithId.CODEC
@@ -43,15 +41,10 @@ public class Raids extends SavedData {
          )
          .apply(i, Raids::new)
    );
-   public static final SavedDataType<Raids> TYPE = new SavedDataType<>("raids", Raids::new, CODEC, DataFixTypes.SAVED_DATA_RAIDS);
-   public static final SavedDataType<Raids> TYPE_END = new SavedDataType<>("raids_end", Raids::new, CODEC, DataFixTypes.SAVED_DATA_RAIDS);
+   public static final SavedDataType<Raids> TYPE = new SavedDataType<>(RAID_FILE_ID, Raids::new, CODEC, DataFixTypes.SAVED_DATA_RAIDS);
    private final Int2ObjectMap<Raid> raidMap = new Int2ObjectOpenHashMap();
    private int nextId = 1;
    private int tick;
-
-   public static SavedDataType<Raids> getType(final Holder<DimensionType> type) {
-      return type.is(BuiltinDimensionTypes.END) ? TYPE_END : TYPE;
-   }
 
    public Raids() {
       this.setDirty();

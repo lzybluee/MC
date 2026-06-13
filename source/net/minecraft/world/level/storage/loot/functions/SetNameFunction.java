@@ -1,6 +1,7 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.datafixers.DataFixUtils;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -15,6 +16,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.context.ContextKey;
@@ -27,7 +29,7 @@ import org.slf4j.Logger;
 
 public class SetNameFunction extends LootItemConditionalFunction {
    private static final Logger LOGGER = LogUtils.getLogger();
-   public static final MapCodec<SetNameFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetNameFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i)
          .and(
             i.group(
@@ -55,13 +57,13 @@ public class SetNameFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetNameFunction> getType() {
-      return LootItemFunctions.SET_NAME;
+   public MapCodec<SetNameFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override
    public Set<ContextKey<?>> getReferencedContextParams() {
-      return this.resolutionContext.<Set<ContextKey<?>>>map(target -> Set.of(target.contextParam())).orElse(Set.of());
+      return (Set<ContextKey<?>>)DataFixUtils.orElse(this.resolutionContext.map(target -> Set.of(target.contextParam())), Set.of());
    }
 
    public static UnaryOperator<Component> createResolver(final LootContext context, final LootContext.@Nullable EntityTarget entityTarget) {
@@ -70,9 +72,10 @@ public class SetNameFunction extends LootItemConditionalFunction {
          if (entity != null) {
             CommandSourceStack commandSourceStack = entity.createCommandSourceStackForNameResolution(context.getLevel())
                .withPermission(LevelBasedPermissionSet.GAMEMASTER);
+            ResolutionContext resolutionContext = ResolutionContext.create(commandSourceStack);
             return line -> {
                try {
-                  return ComponentUtils.updateForEntity(commandSourceStack, line, entity, 0);
+                  return ComponentUtils.resolve(resolutionContext, line);
                } catch (CommandSyntaxException e) {
                   LOGGER.warn("Failed to resolve text component", e);
                   return line;

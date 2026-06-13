@@ -7,6 +7,8 @@ import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 
 public class BundleSelectedItemSpecialRenderer implements ItemModel {
@@ -23,9 +25,9 @@ public class BundleSelectedItemSpecialRenderer implements ItemModel {
       final int seed
    ) {
       output.appendModelIdentityElement(this);
-      ItemStack selectedItemStack = BundleItem.getSelectedItemStack(item);
-      if (!selectedItemStack.isEmpty()) {
-         resolver.appendItemLayers(output, selectedItemStack, displayContext, level, owner, seed);
+      ItemStackTemplate selectedItem = BundleItem.getSelectedItem(item);
+      if (selectedItem != null) {
+         resolver.appendItemLayers(output, selectedItem.create(), displayContext, level, owner, seed);
       }
    }
 
@@ -38,7 +40,7 @@ public class BundleSelectedItemSpecialRenderer implements ItemModel {
       }
 
       @Override
-      public ItemModel bake(final ItemModel.BakingContext context) {
+      public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation) {
          return BundleSelectedItemSpecialRenderer.INSTANCE;
       }
 

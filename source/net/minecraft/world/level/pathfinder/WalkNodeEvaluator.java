@@ -167,9 +167,15 @@ public class WalkNodeEvaluator extends NodeEvaluator {
    protected boolean isDiagonalValid(final Node pos, final @Nullable Node ew, final @Nullable Node ns) {
       if (ns == null || ew == null || ns.y > pos.y || ew.y > pos.y) {
          return false;
-      } else if (ew.type != PathType.WALKABLE_DOOR && ns.type != PathType.WALKABLE_DOOR) {
-         boolean canPassBetweenPosts = ns.type == PathType.FENCE && ew.type == PathType.FENCE && this.mob.getBbWidth() < 0.5;
-         return (ns.y < pos.y || ns.costMalus >= 0.0F || canPassBetweenPosts) && (ew.y < pos.y || ew.costMalus >= 0.0F || canPassBetweenPosts);
+      }
+
+      if (ew.type != PathType.WALKABLE_DOOR && ns.type != PathType.WALKABLE_DOOR) {
+         if (!(this.mob.getBbWidth() > 1.0F) || !(ew.costMalus > 0.0F) && !(ns.costMalus > 0.0F)) {
+            boolean canPassBetweenPosts = ns.type == PathType.FENCE && ew.type == PathType.FENCE && this.mob.getBbWidth() < 0.5;
+            return (ns.y < pos.y || ns.costMalus >= 0.0F || canPassBetweenPosts) && (ew.y < pos.y || ew.costMalus >= 0.0F || canPassBetweenPosts);
+         } else {
+            return false;
+         }
       } else {
          return false;
       }
@@ -373,6 +379,10 @@ public class WalkNodeEvaluator extends NodeEvaluator {
    @Override
    public PathType getPathTypeOfMob(final PathfindingContext context, final int x, final int y, final int z, final Mob mob) {
       Set<PathType> blockTypes = this.getPathTypeWithinMobBB(context, x, y, z);
+      if (blockTypes.size() == 1) {
+         return blockTypes.iterator().next();
+      }
+
       if (blockTypes.contains(PathType.FENCE)) {
          return PathType.FENCE;
       }
@@ -381,24 +391,32 @@ public class WalkNodeEvaluator extends NodeEvaluator {
          return PathType.UNPASSABLE_RAIL;
       }
 
-      PathType blockType = PathType.BLOCKED;
+      PathType highestMalusPathTypeWithinBB = PathType.BLOCKED;
+      float highestMalusWithinBB = mob.getPathfindingMalus(highestMalusPathTypeWithinBB);
 
-      for (PathType type : blockTypes) {
-         if (mob.getPathfindingMalus(type) < 0.0F) {
-            return type;
+      for (PathType pathType : blockTypes) {
+         float malusForPathType = mob.getPathfindingMalus(pathType);
+         if (malusForPathType < 0.0F) {
+            return pathType;
          }
 
-         if (mob.getPathfindingMalus(type) >= mob.getPathfindingMalus(blockType)) {
-            blockType = type;
+         if (malusForPathType >= highestMalusWithinBB) {
+            highestMalusWithinBB = malusForPathType;
+            highestMalusPathTypeWithinBB = pathType;
          }
       }
 
-      return this.entityWidth <= 1
-            && blockType != PathType.OPEN
-            && mob.getPathfindingMalus(blockType) == 0.0F
-            && this.getPathType(context, x, y, z) == PathType.OPEN
-         ? PathType.OPEN
-         : blockType;
+      PathType currentNodePathType = this.getPathType(context, x, y, z);
+      boolean isLargeMob = this.entityWidth > 1;
+      if (isLargeMob) {
+         boolean isCurrentNodeCheaper = mob.getPathfindingMalus(currentNodePathType) < highestMalusWithinBB;
+         boolean capMalusDueToCheapNode = isCurrentNodeCheaper && mob.getPathfindingMalus(PathType.BIG_MOBS_CLOSE_TO_DANGER) < highestMalusWithinBB;
+         return capMalusDueToCheapNode ? PathType.BIG_MOBS_CLOSE_TO_DANGER : highestMalusPathTypeWithinBB;
+      } else {
+         return currentNodePathType == PathType.OPEN && highestMalusPathTypeWithinBB != PathType.OPEN && highestMalusWithinBB == 0.0F
+            ? PathType.OPEN
+            : highestMalusPathTypeWithinBB;
+      }
    }
 
    public Set<PathType> getPathTypeWithinMobBB(final PathfindingContext context, final int x, final int y, final int z) {
@@ -452,12 +470,12 @@ public class WalkNodeEvaluator extends NodeEvaluator {
       if (blockPathType == PathType.OPEN && y >= context.level().getMinY() + 1) {
          return switch (context.getPathTypeFromState(x, y - 1, z)) {
             case OPEN, WATER, LAVA, WALKABLE -> PathType.OPEN;
-            case DAMAGE_FIRE -> PathType.DAMAGE_FIRE;
-            case DAMAGE_OTHER -> PathType.DAMAGE_OTHER;
+            case FIRE -> PathType.FIRE;
+            case DAMAGING -> PathType.DAMAGING;
             case STICKY_HONEY -> PathType.STICKY_HONEY;
-            case POWDER_SNOW -> PathType.DANGER_POWDER_SNOW;
+            case POWDER_SNOW -> PathType.ON_TOP_OF_POWDER_SNOW;
             case DAMAGE_CAUTIOUS -> PathType.DAMAGE_CAUTIOUS;
-            case TRAPDOOR -> PathType.DANGER_TRAPDOOR;
+            case TRAPDOOR -> PathType.ON_TOP_OF_TRAPDOOR;
             default -> checkNeighbourBlocks(context, x, y, z, PathType.WALKABLE);
          };
       } else {
@@ -471,12 +489,12 @@ public class WalkNodeEvaluator extends NodeEvaluator {
             for (int dz = -1; dz <= 1; dz++) {
                if (dx != 0 || dz != 0) {
                   PathType pathType = context.getPathTypeFromState(x + dx, y + dy, z + dz);
-                  if (pathType == PathType.DAMAGE_OTHER) {
-                     return PathType.DANGER_OTHER;
+                  if (pathType == PathType.DAMAGING) {
+                     return PathType.DAMAGING_IN_NEIGHBOR;
                   }
 
-                  if (pathType == PathType.DAMAGE_FIRE || pathType == PathType.LAVA) {
-                     return PathType.DANGER_FIRE;
+                  if (pathType == PathType.FIRE || pathType == PathType.LAVA) {
+                     return PathType.FIRE_IN_NEIGHBOR;
                   }
 
                   if (pathType == PathType.WATER) {
@@ -510,7 +528,7 @@ public class WalkNodeEvaluator extends NodeEvaluator {
       }
 
       if (blockState.is(Blocks.CACTUS) || blockState.is(Blocks.SWEET_BERRY_BUSH)) {
-         return PathType.DAMAGE_OTHER;
+         return PathType.DAMAGING;
       }
 
       if (blockState.is(Blocks.HONEY_BLOCK)) {
@@ -528,7 +546,7 @@ public class WalkNodeEvaluator extends NodeEvaluator {
          }
 
          if (isBurningBlock(blockState)) {
-            return PathType.DAMAGE_FIRE;
+            return PathType.FIRE;
          }
 
          if (block instanceof DoorBlock door) {

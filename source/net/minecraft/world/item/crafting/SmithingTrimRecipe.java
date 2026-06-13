@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -17,35 +16,57 @@ import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.item.crafting.display.SmithingRecipeDisplay;
 import net.minecraft.world.item.equipment.trim.ArmorTrim;
 import net.minecraft.world.item.equipment.trim.TrimMaterial;
-import net.minecraft.world.item.equipment.trim.TrimMaterials;
 import net.minecraft.world.item.equipment.trim.TrimPattern;
-import org.jspecify.annotations.Nullable;
 
-public class SmithingTrimRecipe implements SmithingRecipe {
+public class SmithingTrimRecipe extends SimpleSmithingRecipe {
+   public static final MapCodec<SmithingTrimRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+      i -> i.group(
+            Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+            Ingredient.CODEC.fieldOf("template").forGetter(o -> o.template),
+            Ingredient.CODEC.fieldOf("base").forGetter(o -> o.base),
+            Ingredient.CODEC.fieldOf("addition").forGetter(o -> o.addition),
+            TrimPattern.CODEC.fieldOf("pattern").forGetter(o -> o.pattern)
+         )
+         .apply(i, SmithingTrimRecipe::new)
+   );
+   public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTrimRecipe> STREAM_CODEC = StreamCodec.composite(
+      Recipe.CommonInfo.STREAM_CODEC,
+      o -> o.commonInfo,
+      Ingredient.CONTENTS_STREAM_CODEC,
+      o -> o.template,
+      Ingredient.CONTENTS_STREAM_CODEC,
+      o -> o.base,
+      Ingredient.CONTENTS_STREAM_CODEC,
+      o -> o.addition,
+      TrimPattern.STREAM_CODEC,
+      o -> o.pattern,
+      SmithingTrimRecipe::new
+   );
+   public static final RecipeSerializer<SmithingTrimRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
    private final Ingredient template;
    private final Ingredient base;
    private final Ingredient addition;
    private final Holder<TrimPattern> pattern;
-   private @Nullable PlacementInfo placementInfo;
 
-   public SmithingTrimRecipe(final Ingredient template, final Ingredient base, final Ingredient addition, final Holder<TrimPattern> pattern) {
+   public SmithingTrimRecipe(
+      final Recipe.CommonInfo commonInfo, final Ingredient template, final Ingredient base, final Ingredient addition, final Holder<TrimPattern> pattern
+   ) {
+      super(commonInfo);
       this.template = template;
       this.base = base;
       this.addition = addition;
       this.pattern = pattern;
    }
 
-   public ItemStack assemble(final SmithingRecipeInput input, final HolderLookup.Provider registries) {
-      return applyTrim(registries, input.base(), input.addition(), this.pattern);
+   public ItemStack assemble(final SmithingRecipeInput input) {
+      return applyTrim(input.base(), input.addition(), this.pattern);
    }
 
-   public static ItemStack applyTrim(
-      final HolderLookup.Provider registries, final ItemStack baseItem, final ItemStack materialItem, final Holder<TrimPattern> pattern
-   ) {
-      Optional<Holder<TrimMaterial>> material = TrimMaterials.getFromIngredient(registries, materialItem);
-      if (material.isPresent()) {
+   public static ItemStack applyTrim(final ItemStack baseItem, final ItemStack materialItem, final Holder<TrimPattern> pattern) {
+      Holder<TrimMaterial> material = materialItem.get(DataComponents.PROVIDES_TRIM_MATERIAL);
+      if (material != null) {
          ArmorTrim existingTrim = baseItem.get(DataComponents.TRIM);
-         ArmorTrim newTrim = new ArmorTrim(material.get(), pattern);
+         ArmorTrim newTrim = new ArmorTrim(material, pattern);
          if (Objects.equals(existingTrim, newTrim)) {
             return ItemStack.EMPTY;
          }
@@ -75,16 +96,12 @@ public class SmithingTrimRecipe implements SmithingRecipe {
 
    @Override
    public RecipeSerializer<SmithingTrimRecipe> getSerializer() {
-      return RecipeSerializer.SMITHING_TRIM;
+      return SERIALIZER;
    }
 
    @Override
-   public PlacementInfo placementInfo() {
-      if (this.placementInfo == null) {
-         this.placementInfo = PlacementInfo.create(List.of(this.template, this.base, this.addition));
-      }
-
-      return this.placementInfo;
+   protected PlacementInfo createPlacementInfo() {
+      return PlacementInfo.create(List.of(this.template, this.base, this.addition));
    }
 
    @Override
@@ -101,38 +118,5 @@ public class SmithingTrimRecipe implements SmithingRecipe {
             new SlotDisplay.ItemSlotDisplay(Items.SMITHING_TABLE)
          )
       );
-   }
-
-   public static class Serializer implements RecipeSerializer<SmithingTrimRecipe> {
-      private static final MapCodec<SmithingTrimRecipe> CODEC = RecordCodecBuilder.mapCodec(
-         i -> i.group(
-               Ingredient.CODEC.fieldOf("template").forGetter(r -> r.template),
-               Ingredient.CODEC.fieldOf("base").forGetter(r -> r.base),
-               Ingredient.CODEC.fieldOf("addition").forGetter(r -> r.addition),
-               TrimPattern.CODEC.fieldOf("pattern").forGetter(r -> r.pattern)
-            )
-            .apply(i, SmithingTrimRecipe::new)
-      );
-      public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTrimRecipe> STREAM_CODEC = StreamCodec.composite(
-         Ingredient.CONTENTS_STREAM_CODEC,
-         r -> r.template,
-         Ingredient.CONTENTS_STREAM_CODEC,
-         r -> r.base,
-         Ingredient.CONTENTS_STREAM_CODEC,
-         r -> r.addition,
-         TrimPattern.STREAM_CODEC,
-         r -> r.pattern,
-         SmithingTrimRecipe::new
-      );
-
-      @Override
-      public MapCodec<SmithingTrimRecipe> codec() {
-         return CODEC;
-      }
-
-      @Override
-      public StreamCodec<RegistryFriendlyByteBuf, SmithingTrimRecipe> streamCodec() {
-         return STREAM_CODEC;
-      }
    }
 }

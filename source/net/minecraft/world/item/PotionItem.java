@@ -47,7 +47,15 @@ public class PotionItem extends Item {
 
             for (int i = 0; i < 5; i++) {
                serverLevel.sendParticles(
-                  ParticleTypes.SPLASH, pos.getX() + level.random.nextDouble(), pos.getY() + 1, pos.getZ() + level.random.nextDouble(), 1, 0.0, 0.0, 0.0, 1.0
+                  ParticleTypes.SPLASH,
+                  pos.getX() + level.getRandom().nextDouble(),
+                  pos.getY() + 1,
+                  pos.getZ() + level.getRandom().nextDouble(),
+                  1,
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
                );
             }
          }

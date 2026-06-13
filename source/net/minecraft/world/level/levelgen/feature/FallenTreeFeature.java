@@ -119,7 +119,7 @@ public class FallenTreeFeature extends Feature<FallenTreeConfiguration> {
       final BlockPos.MutableBlockPos blockPos,
       final Function<BlockState, BlockState> sidewaysStateModifier
    ) {
-      level.setBlock(blockPos, sidewaysStateModifier.apply(config.trunkProvider.getState(random, blockPos)), 3);
+      level.setBlock(blockPos, sidewaysStateModifier.apply(config.trunkProvider.getState(level, random, blockPos)), 3);
       this.markAboveForPostProcessing(level, blockPos);
       return blockPos.immutable();
    }

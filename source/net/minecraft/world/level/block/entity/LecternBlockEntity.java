@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.util.Mth;
@@ -175,7 +176,8 @@ public class LecternBlockEntity extends BlockEntity implements Clearable, MenuPr
 
    private ItemStack resolveBook(final ItemStack book, final @Nullable Player player) {
       if (this.level instanceof ServerLevel serverLevel) {
-         WrittenBookContent.resolveForItem(book, this.createCommandSourceStack(player, serverLevel), player);
+         ResolutionContext context = ResolutionContext.create(this.createCommandSourceStack(player, serverLevel));
+         WrittenBookContent.resolveForItem(book, context, this.level.registryAccess());
       }
 
       return book;

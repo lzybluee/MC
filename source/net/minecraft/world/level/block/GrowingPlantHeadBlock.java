@@ -51,7 +51,7 @@ public abstract class GrowingPlantHeadBlock extends GrowingPlantBlock implements
       if (state.getValue(AGE) < 25 && random.nextDouble() < this.growPerTickProbability) {
          BlockPos growthPos = pos.relative(this.growthDirection);
          if (this.canGrowInto(level.getBlockState(growthPos))) {
-            level.setBlockAndUpdate(growthPos, this.getGrowIntoState(state, level.random));
+            level.setBlockAndUpdate(growthPos, this.getGrowIntoState(state, level.getRandom()));
          }
       }
    }
@@ -112,7 +112,8 @@ public abstract class GrowingPlantHeadBlock extends GrowingPlantBlock implements
 
    @Override
    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
-      return this.canGrowInto(level.getBlockState(pos.relative(this.growthDirection)));
+      BlockPos growthPos = pos.relative(this.growthDirection);
+      return this.canGrowInto(level.getBlockState(growthPos)) && level.isInsideBuildHeight(growthPos);
    }
 
    @Override
@@ -126,7 +127,7 @@ public abstract class GrowingPlantHeadBlock extends GrowingPlantBlock implements
       int nextAge = Math.min(state.getValue(AGE) + 1, 25);
       int blocksToGrow = this.getBlocksToGrowWhenBonemealed(random);
 
-      for (int i = 0; i < blocksToGrow && this.canGrowInto(level.getBlockState(forwardPos)); i++) {
+      for (int i = 0; i < blocksToGrow && this.canGrowInto(level.getBlockState(forwardPos)) && !level.isOutsideBuildHeight(forwardPos); i++) {
          level.setBlockAndUpdate(forwardPos, state.setValue(AGE, nextAge));
          forwardPos = forwardPos.relative(this.growthDirection);
          nextAge = Math.min(nextAge + 1, 25);

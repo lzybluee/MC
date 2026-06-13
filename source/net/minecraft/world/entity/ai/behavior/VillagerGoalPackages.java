@@ -129,9 +129,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRestPackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRestPackage(final float speedModifier) {
       return ImmutableList.of(
          Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.HOME, speedModifier, 1, 150, 1200)),
          Pair.of(3, ValidateNearbyPoi.create(p -> p.is(PoiTypes.HOME), MemoryModuleType.HOME)),
@@ -153,9 +151,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getMeetPackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getMeetPackage(final float speedModifier) {
       return ImmutableList.of(
          Pair.of(
             2,
@@ -183,9 +179,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getIdlePackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getIdlePackage(final float speedModifier) {
       return ImmutableList.of(
          Pair.of(
             2,
@@ -231,9 +225,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPanicPackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPanicPackage(final float speedModifier) {
       float runawaySpeed = speedModifier * 1.5F;
       return ImmutableList.of(
          Pair.of(0, VillagerCalmDown.create()),
@@ -244,9 +236,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPreRaidPackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPreRaidPackage(final float speedModifier) {
       return ImmutableList.of(
          Pair.of(0, RingBell.create()),
          Pair.of(
@@ -263,9 +253,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRaidPackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRaidPackage(final float speedModifier) {
       return ImmutableList.of(
          Pair.of(
             0,
@@ -288,9 +276,7 @@ public class VillagerGoalPackages {
       );
    }
 
-   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getHidePackage(
-      final Holder<VillagerProfession> profession, final float speedModifier
-   ) {
+   public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getHidePackage(final float speedModifier) {
       int closeEnoughDist = 2;
       return ImmutableList.of(
          Pair.of(0, SetHiddenState.create(15, 3)), Pair.of(1, LocateHidingPlace.create(32, speedModifier * 1.25F, 2)), getMinimalLookBehavior()

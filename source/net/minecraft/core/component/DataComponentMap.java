@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Spliterators;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -119,6 +120,7 @@ public interface DataComponentMap extends Iterable<TypedDataComponent<?>>, DataC
 
    class Builder {
       private final Reference2ObjectMap<DataComponentType<?>, Object> map = new Reference2ObjectArrayMap();
+      private Consumer<DataComponentMap> validator = components -> {};
 
       private Builder() {
       }
@@ -144,8 +146,15 @@ public interface DataComponentMap extends Iterable<TypedDataComponent<?>>, DataC
          return this;
       }
 
+      public DataComponentMap.Builder addValidator(final Consumer<DataComponentMap> newValidator) {
+         this.validator = this.validator.andThen(newValidator);
+         return this;
+      }
+
       public DataComponentMap build() {
-         return buildFromMapTrusted(this.map);
+         DataComponentMap result = buildFromMapTrusted(this.map);
+         this.validator.accept(result);
+         return result;
       }
 
       private static DataComponentMap buildFromMapTrusted(final Map<DataComponentType<?>, Object> map) {

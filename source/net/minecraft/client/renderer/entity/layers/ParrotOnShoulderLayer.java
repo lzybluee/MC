@@ -63,7 +63,7 @@ public class ParrotOnShoulderLayer extends RenderLayer<AvatarRenderState, Player
          this.model,
          parrotState,
          poseStack,
-         this.model.renderType(ParrotRenderer.getVariantTexture(parrotVariant)),
+         ParrotRenderer.getVariantTexture(parrotVariant),
          lightCoords,
          OverlayTexture.NO_OVERLAY,
          playerState.outlineColor,

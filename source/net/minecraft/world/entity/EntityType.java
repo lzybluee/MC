@@ -11,7 +11,6 @@ import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -26,7 +25,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
@@ -843,7 +841,7 @@ public class EntityType<T extends Entity> implements EntityTypeTest<Entity, T>, 
       "pufferfish", EntityType.Builder.of(Pufferfish::new, MobCategory.WATER_AMBIENT).sized(0.7F, 0.7F).eyeHeight(0.455F).clientTrackingRange(4)
    );
    public static final EntityType<Rabbit> RABBIT = register(
-      "rabbit", EntityType.Builder.of(Rabbit::new, MobCategory.CREATURE).sized(0.4F, 0.5F).clientTrackingRange(8)
+      "rabbit", EntityType.Builder.of(Rabbit::new, MobCategory.CREATURE).sized(0.49F, 0.6F).eyeHeight(0.59F).clientTrackingRange(8)
    );
    public static final EntityType<Ravager> RAVAGER = register(
       "ravager",
@@ -1339,7 +1337,7 @@ public class EntityType<T extends Entity> implements EntityTypeTest<Entity, T>, 
          yOff = 0.0;
       }
 
-      entity.snapTo(spawnPos.getX() + 0.5, spawnPos.getY() + yOff, spawnPos.getZ() + 0.5, Mth.wrapDegrees(level.random.nextFloat() * 360.0F), 0.0F);
+      entity.snapTo(spawnPos.getX() + 0.5, spawnPos.getY() + yOff, spawnPos.getZ() + 0.5, Mth.wrapDegrees(level.getRandom().nextFloat() * 360.0F), 0.0F);
       if (entity instanceof Mob mob) {
          mob.yHeadRot = mob.getYRot();
          mob.yBodyRot = mob.getYRot();
@@ -1566,14 +1564,6 @@ public class EntityType<T extends Entity> implements EntityTypeTest<Entity, T>, 
          && this != PAINTING
          && this != END_CRYSTAL
          && this != EVOKER_FANGS;
-   }
-
-   public boolean is(final TagKey<EntityType<?>> tag) {
-      return this.builtInRegistryHolder.is(tag);
-   }
-
-   public boolean is(final HolderSet<EntityType<?>> holderSet) {
-      return holderSet.contains(this.builtInRegistryHolder);
    }
 
    public @Nullable T tryCast(final Entity entity) {

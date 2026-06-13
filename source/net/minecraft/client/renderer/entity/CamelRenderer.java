@@ -1,7 +1,10 @@
 package net.minecraft.client.renderer.entity;
 
+import net.minecraft.client.model.animal.camel.AdultCamelModel;
+import net.minecraft.client.model.animal.camel.BabyCamelModel;
 import net.minecraft.client.model.animal.camel.CamelModel;
 import net.minecraft.client.model.animal.camel.CamelSaddleModel;
+import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.layers.SimpleEquipmentLayer;
 import net.minecraft.client.renderer.entity.state.CamelRenderState;
@@ -12,25 +15,26 @@ import net.minecraft.world.entity.animal.camel.Camel;
 
 public class CamelRenderer extends AgeableMobRenderer<Camel, CamelRenderState, CamelModel> {
    private static final Identifier CAMEL_LOCATION = Identifier.withDefaultNamespace("textures/entity/camel/camel.png");
+   private static final Identifier CAMEL_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/camel/camel_baby.png");
 
    public CamelRenderer(final EntityRendererProvider.Context context) {
-      super(context, new CamelModel(context.bakeLayer(ModelLayers.CAMEL)), new CamelModel(context.bakeLayer(ModelLayers.CAMEL_BABY)), 0.7F);
-      this.addLayer(this.createCamelSaddleLayer(context));
+      super(context, new AdultCamelModel(context.bakeLayer(ModelLayers.CAMEL)), new BabyCamelModel(context.bakeLayer(ModelLayers.CAMEL_BABY)), 0.7F);
+      this.addLayer(createCamelSaddleLayer(context, this, EquipmentClientInfo.LayerType.CAMEL_SADDLE, ModelLayers.CAMEL_SADDLE));
    }
 
-   protected SimpleEquipmentLayer<CamelRenderState, CamelModel, CamelSaddleModel> createCamelSaddleLayer(final EntityRendererProvider.Context context) {
+   protected static SimpleEquipmentLayer<CamelRenderState, CamelModel, CamelSaddleModel> createCamelSaddleLayer(
+      final EntityRendererProvider.Context context,
+      MobRenderer<Camel, CamelRenderState, CamelModel> renderer,
+      final EquipmentClientInfo.LayerType saddleLayerType,
+      final ModelLayerLocation saddleModelLayer
+   ) {
       return new SimpleEquipmentLayer<>(
-         this,
-         context.getEquipmentRenderer(),
-         EquipmentClientInfo.LayerType.CAMEL_SADDLE,
-         state -> state.saddle,
-         new CamelSaddleModel(context.bakeLayer(ModelLayers.CAMEL_SADDLE)),
-         new CamelSaddleModel(context.bakeLayer(ModelLayers.CAMEL_BABY_SADDLE))
+         renderer, context.getEquipmentRenderer(), saddleLayerType, state -> state.saddle, new CamelSaddleModel(context.bakeLayer(saddleModelLayer)), null
       );
    }
 
    public Identifier getTextureLocation(final CamelRenderState state) {
-      return CAMEL_LOCATION;
+      return state.isBaby ? CAMEL_BABY_LOCATION : CAMEL_LOCATION;
    }
 
    public CamelRenderState createRenderState() {
@@ -39,13 +43,21 @@ public class CamelRenderer extends AgeableMobRenderer<Camel, CamelRenderState, C
 
    public void extractRenderState(final Camel entity, final CamelRenderState state, final float partialTicks) {
       super.extractRenderState(entity, state, partialTicks);
+      extractAdditionalState(entity, state, partialTicks);
+   }
+
+   static void extractAdditionalState(Camel entity, CamelRenderState state, float partialTicks) {
       state.saddle = entity.getItemBySlot(EquipmentSlot.SADDLE).copy();
       state.isRidden = entity.isVehicle();
-      state.jumpCooldown = Math.max(entity.getJumpCooldown() - partialTicks, 0.0F);
+      state.jumpCooldown = getJumpCooldown(entity, partialTicks);
       state.sitAnimationState.copyFrom(entity.sitAnimationState);
       state.sitPoseAnimationState.copyFrom(entity.sitPoseAnimationState);
       state.sitUpAnimationState.copyFrom(entity.sitUpAnimationState);
       state.idleAnimationState.copyFrom(entity.idleAnimationState);
       state.dashAnimationState.copyFrom(entity.dashAnimationState);
+   }
+
+   static float getJumpCooldown(final Camel camel, final float partialTicks) {
+      return Math.max(camel.getJumpCooldown() - partialTicks, 0.0F);
    }
 }

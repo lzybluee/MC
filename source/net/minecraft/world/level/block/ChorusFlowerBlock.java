@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.BlockGetter;
@@ -66,9 +67,9 @@ public class ChorusFlowerBlock extends Block {
          int currentAge = state.getValue(AGE);
          if (currentAge < 5) {
             boolean growUpwards = false;
-            boolean pillarOnEndStone = false;
+            boolean pillarOnSupportBlock = false;
             BlockState belowState = level.getBlockState(pos.below());
-            if (belowState.is(Blocks.END_STONE)) {
+            if (belowState.is(BlockTags.SUPPORTS_CHORUS_FLOWER)) {
                growUpwards = true;
             } else if (belowState.is(this.plant)) {
                int height = 1;
@@ -76,8 +77,8 @@ public class ChorusFlowerBlock extends Block {
                for (int i = 0; i < 4; i++) {
                   BlockState testState = level.getBlockState(pos.below(height + 1));
                   if (!testState.is(this.plant)) {
-                     if (testState.is(Blocks.END_STONE)) {
-                        pillarOnEndStone = true;
+                     if (testState.is(BlockTags.SUPPORTS_CHORUS_FLOWER)) {
+                        pillarOnSupportBlock = true;
                      }
                      break;
                   }
@@ -85,7 +86,7 @@ public class ChorusFlowerBlock extends Block {
                   height++;
                }
 
-               if (height < 2 || height <= random.nextInt(pillarOnEndStone ? 5 : 4)) {
+               if (height < 2 || height <= random.nextInt(pillarOnSupportBlock ? 5 : 4)) {
                   growUpwards = true;
                }
             } else if (belowState.isAir()) {
@@ -97,7 +98,7 @@ public class ChorusFlowerBlock extends Block {
                this.placeGrownFlower(level, above, currentAge);
             } else if (currentAge < 4) {
                int numBranchAttempts = random.nextInt(4);
-               if (pillarOnEndStone) {
+               if (pillarOnSupportBlock) {
                   numBranchAttempts++;
                }
 
@@ -165,7 +166,7 @@ public class ChorusFlowerBlock extends Block {
    @Override
    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
       BlockState belowState = level.getBlockState(pos.below());
-      if (!belowState.is(this.plant) && !belowState.is(Blocks.END_STONE)) {
+      if (!belowState.is(this.plant) && !belowState.is(BlockTags.SUPPORTS_CHORUS_FLOWER)) {
          if (!belowState.isAir()) {
             return false;
          }

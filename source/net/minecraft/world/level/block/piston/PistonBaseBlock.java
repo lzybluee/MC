@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -161,13 +162,14 @@ public class PistonBaseBlock extends DirectionalBlock {
          }
       }
 
+      RandomSource random = level.getRandom();
       if (b0 == 0) {
          if (!this.moveBlocks(level, pos, direction, true)) {
             return false;
          }
 
          level.setBlock(pos, extendedState, 67);
-         level.playSound(null, pos, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 0.5F, level.random.nextFloat() * 0.25F + 0.6F);
+         level.playSound(null, pos, SoundEvents.PISTON_EXTEND, SoundSource.BLOCKS, 0.5F, random.nextFloat() * 0.25F + 0.6F);
          level.gameEvent(GameEvent.BLOCK_ACTIVATE, pos, GameEvent.Context.of(extendedState));
       } else if (b0 == 1 || b0 == 2) {
          BlockEntity prevBlockEntity = level.getBlockEntity(pos.relative(direction));
@@ -213,7 +215,7 @@ public class PistonBaseBlock extends DirectionalBlock {
             level.removeBlock(pos.relative(direction), false);
          }
 
-         level.playSound(null, pos, SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 0.5F, level.random.nextFloat() * 0.15F + 0.6F);
+         level.playSound(null, pos, SoundEvents.PISTON_CONTRACT, SoundSource.BLOCKS, 0.5F, random.nextFloat() * 0.15F + 0.6F);
          level.gameEvent(GameEvent.BLOCK_DEACTIVATE, pos, GameEvent.Context.of(movingPistonState));
       }
 

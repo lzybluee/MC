@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.attribute.EnvironmentAttributes;
@@ -121,14 +122,11 @@ public class BucketItem extends Item implements DispensibleContainerItem {
             int x = pos.getX();
             int y = pos.getY();
             int z = pos.getZ();
-            level.playSound(
-               user, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 2.6F + (level.random.nextFloat() - level.random.nextFloat()) * 0.8F
-            );
+            RandomSource random = level.getRandom();
+            level.playSound(user, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 2.6F + (random.nextFloat() - random.nextFloat()) * 0.8F);
 
             for (int i = 0; i < 8; i++) {
-               level.addParticle(
-                  ParticleTypes.LARGE_SMOKE, x + level.random.nextFloat(), y + level.random.nextFloat(), z + level.random.nextFloat(), 0.0, 0.0, 0.0
-               );
+               level.addParticle(ParticleTypes.LARGE_SMOKE, x + random.nextFloat(), y + random.nextFloat(), z + random.nextFloat(), 0.0, 0.0, 0.0);
             }
 
             return true;

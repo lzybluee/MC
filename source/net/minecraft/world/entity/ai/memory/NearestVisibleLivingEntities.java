@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.VisibleForDebug;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 
@@ -29,6 +30,11 @@ public class NearestVisibleLivingEntities {
 
    public static NearestVisibleLivingEntities empty() {
       return EMPTY;
+   }
+
+   @VisibleForDebug
+   public List<LivingEntity> nearbyEntities() {
+      return this.nearbyEntities;
    }
 
    public Optional<LivingEntity> findClosest(final Predicate<LivingEntity> filter) {

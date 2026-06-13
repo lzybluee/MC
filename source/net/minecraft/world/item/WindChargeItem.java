@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.phys.Vec3;
 
 public class WindChargeItem extends Item implements ProjectileItem {
-   public static float PROJECTILE_SHOOT_POWER = 1.5F;
+   public static final float PROJECTILE_SHOOT_POWER = 1.5F;
 
    public WindChargeItem(final Item.Properties properties) {
       super(properties);
@@ -33,7 +33,7 @@ public class WindChargeItem extends Item implements ProjectileItem {
             stack,
             player,
             0.0F,
-            PROJECTILE_SHOOT_POWER,
+            1.5F,
             1.0F
          );
       }

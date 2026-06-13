@@ -9,7 +9,7 @@ import net.minecraft.world.entity.schedule.Activity;
 public class ResetRaidStatus {
    public static BehaviorControl<LivingEntity> create() {
       return BehaviorBuilder.create(i -> i.point((level, body, timestamp) -> {
-         if (level.random.nextInt(20) != 0) {
+         if (level.getRandom().nextInt(20) != 0) {
             return false;
          }
 

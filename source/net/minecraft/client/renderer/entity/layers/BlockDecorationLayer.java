@@ -2,29 +2,27 @@ package net.minecraft.client.renderer.entity.layers;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.level.block.AbstractBannerBlock;
-import net.minecraft.world.level.block.AbstractChestBlock;
-import net.minecraft.world.level.block.AbstractSkullBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.CopperGolemStatueBlock;
-import net.minecraft.world.level.block.FlowerBedBlock;
-import net.minecraft.world.level.block.state.BlockState;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 public class BlockDecorationLayer<S extends EntityRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
-   private final Function<S, Optional<BlockState>> blockState;
+   private static final Matrix4fc UNIT_CUBE_BOTTOM_CENTER_TO_ANTENNA_CENTER = new Matrix4f()
+      .translation(-0.5F, 0.0F, -0.5F)
+      .rotateAround(Axis.ZP.rotationDegrees(180.0F), 0.5F, 0.5F, 0.5F);
+   private final Function<S, BlockModelRenderState> blockModel;
    private final Consumer<PoseStack> transform;
 
-   public BlockDecorationLayer(final RenderLayerParent<S, M> renderer, final Function<S, Optional<BlockState>> blockState, final Consumer<PoseStack> transform) {
+   public BlockDecorationLayer(final RenderLayerParent<S, M> renderer, final Function<S, BlockModelRenderState> blockModel, final Consumer<PoseStack> transform) {
       super(renderer);
-      this.blockState = blockState;
+      this.blockModel = blockModel;
       this.transform = transform;
    }
 
@@ -32,30 +30,12 @@ public class BlockDecorationLayer<S extends EntityRenderState, M extends EntityM
    public void submit(
       final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
    ) {
-      Optional<BlockState> optionalBlockState = this.blockState.apply(state);
-      if (!optionalBlockState.isEmpty()) {
-         BlockState blockState = optionalBlockState.get();
-         Block block = blockState.getBlock();
-         boolean isCopperGolemStatue = block instanceof CopperGolemStatueBlock;
+      BlockModelRenderState blockModel = this.blockModel.apply(state);
+      if (!blockModel.isEmpty()) {
          poseStack.pushPose();
          this.transform.accept(poseStack);
-         if (!isCopperGolemStatue) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(180.0F));
-         }
-
-         if (isCopperGolemStatue || block instanceof AbstractSkullBlock || block instanceof AbstractBannerBlock || block instanceof AbstractChestBlock) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-         }
-
-         if (block instanceof FlowerBedBlock) {
-            poseStack.translate(-0.25, -1.5, -0.25);
-         } else if (!isCopperGolemStatue) {
-            poseStack.translate(-0.5, -1.5, -0.5);
-         } else {
-            poseStack.translate(-0.5, 0.0, -0.5);
-         }
-
-         submitNodeCollector.submitBlock(poseStack, blockState, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+         poseStack.mulPose(UNIT_CUBE_BOTTOM_CENTER_TO_ANTENNA_CENTER);
+         blockModel.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
          poseStack.popPose();
       }
    }

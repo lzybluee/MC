@@ -22,7 +22,7 @@ public class ClimbOnTopOfPowderSnowGoal extends Goal {
    @Override
    public boolean canUse() {
       boolean inPowderSnow = this.mob.wasInPowderSnow || this.mob.isInPowderSnow;
-      if (inPowderSnow && this.mob.getType().is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
+      if (inPowderSnow && this.mob.is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
          BlockPos above = this.mob.blockPosition().above();
          BlockState aboveBlockState = this.level.getBlockState(above);
          return aboveBlockState.is(Blocks.POWDER_SNOW) || aboveBlockState.getCollisionShape(this.level, above) == Shapes.empty();

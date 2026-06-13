@@ -12,10 +12,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 public record ArmorModelSet<T>(T head, T chest, T legs, T feet) {
    public T get(final EquipmentSlot slot) {
       return (T)(switch (slot) {
-         case HEAD -> (Object)this.head;
-         case CHEST -> (Object)this.chest;
-         case LEGS -> (Object)this.legs;
-         case FEET -> (Object)this.feet;
+         case HEAD -> this.head;
+         case CHEST -> this.chest;
+         case LEGS -> this.legs;
+         case FEET -> this.feet;
          default -> throw new IllegalStateException("No model for slot: " + slot);
       });
    }

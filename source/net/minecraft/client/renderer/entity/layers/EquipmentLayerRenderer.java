@@ -101,7 +101,7 @@ public class EquipmentLayerRenderer {
          }
 
          ArmorTrim trim = itemStack.get(DataComponents.TRIM);
-         if (trim != null) {
+         if (trim != null && layerType != EquipmentClientInfo.LayerType.HUMANOID_BABY) {
             TextureAtlasSprite sprite = this.trimSpriteLookup.apply(new EquipmentLayerRenderer.TrimSpriteKey(trim, layerType, equipmentAssetId));
             RenderType renderType = Sheets.armorTrimsSheet(trim.pattern().value().decal());
             submitNodeCollector.order(nextOrder++)

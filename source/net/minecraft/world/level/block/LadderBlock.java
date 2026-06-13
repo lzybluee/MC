@@ -94,7 +94,7 @@ public class LadderBlock extends Block implements SimpleWaterloggedBlock {
          if (direction.getAxis().isHorizontal()) {
             state = state.setValue(FACING, direction.getOpposite());
             if (state.canSurvive(level, pos)) {
-               return state.setValue(WATERLOGGED, replacedFluidState.getType() == Fluids.WATER);
+               return state.setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
             }
          }
       }

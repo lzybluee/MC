@@ -2,6 +2,7 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 public class SoulParticle extends RisingParticle {
@@ -18,8 +19,8 @@ public class SoulParticle extends RisingParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
-      return this.isGlowing ? 240 : super.getLightColor(a);
+   public int getLightCoords(final float a) {
+      return this.isGlowing ? LightCoordsUtil.withBlock(super.getLightCoords(a), 15) : super.getLightCoords(a);
    }
 
    @Override

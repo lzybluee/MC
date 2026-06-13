@@ -52,13 +52,12 @@ public class CustomHeadLayer<S extends LivingEntityRenderState, M extends Entity
          parentModel.translateToHead(poseStack);
          if (state.wornHeadType != null) {
             poseStack.translate(0.0F, this.transforms.skullYOffset(), 0.0F);
-            poseStack.scale(1.1875F, -1.1875F, -1.1875F);
-            poseStack.translate(-0.5, 0.0, -0.5);
+            poseStack.scale(1.1875F, 1.1875F, 1.1875F);
             SkullBlock.Type type = state.wornHeadType;
             SkullModelBase skullModel = this.skullModels.apply(type);
             RenderType renderType = this.resolveSkullRenderType(state, type);
             SkullBlockRenderer.submitSkull(
-               null, 180.0F, state.wornHeadAnimationPos, poseStack, submitNodeCollector, lightCoords, skullModel, renderType, state.outlineColor, null
+               state.wornHeadAnimationPos, poseStack, submitNodeCollector, lightCoords, skullModel, renderType, state.outlineColor, null
             );
          } else {
             translateToHead(poseStack, this.transforms);

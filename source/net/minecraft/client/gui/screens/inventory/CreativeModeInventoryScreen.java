@@ -14,11 +14,12 @@ import java.util.function.Predicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.HotbarManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.SessionSearchTrees;
 import net.minecraft.client.player.LocalPlayer;
@@ -43,7 +44,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -114,10 +115,8 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    private final EffectsInInventory effects;
 
    public CreativeModeInventoryScreen(final LocalPlayer player, final FeatureFlagSet enabledFeatures, final boolean displayOperatorCreativeTab) {
-      super(new CreativeModeInventoryScreen.ItemPickerMenu(player), player.getInventory(), CommonComponents.EMPTY);
+      super(new CreativeModeInventoryScreen.ItemPickerMenu(player), player.getInventory(), CommonComponents.EMPTY, 195, 136);
       player.containerMenu = this.menu;
-      this.imageHeight = 136;
-      this.imageWidth = 195;
       this.displayOperatorCreativeTab = displayOperatorCreativeTab;
       this.tryRebuildTabContents(player.connection.searchTrees(), enabledFeatures, this.hasPermissions(player), player.level().registryAccess());
       this.effects = new EffectsInInventory(this);
@@ -185,17 +184,17 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    }
 
    @Override
-   protected void slotClicked(final @Nullable Slot slot, final int slotId, final int buttonNum, ClickType clickType) {
+   protected void slotClicked(final @Nullable Slot slot, final int slotId, final int buttonNum, ContainerInput containerInput) {
       if (this.isCreativeSlot(slot)) {
          this.searchBox.moveCursorToEnd(false);
          this.searchBox.setHighlightPos(0);
       }
 
-      boolean quickKey = clickType == ClickType.QUICK_MOVE;
-      clickType = slotId == -999 && clickType == ClickType.PICKUP ? ClickType.THROW : clickType;
-      if (clickType != ClickType.THROW || this.minecraft.player.canDropItems()) {
-         this.onMouseClickAction(slot, clickType);
-         if (slot == null && selectedTab.getType() != CreativeModeTab.Type.INVENTORY && clickType != ClickType.QUICK_CRAFT) {
+      boolean quickKey = containerInput == ContainerInput.QUICK_MOVE;
+      containerInput = slotId == -999 && containerInput == ContainerInput.PICKUP ? ContainerInput.THROW : containerInput;
+      if (containerInput != ContainerInput.THROW || this.minecraft.player.canDropItems()) {
+         this.onMouseClickAction(slot, containerInput);
+         if (slot == null && selectedTab.getType() != CreativeModeTab.Type.INVENTORY && containerInput != ContainerInput.QUICK_CRAFT) {
             if (!this.menu.getCarried().isEmpty() && this.hasClickedOutside) {
                if (!this.minecraft.player.canDropItems()) {
                   return;
@@ -226,13 +225,13 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
             } else if (selectedTab.getType() == CreativeModeTab.Type.INVENTORY) {
                if (slot == this.destroyItemSlot) {
                   this.menu.setCarried(ItemStack.EMPTY);
-               } else if (clickType == ClickType.THROW && slot != null && slot.hasItem()) {
+               } else if (containerInput == ContainerInput.THROW && slot != null && slot.hasItem()) {
                   ItemStack toDrop = slot.remove(buttonNum == 0 ? 1 : slot.getItem().getMaxStackSize());
                   ItemStack afterDrop = slot.getItem();
                   this.minecraft.player.drop(toDrop, true);
                   this.minecraft.gameMode.handleCreativeModeItemDrop(toDrop);
                   this.minecraft.gameMode.handleCreativeModeItemAdd(afterDrop, ((CreativeModeInventoryScreen.SlotWrapper)slot).target.index);
-               } else if (clickType == ClickType.THROW && slotId == -999 && !this.menu.getCarried().isEmpty()) {
+               } else if (containerInput == ContainerInput.THROW && slotId == -999 && !this.menu.getCarried().isEmpty()) {
                   this.minecraft.player.drop(this.menu.getCarried(), true);
                   this.minecraft.gameMode.handleCreativeModeItemDrop(this.menu.getCarried());
                   this.menu.setCarried(ItemStack.EMPTY);
@@ -240,13 +239,15 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
                   this.minecraft
                      .player
                      .inventoryMenu
-                     .clicked(slot == null ? slotId : ((CreativeModeInventoryScreen.SlotWrapper)slot).target.index, buttonNum, clickType, this.minecraft.player);
+                     .clicked(
+                        slot == null ? slotId : ((CreativeModeInventoryScreen.SlotWrapper)slot).target.index, buttonNum, containerInput, this.minecraft.player
+                     );
                   this.minecraft.player.inventoryMenu.broadcastChanges();
                }
-            } else if (clickType != ClickType.QUICK_CRAFT && slot.container == CONTAINER) {
+            } else if (containerInput != ContainerInput.QUICK_CRAFT && slot.container == CONTAINER) {
                ItemStack carried = this.menu.getCarried();
                ItemStack clicked = slot.getItem();
-               if (clickType == ClickType.SWAP) {
+               if (containerInput == ContainerInput.SWAP) {
                   if (!clicked.isEmpty()) {
                      this.minecraft.player.getInventory().setItem(buttonNum, clicked.copyWithCount(clicked.getMaxStackSize()));
                      this.minecraft.player.inventoryMenu.broadcastChanges();
@@ -255,7 +256,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
                   return;
                }
 
-               if (clickType == ClickType.CLONE) {
+               if (containerInput == ContainerInput.CLONE) {
                   if (this.menu.getCarried().isEmpty() && slot.hasItem()) {
                      ItemStack item = slot.getItem();
                      this.menu.setCarried(item.copyWithCount(item.getMaxStackSize()));
@@ -264,7 +265,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
                   return;
                }
 
-               if (clickType == ClickType.THROW) {
+               if (containerInput == ContainerInput.THROW) {
                   if (!clicked.isEmpty()) {
                      ItemStack toDrop = clicked.copyWithCount(buttonNum == 0 ? 1 : clicked.getMaxStackSize());
                      this.minecraft.player.drop(toDrop, true);
@@ -294,13 +295,13 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
                }
             } else if (this.menu != null) {
                ItemStack oldItemStack = slot == null ? ItemStack.EMPTY : this.menu.getSlot(slot.index).getItem();
-               this.menu.clicked(slot == null ? slotId : slot.index, buttonNum, clickType, this.minecraft.player);
+               this.menu.clicked(slot == null ? slotId : slot.index, buttonNum, containerInput, this.minecraft.player);
                if (AbstractContainerMenu.getQuickcraftHeader(buttonNum) == 2) {
                   for (int i = 0; i < 9; i++) {
                      this.minecraft.gameMode.handleCreativeModeItemAdd(this.menu.getSlot(45 + i).getItem(), 36 + i);
                   }
                } else if (slot != null && Inventory.isHotbarSlot(slot.getContainerSlot()) && selectedTab.getType() != CreativeModeTab.Type.INVENTORY) {
-                  if (clickType == ClickType.THROW && !oldItemStack.isEmpty() && !this.menu.getCarried().isEmpty()) {
+                  if (containerInput == ContainerInput.THROW && !oldItemStack.isEmpty() && !this.menu.getCarried().isEmpty()) {
                      int numToDrop = buttonNum == 0 ? 1 : oldItemStack.getCount();
                      ItemStack toDrop = oldItemStack.copyWithCount(numToDrop);
                      oldItemStack.shrink(numToDrop);
@@ -389,6 +390,15 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    }
 
    @Override
+   public boolean preeditUpdated(final @Nullable PreeditEvent event) {
+      if (this.ignoreTextInput) {
+         return false;
+      } else {
+         return selectedTab.getType() != CreativeModeTab.Type.SEARCH ? false : this.searchBox.preeditUpdated(event);
+      }
+   }
+
+   @Override
    public boolean keyPressed(final KeyEvent event) {
       this.ignoreTextInput = false;
       if (selectedTab.getType() != CreativeModeTab.Type.SEARCH) {
@@ -468,9 +478,9 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    }
 
    @Override
-   protected void renderLabels(final GuiGraphics graphics, final int xm, final int ym) {
+   protected void extractLabels(final GuiGraphicsExtractor graphics, final int xm, final int ym) {
       if (selectedTab.showTitle()) {
-         graphics.drawString(this.font, selectedTab.getDisplayName(), 8, 6, -12566464, false);
+         graphics.text(this.font, selectedTab.getDisplayName(), 8, 6, -12566464, false);
       }
    }
 
@@ -645,7 +655,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       int yscr = yo + 18;
       int xscr2 = xscr + 14;
       int yscr2 = yscr + 112;
-      return xm >= xscr && ym >= yscr && xm < xscr2 && ym < yscr2;
+      return xm >= xscr && ym >= yscr && xm < xscr2 && ym < yscr2 && selectedTab.canScroll();
    }
 
    @Override
@@ -663,9 +673,9 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      this.effects.render(graphics, mouseX, mouseY);
-      super.render(graphics, mouseX, mouseY, a);
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      this.effects.extractRenderState(graphics, mouseX, mouseY);
+      super.extractRenderState(graphics, mouseX, mouseY, a);
 
       for (CreativeModeTab tab : CreativeModeTabs.tabs()) {
          if (this.checkTabHovering(graphics, tab, mouseX, mouseY)) {
@@ -678,8 +688,6 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
          && this.isHovering(this.destroyItemSlot.x, this.destroyItemSlot.y, 16, 16, mouseX, mouseY)) {
          graphics.setTooltipForNextFrame(this.font, TRASH_SLOT_TOOLTIP, mouseX, mouseY);
       }
-
-      this.renderTooltip(graphics, mouseX, mouseY);
    }
 
    @Override
@@ -724,21 +732,27 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
    }
 
    @Override
-   protected void renderBg(final GuiGraphics graphics, final float a, final int xm, final int ym) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
+
       for (CreativeModeTab tab : CreativeModeTabs.tabs()) {
          if (tab != selectedTab) {
-            this.renderTabButton(graphics, xm, ym, tab);
+            this.extractTabButton(graphics, mouseX, mouseY, tab);
          }
       }
 
       graphics.blit(
          RenderPipelines.GUI_TEXTURED, selectedTab.getBackgroundTexture(), this.leftPos, this.topPos, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256
       );
-      if (this.insideScrollbar(xm, ym) && this.canScroll()) {
-         graphics.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+      if (this.insideScrollbar(mouseX, mouseY)) {
+         if (this.canScroll()) {
+            graphics.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+         } else {
+            graphics.requestCursor(CursorTypes.NOT_ALLOWED);
+         }
       }
 
-      this.searchBox.render(graphics, xm, ym, a);
+      this.searchBox.extractRenderState(graphics, mouseX, mouseY, a);
       int xscr = this.leftPos + 175;
       int yscr = this.topPos + 18;
       int yscr2 = yscr + 112;
@@ -747,10 +761,10 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, xscr, yscr + (int)((yscr2 - yscr - 17) * this.scrollOffs), 12, 15);
       }
 
-      this.renderTabButton(graphics, xm, ym, selectedTab);
+      this.extractTabButton(graphics, mouseX, mouseY, selectedTab);
       if (selectedTab.getType() == CreativeModeTab.Type.INVENTORY) {
-         InventoryScreen.renderEntityInInventoryFollowsMouse(
-            graphics, this.leftPos + 73, this.topPos + 6, this.leftPos + 105, this.topPos + 49, 20, 0.0625F, xm, ym, this.minecraft.player
+         InventoryScreen.extractEntityInInventoryFollowsMouse(
+            graphics, this.leftPos + 73, this.topPos + 6, this.leftPos + 105, this.topPos + 49, 20, 0.0625F, mouseX, mouseY, this.minecraft.player
          );
       }
    }
@@ -783,7 +797,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       return xm >= x && xm <= x + 26 && ym >= y && ym <= y + 32;
    }
 
-   protected boolean checkTabHovering(final GuiGraphics graphics, final CreativeModeTab tab, final int xm, final int ym) {
+   protected boolean checkTabHovering(final GuiGraphicsExtractor graphics, final CreativeModeTab tab, final int xm, final int ym) {
       int x = this.getTabX(tab);
       int y = this.getTabY(tab);
       if (this.isHovering(x + 3, y + 3, 21, 27, xm, ym)) {
@@ -794,7 +808,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       }
    }
 
-   protected void renderTabButton(final GuiGraphics graphics, final int mouseX, final int mouseY, final CreativeModeTab tab) {
+   protected void extractTabButton(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final CreativeModeTab tab) {
       boolean selected = tab == selectedTab;
       boolean isTop = tab.row() == CreativeModeTab.Row.TOP;
       int pos = tab.column();
@@ -814,7 +828,7 @@ public class CreativeModeInventoryScreen extends AbstractContainerScreen<Creativ
       graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprites[Mth.clamp(pos, 0, sprites.length)], x, y, 26, 32);
       int iconX = x + 13 - 8;
       int iconY = y + 16 - 8 + (isTop ? 1 : -1);
-      graphics.renderItem(tab.getIconItem(), iconX, iconY);
+      graphics.item(tab.getIconItem(), iconX, iconY);
    }
 
    public boolean isInventoryOpen() {

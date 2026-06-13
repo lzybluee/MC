@@ -21,11 +21,11 @@ public class GameTestBatchFactory {
    public static List<GameTestBatch> divideIntoBatches(
       final Collection<Holder.Reference<GameTestInstance>> allTests, final GameTestBatchFactory.TestDecorator decorator, final ServerLevel level
    ) {
-      Map<Holder<TestEnvironmentDefinition>, List<GameTestInfo>> testsPerBatch = allTests.stream()
+      Map<Holder<TestEnvironmentDefinition<?>>, List<GameTestInfo>> testsPerBatch = allTests.stream()
          .flatMap(test -> decorator.decorate((Holder.Reference<GameTestInstance>)test, level))
          .collect(Collectors.groupingBy(info -> info.getTest().batch()));
       return testsPerBatch.entrySet().stream().flatMap(e -> {
-         Holder<TestEnvironmentDefinition> batchKey = e.getKey();
+         Holder<TestEnvironmentDefinition<?>> batchKey = e.getKey();
          List<GameTestInfo> testsInBatch = e.getValue();
          return Streams.mapWithIndex(Lists.partition(testsInBatch, 50).stream(), (tests, index) -> toGameTestBatch(tests, batchKey, (int)index));
       }).toList();
@@ -37,14 +37,14 @@ public class GameTestBatchFactory {
 
    public static GameTestRunner.GameTestBatcher fromGameTestInfo(final int maxTestsPerBatch) {
       return gameTestInfos -> {
-         Map<Holder<TestEnvironmentDefinition>, List<GameTestInfo>> testFunctionsPerBatch = gameTestInfos.stream()
+         Map<Holder<TestEnvironmentDefinition<?>>, List<GameTestInfo>> testFunctionsPerBatch = gameTestInfos.stream()
             .filter(Objects::nonNull)
             .collect(Collectors.groupingBy(gameTestInfo -> gameTestInfo.getTest().batch()));
          return testFunctionsPerBatch.entrySet()
             .stream()
             .flatMap(
                e -> {
-                  Holder<TestEnvironmentDefinition> batchKey = e.getKey();
+                  Holder<TestEnvironmentDefinition<?>> batchKey = e.getKey();
                   List<GameTestInfo> testsInBatch = e.getValue();
                   return Streams.mapWithIndex(
                      Lists.partition(testsInBatch, maxTestsPerBatch).stream(), (tests, index) -> toGameTestBatch(List.copyOf(tests), batchKey, (int)index)
@@ -55,7 +55,7 @@ public class GameTestBatchFactory {
       };
    }
 
-   public static GameTestBatch toGameTestBatch(final Collection<GameTestInfo> tests, final Holder<TestEnvironmentDefinition> batch, final int counter) {
+   public static GameTestBatch toGameTestBatch(final Collection<GameTestInfo> tests, final Holder<TestEnvironmentDefinition<?>> batch, final int counter) {
       return new GameTestBatch(counter, tests, batch);
    }
 

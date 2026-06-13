@@ -5,9 +5,9 @@ import com.mojang.realmsclient.dto.RealmsServer;
 import com.mojang.realmsclient.dto.RealmsSlot;
 import com.mojang.realmsclient.util.RealmsTextureManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
@@ -26,9 +26,8 @@ public class RealmsWorldSlotButton extends Button {
    private static final Component SWITCH_TO_MINIGAME_SLOT_TOOLTIP = Component.translatable("mco.configure.world.slot.tooltip.minigame");
    private static final Component SWITCH_TO_WORLD_SLOT_TOOLTIP = Component.translatable("mco.configure.world.slot.tooltip");
    private static final Component MINIGAME = Component.translatable("mco.worldSlot.minigame");
-   private static final int WORLD_NAME_MAX_WIDTH = 64;
-   private static final String DOTS = "...";
    private final int slotIndex;
+   private final StringWidget slotNameWidget;
    private RealmsWorldSlotButton.State state;
 
    public RealmsWorldSlotButton(
@@ -37,6 +36,7 @@ public class RealmsWorldSlotButton extends Button {
       super(x, y, width, height, CommonComponents.EMPTY, onPress, DEFAULT_NARRATION);
       this.slotIndex = slotIndex;
       this.state = this.setServerData(serverData);
+      this.slotNameWidget = new StringWidget(Component.literal(this.state.slotName), Minecraft.getInstance().font);
    }
 
    public RealmsWorldSlotButton.State getState() {
@@ -76,7 +76,7 @@ public class RealmsWorldSlotButton extends Button {
    }
 
    @Override
-   public void renderContents(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       int x = this.getX();
       int y = this.getY();
       boolean hoveredOrFocused = this.isHoveredOrFocused();
@@ -115,22 +115,23 @@ public class RealmsWorldSlotButton extends Button {
          graphics.blitSprite(RenderPipelines.GUI_TEXTURED, RealmsMainScreen.HARDCORE_MODE_SPRITE, x + 3, y + 4, 9, 8);
       }
 
-      Font font = Minecraft.getInstance().font;
-      String slotName = this.state.slotName;
-      if (font.width(slotName) > 64) {
-         slotName = font.plainSubstrByWidth(slotName, 64 - font.width("...")) + "...";
-      }
-
-      graphics.drawCenteredString(font, slotName, x + this.width / 2, y + this.height - 14, -1);
+      this.slotNameWidget.setMaxWidth(this.getWidth() - (this.state.activeSlot ? 2 : 0), StringWidget.TextOverflow.SCROLLING);
+      this.slotNameWidget.setPosition(this.getX() + this.getWidth() / 2 - this.slotNameWidget.getWidth() / 2, y + this.height - 14);
+      this.slotNameWidget.extractRenderState(graphics, mouseX, mouseY, a);
       if (this.state.activeSlot) {
-         graphics.drawCenteredString(
-            font,
+         graphics.centeredText(
+            Minecraft.getInstance().font,
             RealmsMainScreen.getVersionComponent(this.state.slotVersion, this.state.compatibility.isCompatible()),
             x + this.width / 2,
             y + this.height + 2,
             -1
          );
       }
+   }
+
+   public void updateSlotState(final RealmsServer serverData) {
+      this.state = this.setServerData(serverData);
+      this.slotNameWidget.setMessage(Component.literal(this.state.slotName));
    }
 
    public enum Action {

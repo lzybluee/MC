@@ -14,11 +14,13 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -44,6 +46,7 @@ public class Squid extends AgeableWaterCreature {
    private float tentacleSpeed;
    private float rotateSpeed;
    private Vec3 movementVector = Vec3.ZERO;
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.5F, 0.63F).withEyeHeight(0.37F);
 
    public Squid(final EntityType<? extends Squid> type, final Level level) {
       super(type, level);
@@ -226,6 +229,11 @@ public class Squid extends AgeableWaterCreature {
    ) {
       SpawnGroupData spawnGroupData = Objects.requireNonNullElseGet(groupData, () -> new AgeableMob.AgeableMobGroupData(0.05F));
       return super.finalizeSpawn(level, difficulty, spawnReason, spawnGroupData);
+   }
+
+   @Override
+   public EntityDimensions getDefaultDimensions(final Pose pose) {
+      return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
    }
 
    private class SquidFleeGoal extends Goal {

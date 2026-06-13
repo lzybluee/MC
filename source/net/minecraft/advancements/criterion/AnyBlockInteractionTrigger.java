@@ -6,10 +6,12 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
@@ -19,14 +21,14 @@ public class AnyBlockInteractionTrigger extends SimpleCriterionTrigger<AnyBlockI
       return AnyBlockInteractionTrigger.TriggerInstance.CODEC;
    }
 
-   public void trigger(final ServerPlayer player, final BlockPos pos, final ItemStack itemStack) {
+   public void trigger(final ServerPlayer player, final BlockPos pos, final ItemInstance tool) {
       ServerLevel level = player.level();
       BlockState state = level.getBlockState(pos);
       LootParams params = new LootParams.Builder(level)
          .withParameter(LootContextParams.ORIGIN, pos.getCenter())
          .withParameter(LootContextParams.THIS_ENTITY, player)
          .withParameter(LootContextParams.BLOCK_STATE, state)
-         .withParameter(LootContextParams.TOOL, itemStack)
+         .withParameter(LootContextParams.TOOL, tool)
          .create(LootContextParamSets.ADVANCEMENT_LOCATION);
       LootContext context = new LootContext.Builder(params).create(Optional.empty());
       this.trigger(player, t -> t.matches(context));
@@ -47,9 +49,9 @@ public class AnyBlockInteractionTrigger extends SimpleCriterionTrigger<AnyBlockI
       }
 
       @Override
-      public void validate(final CriterionValidator validator) {
+      public void validate(final ValidationContextSource validator) {
          SimpleCriterionTrigger.SimpleInstance.super.validate(validator);
-         this.location.ifPresent(predicate -> validator.validate(predicate, LootContextParamSets.ADVANCEMENT_LOCATION, "location"));
+         Validatable.validate(validator.context(LootContextParamSets.ADVANCEMENT_LOCATION), "location", this.location);
       }
    }
 }

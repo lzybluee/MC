@@ -7,20 +7,13 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -45,22 +38,27 @@ import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.OversizedItemRenderer;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.gui.render.state.BlitRenderState;
-import net.minecraft.client.gui.render.state.GlyphRenderState;
-import net.minecraft.client.gui.render.state.GuiElementRenderState;
-import net.minecraft.client.gui.render.state.GuiItemRenderState;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.pip.OversizedItemRenderState;
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
+import net.minecraft.client.renderer.CubeMap;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
+import net.minecraft.client.renderer.state.WindowRenderState;
+import net.minecraft.client.renderer.state.gui.BlitRenderState;
+import net.minecraft.client.renderer.state.gui.GlyphRenderState;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.pip.OversizedItemRenderState;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.joml.Matrix3x2fc;
 import org.joml.Matrix4f;
@@ -78,8 +76,6 @@ public class GuiRenderer implements AutoCloseable {
    public static final int GUI_3D_Z_FAR = 1000;
    public static final int GUI_3D_Z_NEAR = -1000;
    public static final int DEFAULT_ITEM_SIZE = 16;
-   private static final int MINIMUM_ITEM_ATLAS_SIZE = 512;
-   private static final int MAXIMUM_ITEM_ATLAS_SIZE = RenderSystem.getDevice().getMaxTextureSize();
    public static final int CLEAR_COLOR = 0;
    private static final Comparator<ScreenRectangle> SCISSOR_COMPARATOR = Comparator.nullsFirst(
       Comparator.comparing(ScreenRectangle::top)
@@ -91,7 +87,6 @@ public class GuiRenderer implements AutoCloseable {
    private static final Comparator<GuiElementRenderState> ELEMENT_SORT_COMPARATOR = Comparator.comparing(GuiElementRenderState::scissorArea, SCISSOR_COMPARATOR)
       .thenComparing(GuiElementRenderState::pipeline, Comparator.comparing(RenderPipeline::getSortKey))
       .thenComparing(GuiElementRenderState::textureSetup, TEXTURE_COMPARATOR);
-   private final Map<Object, GuiRenderer.AtlasPosition> atlasPositions = new Object2ObjectOpenHashMap();
    private final Map<Object, OversizedItemRenderer> oversizedItemRenderers = new Object2ObjectOpenHashMap();
    private final GuiRenderState renderState;
    private final List<GuiRenderer.Draw> draws = new ArrayList<>();
@@ -99,20 +94,15 @@ public class GuiRenderer implements AutoCloseable {
    private final ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(786432);
    private final Map<VertexFormat, MappableRingBuffer> vertexBuffers = new Object2ObjectOpenHashMap();
    private int firstDrawIndexAfterBlur = Integer.MAX_VALUE;
-   private final CachedOrthoProjectionMatrixBuffer guiProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", 1000.0F, 11000.0F, true);
-   private final CachedOrthoProjectionMatrixBuffer itemsProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("items", -1000.0F, 1000.0F, true);
+   private final Projection guiProjection = new Projection();
+   private final ProjectionMatrixBuffer guiProjectionMatrixBuffer = new ProjectionMatrixBuffer("gui");
    private final MultiBufferSource.BufferSource bufferSource;
    private final SubmitNodeCollector submitNodeCollector;
    private final FeatureRenderDispatcher featureRenderDispatcher;
    private final Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> pictureInPictureRenderers;
-   private @Nullable GpuTexture itemsAtlas;
-   private @Nullable GpuTextureView itemsAtlasView;
-   private @Nullable GpuTexture itemsAtlasDepth;
-   private @Nullable GpuTextureView itemsAtlasDepthView;
-   private int itemAtlasX;
-   private int itemAtlasY;
+   private @Nullable GuiItemAtlas itemAtlas;
    private int cachedGuiScale;
-   private int frameNumber;
+   private final CubeMap cubeMap = new CubeMap(Identifier.withDefaultNamespace("textures/gui/title/background/panorama"));
    private @Nullable ScreenRectangle previousScissorArea = null;
    private @Nullable RenderPipeline previousPipeline = null;
    private @Nullable TextureSetup previousTextureSetup = null;
@@ -138,18 +128,29 @@ public class GuiRenderer implements AutoCloseable {
       this.pictureInPictureRenderers = builder.buildOrThrow();
    }
 
-   public void incrementFrameNumber() {
-      this.frameNumber++;
+   public void endFrame() {
+      if (this.itemAtlas != null) {
+         this.itemAtlas.endFrame();
+      }
    }
 
    public void render(final GpuBufferSlice fogBuffer) {
+      ProfilerFiller profiler = Profiler.get();
+      if (this.renderState.panoramaRenderState != null) {
+         this.cubeMap.render(10.0F, this.renderState.panoramaRenderState.spin());
+      }
+
+      profiler.push("prepare");
       this.prepare();
+      profiler.popPush("draw");
       this.draw(fogBuffer);
+      profiler.popPush("vertexBufferRotate");
 
       for (MappableRingBuffer buffer : this.vertexBuffers.values()) {
          buffer.rotate();
       }
 
+      profiler.pop();
       this.draws.clear();
       this.meshesToDraw.clear();
       this.renderState.reset();
@@ -202,11 +203,10 @@ public class GuiRenderer implements AutoCloseable {
    private void draw(final GpuBufferSlice fogBuffer) {
       if (!this.draws.isEmpty()) {
          Minecraft minecraft = Minecraft.getInstance();
-         Window window = minecraft.getWindow();
-         RenderSystem.setProjectionMatrix(
-            this.guiProjectionMatrixBuffer.getBuffer((float)window.getWidth() / window.getGuiScale(), (float)window.getHeight() / window.getGuiScale()),
-            ProjectionType.ORTHOGRAPHIC
-         );
+         WindowRenderState windowState = minecraft.gameRenderer.getGameRenderState().windowRenderState;
+         this.guiProjection
+            .setupOrtho(1000.0F, 11000.0F, (float)windowState.width / windowState.guiScale, (float)windowState.height / windowState.guiScale, true);
+         RenderSystem.setProjectionMatrix(this.guiProjectionMatrixBuffer.getBuffer(this.guiProjection), ProjectionType.ORTHOGRAPHIC);
          RenderTarget mainRenderTarget = minecraft.getMainRenderTarget();
          int maxIndexCount = 0;
 
@@ -308,89 +308,28 @@ public class GuiRenderer implements AutoCloseable {
             }
 
             private void accept(final TextRenderable glyph) {
-               GuiRenderer.this.renderState.submitGlyphToCurrentLayer(new GlyphRenderState(pose, glyph, scissor));
+               GuiRenderer.this.renderState.addGlyphToCurrentLayer(new GlyphRenderState(pose, glyph, scissor));
             }
          });
       });
    }
 
    private void prepareItemElements() {
-      if (!this.renderState.getItemModelIdentities().isEmpty()) {
+      Set<Object> itemsInFrame = this.renderState.getItemModelIdentities();
+      if (!itemsInFrame.isEmpty()) {
          int guiScale = this.getGuiScaleInvalidatingItemAtlasIfChanged();
-         int singleItemTextureSize = 16 * guiScale;
-         int atlasSizeInPixels = this.calculateAtlasSizeInPixels(singleItemTextureSize);
-         if (this.itemsAtlas == null) {
-            this.createAtlasTextures(atlasSizeInPixels);
-         }
-
-         RenderSystem.outputColorTextureOverride = this.itemsAtlasView;
-         RenderSystem.outputDepthTextureOverride = this.itemsAtlasDepthView;
-         RenderSystem.setProjectionMatrix(this.itemsProjectionMatrixBuffer.getBuffer(atlasSizeInPixels, atlasSizeInPixels), ProjectionType.ORTHOGRAPHIC);
-         Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-         PoseStack poseStack = new PoseStack();
-         MutableBoolean alreadyWarned = new MutableBoolean(false);
+         GuiItemAtlas itemAtlas = this.prepareItemAtlas(itemsInFrame, 16 * guiScale);
          MutableBoolean hasOversizedItems = new MutableBoolean(false);
-         this.renderState
-            .forEachItem(
-               itemState -> {
-                  if (itemState.oversizedItemBounds() != null) {
-                     hasOversizedItems.setTrue();
-                  } else {
-                     TrackingItemStackRenderState itemStackRenderState = itemState.itemStackRenderState();
-                     GuiRenderer.AtlasPosition atlasPosition = this.atlasPositions.get(itemStackRenderState.getModelIdentity());
-                     if (atlasPosition == null || itemStackRenderState.isAnimated() && atlasPosition.lastAnimatedOnFrame != this.frameNumber) {
-                        if (this.itemAtlasX + singleItemTextureSize > atlasSizeInPixels) {
-                           this.itemAtlasX = 0;
-                           this.itemAtlasY += singleItemTextureSize;
-                        }
-
-                        boolean reDrawingAnimated = itemStackRenderState.isAnimated() && atlasPosition != null;
-                        if (!reDrawingAnimated && this.itemAtlasY + singleItemTextureSize > atlasSizeInPixels) {
-                           if (alreadyWarned.isFalse()) {
-                              LOGGER.warn("Trying to render too many items in GUI at the same time. Skipping some of them.");
-                              alreadyWarned.setTrue();
-                           }
-                        } else {
-                           int renderX = reDrawingAnimated ? atlasPosition.x : this.itemAtlasX;
-                           int renderY = reDrawingAnimated ? atlasPosition.y : this.itemAtlasY;
-                           if (reDrawingAnimated) {
-                              RenderSystem.getDevice()
-                                 .createCommandEncoder()
-                                 .clearColorAndDepthTextures(
-                                    this.itemsAtlas,
-                                    0,
-                                    this.itemsAtlasDepth,
-                                    1.0,
-                                    renderX,
-                                    atlasSizeInPixels - renderY - singleItemTextureSize,
-                                    singleItemTextureSize,
-                                    singleItemTextureSize
-                                 );
-                           }
-
-                           this.renderItemToAtlas(itemStackRenderState, poseStack, renderX, renderY, singleItemTextureSize);
-                           float u0 = (float)renderX / atlasSizeInPixels;
-                           float v0 = (float)(atlasSizeInPixels - renderY) / atlasSizeInPixels;
-                           this.submitBlitFromItemAtlas(itemState, u0, v0, singleItemTextureSize, atlasSizeInPixels);
-                           if (reDrawingAnimated) {
-                              atlasPosition.lastAnimatedOnFrame = this.frameNumber;
-                           } else {
-                              this.atlasPositions
-                                 .put(
-                                    itemState.itemStackRenderState().getModelIdentity(),
-                                    new GuiRenderer.AtlasPosition(this.itemAtlasX, this.itemAtlasY, u0, v0, this.frameNumber)
-                                 );
-                              this.itemAtlasX += singleItemTextureSize;
-                           }
-                        }
-                     } else {
-                        this.submitBlitFromItemAtlas(itemState, atlasPosition.u, atlasPosition.v, singleItemTextureSize, atlasSizeInPixels);
-                     }
-                  }
+         this.renderState.forEachItem(itemState -> {
+            if (itemState.oversizedItemBounds() != null) {
+               hasOversizedItems.setTrue();
+            } else {
+               GuiItemAtlas.SlotView slotView = itemAtlas.getOrUpdate(itemState.itemStackRenderState());
+               if (slotView != null) {
+                  this.submitBlitFromItemAtlas(itemState, slotView);
                }
-            );
-         RenderSystem.outputColorTextureOverride = null;
-         RenderSystem.outputDepthTextureOverride = null;
+            }
+         });
          if (hasOversizedItems.booleanValue()) {
             this.renderState
                .forEachItem(
@@ -412,7 +351,7 @@ public class GuiRenderer implements AutoCloseable {
    }
 
    private void preparePictureInPicture() {
-      int guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+      int guiScale = Minecraft.getInstance().gameRenderer.getGameRenderState().windowRenderState.guiScale;
       this.renderState.forEachPictureInPicture(pictureInPictureState -> this.preparePictureInPictureState(pictureInPictureState, guiScale));
    }
 
@@ -423,48 +362,21 @@ public class GuiRenderer implements AutoCloseable {
       }
    }
 
-   private void renderItemToAtlas(
-      final TrackingItemStackRenderState itemStackRenderState, final PoseStack poseStack, final int renderX, final int renderY, final int singleItemTextureSize
-   ) {
-      poseStack.pushPose();
-      poseStack.translate(renderX + singleItemTextureSize / 2.0F, renderY + singleItemTextureSize / 2.0F, 0.0F);
-      poseStack.scale(singleItemTextureSize, -singleItemTextureSize, singleItemTextureSize);
-      boolean flat = !itemStackRenderState.usesBlockLight();
-      if (flat) {
-         Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
-      } else {
-         Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-      }
-
-      RenderSystem.enableScissorForRenderTypeDraws(
-         renderX, this.itemsAtlas.getHeight(0) - renderY - singleItemTextureSize, singleItemTextureSize, singleItemTextureSize
-      );
-      itemStackRenderState.submit(poseStack, this.submitNodeCollector, 15728880, OverlayTexture.NO_OVERLAY, 0);
-      this.featureRenderDispatcher.renderAllFeatures();
-      this.bufferSource.endBatch();
-      RenderSystem.disableScissorForRenderTypeDraws();
-      poseStack.popPose();
-   }
-
-   private void submitBlitFromItemAtlas(
-      final GuiItemRenderState itemState, final float u0, final float v0, final int singleItemTextureSize, final int atlasSizeInPixels
-   ) {
-      float u1 = u0 + (float)singleItemTextureSize / atlasSizeInPixels;
-      float v1 = v0 + (float)(-singleItemTextureSize) / atlasSizeInPixels;
+   private void submitBlitFromItemAtlas(final GuiItemRenderState itemState, final GuiItemAtlas.SlotView slotView) {
       this.renderState
-         .submitBlitToCurrentLayer(
+         .addBlitToCurrentLayer(
             new BlitRenderState(
                RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
-               TextureSetup.singleTexture(this.itemsAtlasView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
+               TextureSetup.singleTexture(slotView.textureView(), RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
                itemState.pose(),
                itemState.x(),
                itemState.y(),
                itemState.x() + 16,
                itemState.y() + 16,
-               u0,
-               u1,
-               v0,
-               v1,
+               slotView.u0(),
+               slotView.u1(),
+               slotView.v0(),
+               slotView.v1(),
                -1,
                itemState.scissorArea(),
                null
@@ -472,47 +384,30 @@ public class GuiRenderer implements AutoCloseable {
          );
    }
 
-   private void createAtlasTextures(final int atlasSizeInPixels) {
-      GpuDevice device = RenderSystem.getDevice();
-      this.itemsAtlas = device.createTexture("UI items atlas", 12, TextureFormat.RGBA8, atlasSizeInPixels, atlasSizeInPixels, 1, 1);
-      this.itemsAtlasView = device.createTextureView(this.itemsAtlas);
-      this.itemsAtlasDepth = device.createTexture("UI items atlas depth", 8, TextureFormat.DEPTH32, atlasSizeInPixels, atlasSizeInPixels, 1, 1);
-      this.itemsAtlasDepthView = device.createTextureView(this.itemsAtlasDepth);
-      device.createCommandEncoder().clearColorAndDepthTextures(this.itemsAtlas, 0, this.itemsAtlasDepth, 1.0);
-   }
-
-   private int calculateAtlasSizeInPixels(final int singleItemTextureSize) {
-      Set<Object> itemStates = this.renderState.getItemModelIdentities();
-      int itemCount;
-      if (this.atlasPositions.isEmpty()) {
-         itemCount = itemStates.size();
-      } else {
-         itemCount = this.atlasPositions.size();
-
-         for (Object itemState : itemStates) {
-            if (!this.atlasPositions.containsKey(itemState)) {
-               itemCount++;
-            }
-         }
+   private GuiItemAtlas prepareItemAtlas(final Set<Object> itemsInFrame, final int slotTextureSize) {
+      if (this.itemAtlas != null && this.itemAtlas.tryPrepareFor(itemsInFrame)) {
+         return this.itemAtlas;
       }
 
-      if (this.itemsAtlas != null) {
-         int currentAtlasItemsPerRow = this.itemsAtlas.getWidth(0) / singleItemTextureSize;
-         int currentAtlasCapacity = currentAtlasItemsPerRow * currentAtlasItemsPerRow;
-         if (itemCount < currentAtlasCapacity) {
-            return this.itemsAtlas.getWidth(0);
-         }
-
-         this.invalidateItemAtlas();
+      int newTextureSize = GuiItemAtlas.computeTextureSizeFor(slotTextureSize, itemsInFrame.size());
+      if (this.itemAtlas != null && this.itemAtlas.textureSize() == newTextureSize) {
+         LOGGER.warn(
+            "Too many items ({}) in UI, some will be skipped! (Reached maximum texture size {}x{})",
+            new Object[]{itemsInFrame.size(), newTextureSize, newTextureSize}
+         );
+         return this.itemAtlas;
       }
 
-      int itemCountOnThisFrame = itemStates.size();
-      int atlasSizeInItems = Mth.smallestSquareSide(itemCountOnThisFrame + itemCountOnThisFrame / 2);
-      return Math.clamp(Mth.smallestEncompassingPowerOfTwo(atlasSizeInItems * singleItemTextureSize), 512, MAXIMUM_ITEM_ATLAS_SIZE);
+      if (this.itemAtlas != null) {
+         this.itemAtlas.close();
+      }
+
+      this.itemAtlas = new GuiItemAtlas(this.submitNodeCollector, this.featureRenderDispatcher, this.bufferSource, newTextureSize, slotTextureSize);
+      return this.itemAtlas;
    }
 
    private int getGuiScaleInvalidatingItemAtlasIfChanged() {
-      int guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+      int guiScale = Minecraft.getInstance().gameRenderer.getGameRenderState().windowRenderState.guiScale;
       if (guiScale != this.cachedGuiScale) {
          this.invalidateItemAtlas();
 
@@ -527,27 +422,9 @@ public class GuiRenderer implements AutoCloseable {
    }
 
    private void invalidateItemAtlas() {
-      this.itemAtlasX = 0;
-      this.itemAtlasY = 0;
-      this.atlasPositions.clear();
-      if (this.itemsAtlas != null) {
-         this.itemsAtlas.close();
-         this.itemsAtlas = null;
-      }
-
-      if (this.itemsAtlasView != null) {
-         this.itemsAtlasView.close();
-         this.itemsAtlasView = null;
-      }
-
-      if (this.itemsAtlasDepth != null) {
-         this.itemsAtlasDepth.close();
-         this.itemsAtlasDepth = null;
-      }
-
-      if (this.itemsAtlasDepthView != null) {
-         this.itemsAtlasDepthView.close();
-         this.itemsAtlasDepthView = null;
+      if (this.itemAtlas != null) {
+         this.itemAtlas.close();
+         this.itemAtlas = null;
       }
    }
 
@@ -674,9 +551,9 @@ public class GuiRenderer implements AutoCloseable {
    }
 
    private void enableScissor(final ScreenRectangle rectangle, final RenderPass renderPass) {
-      Window window = Minecraft.getInstance().getWindow();
-      int windowHeight = window.getHeight();
-      int guiScale = window.getGuiScale();
+      WindowRenderState windowState = Minecraft.getInstance().gameRenderer.getGameRenderState().windowRenderState;
+      int windowHeight = windowState.height;
+      int guiScale = windowState.guiScale;
       double left = rectangle.left() * guiScale;
       double bottom = windowHeight - rectangle.bottom() * guiScale;
       double width = rectangle.width() * guiScale;
@@ -684,50 +561,27 @@ public class GuiRenderer implements AutoCloseable {
       renderPass.enableScissor((int)left, (int)bottom, Math.max(0, (int)width), Math.max(0, (int)height));
    }
 
+   public void registerPanoramaTextures(final TextureManager textureManager) {
+      this.cubeMap.registerTextures(textureManager);
+   }
+
    @Override
    public void close() {
       this.byteBufferBuilder.close();
-      if (this.itemsAtlas != null) {
-         this.itemsAtlas.close();
-      }
-
-      if (this.itemsAtlasView != null) {
-         this.itemsAtlasView.close();
-      }
-
-      if (this.itemsAtlasDepth != null) {
-         this.itemsAtlasDepth.close();
-      }
-
-      if (this.itemsAtlasDepthView != null) {
-         this.itemsAtlasDepthView.close();
+      if (this.itemAtlas != null) {
+         this.itemAtlas.close();
+         this.itemAtlas = null;
       }
 
       this.pictureInPictureRenderers.values().forEach(PictureInPictureRenderer::close);
       this.guiProjectionMatrixBuffer.close();
-      this.itemsProjectionMatrixBuffer.close();
 
       for (MappableRingBuffer buffer : this.vertexBuffers.values()) {
          buffer.close();
       }
 
       this.oversizedItemRenderers.values().forEach(PictureInPictureRenderer::close);
-   }
-
-   private static final class AtlasPosition {
-      final int x;
-      final int y;
-      final float u;
-      final float v;
-      int lastAnimatedOnFrame;
-
-      private AtlasPosition(final int x, final int y, final float u, final float v, final int lastAnimatedOnFrame) {
-         this.x = x;
-         this.y = y;
-         this.u = u;
-         this.v = v;
-         this.lastAnimatedOnFrame = lastAnimatedOnFrame;
-      }
+      this.cubeMap.close();
    }
 
    private record Draw(

@@ -11,6 +11,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -213,7 +214,7 @@ public abstract class Display extends Entity {
 
    @Override
    protected void readAdditionalSaveData(final ValueInput input) {
-      this.setTransformation(input.<Transformation>read("transformation", Transformation.EXTENDED_CODEC).orElse(Transformation.identity()));
+      this.setTransformation(input.<Transformation>read("transformation", Transformation.EXTENDED_CODEC).orElse(Transformation.IDENTITY));
       this.setTransformationInterpolationDuration(input.getIntOr("interpolation_duration", 0));
       this.setTransformationInterpolationDelay(input.getIntOr("start_interpolation", 0));
       int teleportDuration = input.getIntOr("teleport_duration", 0);
@@ -231,10 +232,10 @@ public abstract class Display extends Entity {
    }
 
    private void setTransformation(final Transformation transformation) {
-      this.entityData.set(DATA_TRANSLATION_ID, transformation.getTranslation());
-      this.entityData.set(DATA_LEFT_ROTATION_ID, transformation.getLeftRotation());
-      this.entityData.set(DATA_SCALE_ID, transformation.getScale());
-      this.entityData.set(DATA_RIGHT_ROTATION_ID, transformation.getRightRotation());
+      this.entityData.set(DATA_TRANSLATION_ID, transformation.translation());
+      this.entityData.set(DATA_LEFT_ROTATION_ID, transformation.leftRotation());
+      this.entityData.set(DATA_SCALE_ID, transformation.scale());
+      this.entityData.set(DATA_RIGHT_ROTATION_ID, transformation.rightRotation());
    }
 
    @Override
@@ -627,9 +628,7 @@ public abstract class Display extends Entity {
 
       @Override
       protected void updateRenderSubState(final boolean shouldInterpolate, final float progress) {
-         ItemStack itemStack = this.getItemStack();
-         itemStack.setEntityRepresentation(this);
-         this.itemRenderState = new Display.ItemDisplay.ItemRenderState(itemStack, this.getItemTransform());
+         this.itemRenderState = new Display.ItemDisplay.ItemRenderState(this.getItemStack(), this.getItemTransform());
       }
 
       public record ItemRenderState(ItemStack itemStack, ItemDisplayContext itemTransform) {
@@ -780,7 +779,7 @@ public abstract class Display extends Entity {
             try {
                if (this.level() instanceof ServerLevel serverLevel) {
                   CommandSourceStack context = this.createCommandSourceStackForNameResolution(serverLevel).withPermission(LevelBasedPermissionSet.GAMEMASTER);
-                  Component resolvedText = ComponentUtils.updateForEntity(context, text.get(), this, 0);
+                  Component resolvedText = ComponentUtils.resolve(ResolutionContext.create(context), text.get());
                   this.setText(resolvedText);
                } else {
                   this.setText(Component.empty());

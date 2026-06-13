@@ -112,7 +112,7 @@ public class ChestBlockEntity extends RandomizableContainerBlockEntity implement
             z += direction.getStepZ() * 0.5;
          }
 
-         level.playSound(null, x, y, z, event, SoundSource.BLOCKS, 0.5F, level.random.nextFloat() * 0.1F + 0.9F);
+         level.playSound(null, x, y, z, event, SoundSource.BLOCKS, 0.5F, level.getRandom().nextFloat() * 0.1F + 0.9F);
       }
    }
 

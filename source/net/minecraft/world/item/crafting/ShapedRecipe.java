@@ -1,57 +1,56 @@
 package net.minecraft.world.item.crafting;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.level.Level;
-import org.jspecify.annotations.Nullable;
 
-public class ShapedRecipe implements CraftingRecipe {
+public class ShapedRecipe extends NormalCraftingRecipe {
+   public static final MapCodec<ShapedRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+      i -> i.group(
+            Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+            CraftingRecipe.CraftingBookInfo.MAP_CODEC.forGetter(o -> o.bookInfo),
+            ShapedRecipePattern.MAP_CODEC.forGetter(o -> o.pattern),
+            ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+         )
+         .apply(i, ShapedRecipe::new)
+   );
+   public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRecipe> STREAM_CODEC = StreamCodec.composite(
+      Recipe.CommonInfo.STREAM_CODEC,
+      o -> o.commonInfo,
+      CraftingRecipe.CraftingBookInfo.STREAM_CODEC,
+      o -> o.bookInfo,
+      ShapedRecipePattern.STREAM_CODEC,
+      o -> o.pattern,
+      ItemStackTemplate.STREAM_CODEC,
+      o -> o.result,
+      ShapedRecipe::new
+   );
+   public static final RecipeSerializer<ShapedRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
    private final ShapedRecipePattern pattern;
-   private final ItemStack result;
-   private final String group;
-   private final CraftingBookCategory category;
-   private final boolean showNotification;
-   private @Nullable PlacementInfo placementInfo;
+   private final ItemStackTemplate result;
 
    public ShapedRecipe(
-      final String group, final CraftingBookCategory category, final ShapedRecipePattern pattern, final ItemStack result, final boolean showNotification
+      final Recipe.CommonInfo commonInfo, final CraftingRecipe.CraftingBookInfo bookInfo, final ShapedRecipePattern pattern, final ItemStackTemplate result
    ) {
-      this.group = group;
-      this.category = category;
+      super(commonInfo, bookInfo);
       this.pattern = pattern;
       this.result = result;
-      this.showNotification = showNotification;
-   }
-
-   public ShapedRecipe(final String group, final CraftingBookCategory category, final ShapedRecipePattern pattern, final ItemStack result) {
-      this(group, category, pattern, result, true);
    }
 
    @Override
-   public RecipeSerializer<? extends ShapedRecipe> getSerializer() {
-      return RecipeSerializer.SHAPED_RECIPE;
-   }
-
-   @Override
-   public String group() {
-      return this.group;
-   }
-
-   @Override
-   public CraftingBookCategory category() {
-      return this.category;
+   public RecipeSerializer<ShapedRecipe> getSerializer() {
+      return SERIALIZER;
    }
 
    @VisibleForTesting
@@ -60,25 +59,16 @@ public class ShapedRecipe implements CraftingRecipe {
    }
 
    @Override
-   public PlacementInfo placementInfo() {
-      if (this.placementInfo == null) {
-         this.placementInfo = PlacementInfo.createFromOptionals(this.pattern.ingredients());
-      }
-
-      return this.placementInfo;
-   }
-
-   @Override
-   public boolean showNotification() {
-      return this.showNotification;
+   protected PlacementInfo createPlacementInfo() {
+      return PlacementInfo.createFromOptionals(this.pattern.ingredients());
    }
 
    public boolean matches(final CraftingInput input, final Level level) {
       return this.pattern.matches(input);
    }
 
-   public ItemStack assemble(final CraftingInput input, final HolderLookup.Provider registries) {
-      return this.result.copy();
+   public ItemStack assemble(final CraftingInput input) {
+      return this.result.create();
    }
 
    public int getWidth() {
@@ -100,48 +90,5 @@ public class ShapedRecipe implements CraftingRecipe {
             new SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)
          )
       );
-   }
-
-   public static class Serializer implements RecipeSerializer<ShapedRecipe> {
-      public static final MapCodec<ShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(
-         r -> r.group(
-               Codec.STRING.optionalFieldOf("group", "").forGetter(o -> o.group),
-               CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC).forGetter(o -> o.category),
-               ShapedRecipePattern.MAP_CODEC.forGetter(o -> o.pattern),
-               ItemStack.STRICT_CODEC.fieldOf("result").forGetter(o -> o.result),
-               Codec.BOOL.optionalFieldOf("show_notification", true).forGetter(o -> o.showNotification)
-            )
-            .apply(r, ShapedRecipe::new)
-      );
-      public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRecipe> STREAM_CODEC = StreamCodec.of(
-         ShapedRecipe.Serializer::toNetwork, ShapedRecipe.Serializer::fromNetwork
-      );
-
-      @Override
-      public MapCodec<ShapedRecipe> codec() {
-         return CODEC;
-      }
-
-      @Override
-      public StreamCodec<RegistryFriendlyByteBuf, ShapedRecipe> streamCodec() {
-         return STREAM_CODEC;
-      }
-
-      private static ShapedRecipe fromNetwork(final RegistryFriendlyByteBuf input) {
-         String group = input.readUtf();
-         CraftingBookCategory category = input.readEnum(CraftingBookCategory.class);
-         ShapedRecipePattern pattern = ShapedRecipePattern.STREAM_CODEC.decode(input);
-         ItemStack result = ItemStack.STREAM_CODEC.decode(input);
-         boolean showNotification = input.readBoolean();
-         return new ShapedRecipe(group, category, pattern, result, showNotification);
-      }
-
-      private static void toNetwork(final RegistryFriendlyByteBuf output, final ShapedRecipe recipe) {
-         output.writeUtf(recipe.group);
-         output.writeEnum(recipe.category);
-         ShapedRecipePattern.STREAM_CODEC.encode(output, recipe.pattern);
-         ItemStack.STREAM_CODEC.encode(output, recipe.result);
-         output.writeBoolean(recipe.showNotification);
-      }
    }
 }

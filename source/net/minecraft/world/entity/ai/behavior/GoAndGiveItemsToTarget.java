@@ -3,31 +3,28 @@ package net.minecraft.world.entity.ai.behavior;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Util;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
-import net.minecraft.world.entity.animal.allay.Allay;
-import net.minecraft.world.entity.animal.allay.AllayAi;
 import net.minecraft.world.entity.npc.InventoryCarrier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 public class GoAndGiveItemsToTarget<E extends LivingEntity & InventoryCarrier> extends Behavior<E> {
    private static final int CLOSE_ENOUGH_DISTANCE_TO_TARGET = 3;
    private static final int ITEM_PICKUP_COOLDOWN_AFTER_THROWING = 60;
+   private final Vec3 throwVelocity;
    private final Function<LivingEntity, Optional<PositionTracker>> targetPositionGetter;
    private final float speedModifier;
+   private final GoAndGiveItemsToTarget.ItemThrower<E> itemThrower;
 
    public GoAndGiveItemsToTarget(
-      final Function<LivingEntity, Optional<PositionTracker>> targetPositionGetter, final float speedModifier, final int timeoutDuration
+      final Function<LivingEntity, Optional<PositionTracker>> targetPositionGetter,
+      final float speedModifier,
+      final int timeoutDuration,
+      final GoAndGiveItemsToTarget.ItemThrower<E> itemThrower
    ) {
       super(
          Map.of(
@@ -42,6 +39,8 @@ public class GoAndGiveItemsToTarget<E extends LivingEntity & InventoryCarrier> e
       );
       this.targetPositionGetter = targetPositionGetter;
       this.speedModifier = speedModifier;
+      this.itemThrower = itemThrower;
+      this.throwVelocity = new Vec3(0.2F, 0.3F, 0.2F);
    }
 
    @Override
@@ -66,24 +65,17 @@ public class GoAndGiveItemsToTarget<E extends LivingEntity & InventoryCarrier> e
       Optional<PositionTracker> targetPosition = this.targetPositionGetter.apply(body);
       if (!targetPosition.isEmpty()) {
          PositionTracker depositTarget = targetPosition.get();
-         double distanceToTarget = depositTarget.currentPosition().distanceTo(body.getEyePosition());
+         Vec3 depositPosition = depositTarget.currentPosition();
+         double distanceToTarget = depositPosition.distanceTo(body.getEyePosition());
          if (distanceToTarget < 3.0) {
             ItemStack item = body.getInventory().removeItem(0, 1);
             if (!item.isEmpty()) {
-               throwItem(body, item, getThrowPosition(depositTarget));
-               if (body instanceof Allay allay) {
-                  AllayAi.getLikedPlayer(allay).ifPresent(player -> this.triggerDropItemOnBlock(depositTarget, item, player));
-               }
-
+               BehaviorUtils.throwItem(body, item, depositPosition.add(0.0, 1.0, 0.0), this.throwVelocity, 0.2F);
+               this.itemThrower.onItemThrown(level, body, item, depositTarget.currentBlockPosition());
                body.getBrain().setMemory(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS, 60);
             }
          }
       }
-   }
-
-   private void triggerDropItemOnBlock(final PositionTracker depositTarget, final ItemStack item, final ServerPlayer player) {
-      BlockPos belowPos = depositTarget.currentBlockPosition().below();
-      CriteriaTriggers.ALLAY_DROP_ITEM_ON_BLOCK.trigger(player, belowPos, item);
    }
 
    private boolean canThrowItemToTarget(final E body) {
@@ -95,17 +87,8 @@ public class GoAndGiveItemsToTarget<E extends LivingEntity & InventoryCarrier> e
       return positionTracker.isPresent();
    }
 
-   private static Vec3 getThrowPosition(final PositionTracker depositTarget) {
-      return depositTarget.currentPosition().add(0.0, 1.0, 0.0);
-   }
-
-   public static void throwItem(final LivingEntity thrower, final ItemStack item, final Vec3 targetPos) {
-      Vec3 throwVelocity = new Vec3(0.2F, 0.3F, 0.2F);
-      BehaviorUtils.throwItem(thrower, item, targetPos, throwVelocity, 0.2F);
-      Level level = thrower.level();
-      if (level.getGameTime() % 7L == 0L && level.random.nextDouble() < 0.9) {
-         float pitch = Util.<Float>getRandom(Allay.THROW_SOUND_PITCHES, level.getRandom());
-         level.playSound(null, thrower, SoundEvents.ALLAY_THROW, SoundSource.NEUTRAL, 1.0F, pitch);
-      }
+   @FunctionalInterface
+   public interface ItemThrower<E> {
+      void onItemThrown(ServerLevel level, E thrower, ItemStack item, final BlockPos targetPos);
    }
 }

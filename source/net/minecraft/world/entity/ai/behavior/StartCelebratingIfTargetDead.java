@@ -27,7 +27,7 @@ public class StartCelebratingIfTargetDead {
                }
 
                celebrateAt.setWithExpiry(target.blockPosition(), celebrateDuration);
-               if (target.getType() != EntityType.PLAYER || level.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS)) {
+               if (!target.is(EntityType.PLAYER) || level.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS)) {
                   attackTarget.erase();
                   angryAt.erase();
                }

@@ -1,12 +1,6 @@
 package net.minecraft.data.recipes;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementRequirements;
-import net.minecraft.advancements.AdvancementRewards;
 import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.RecipeUnlockedTrigger;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -20,7 +14,7 @@ public class SmithingTrimRecipeBuilder {
    private final Ingredient base;
    private final Ingredient addition;
    private final Holder<TrimPattern> pattern;
-   private final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
+   private final RecipeUnlockAdvancementBuilder advancementBuilder = new RecipeUnlockAdvancementBuilder();
 
    public SmithingTrimRecipeBuilder(
       final RecipeCategory category, final Ingredient template, final Ingredient base, final Ingredient addition, final Holder<TrimPattern> pattern
@@ -39,24 +33,12 @@ public class SmithingTrimRecipeBuilder {
    }
 
    public SmithingTrimRecipeBuilder unlocks(final String name, final Criterion<?> criterion) {
-      this.criteria.put(name, criterion);
+      this.advancementBuilder.unlockedBy(name, criterion);
       return this;
    }
 
    public void save(final RecipeOutput output, final ResourceKey<Recipe<?>> id) {
-      this.ensureValid(id);
-      Advancement.Builder advancement = output.advancement()
-         .addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(id))
-         .rewards(AdvancementRewards.Builder.recipe(id))
-         .requirements(AdvancementRequirements.Strategy.OR);
-      this.criteria.forEach(advancement::addCriterion);
-      SmithingTrimRecipe recipe = new SmithingTrimRecipe(this.template, this.base, this.addition, this.pattern);
-      output.accept(id, recipe, advancement.build(id.identifier().withPrefix("recipes/" + this.category.getFolderName() + "/")));
-   }
-
-   private void ensureValid(final ResourceKey<Recipe<?>> id) {
-      if (this.criteria.isEmpty()) {
-         throw new IllegalStateException("No way of obtaining recipe " + id.identifier());
-      }
+      SmithingTrimRecipe recipe = new SmithingTrimRecipe(new Recipe.CommonInfo(true), this.template, this.base, this.addition, this.pattern);
+      output.accept(id, recipe, this.advancementBuilder.build(output, id, this.category));
    }
 }

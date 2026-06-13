@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.RecipeBookMenu;
@@ -135,7 +136,7 @@ public class ServerPlaceRecipe<R extends Recipe<?>> {
 
    private static int clampToMaxStackSize(int value, final List<Holder<Item>> items) {
       for (Holder<Item> item : items) {
-         value = Math.min(value, item.value().getDefaultMaxStackSize());
+         value = Math.min(value, item.components().getOrDefault(DataComponents.MAX_STACK_SIZE, 1));
       }
 
       return value;

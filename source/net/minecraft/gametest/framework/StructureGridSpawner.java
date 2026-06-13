@@ -32,7 +32,7 @@ public class StructureGridSpawner implements GameTestRunner.StructureSpawner {
    public void onBatchStart(final ServerLevel level) {
       if (this.clearOnBatch) {
          this.testInLastBatch.forEach(info -> {
-            BoundingBox boundingBox = info.getTestInstanceBlockEntity().getStructureBoundingBox();
+            BoundingBox boundingBox = info.getTestInstanceBlockEntity().getTestBoundingBox();
             StructureUtils.clearSpaceForStructure(boundingBox, level);
          });
          this.testInLastBatch.clear();
@@ -51,7 +51,7 @@ public class StructureGridSpawner implements GameTestRunner.StructureSpawner {
       }
 
       infoWithStructure.startExecution(1);
-      AABB structureBounds = testInfo.getTestInstanceBlockEntity().getStructureBounds();
+      AABB structureBounds = testInfo.getTestInstanceBlockEntity().getTestBounds();
       this.rowBounds = this.rowBounds.minmax(structureBounds);
       this.nextTestNorthWestCorner.move((int)structureBounds.getXsize() + 5, 0, 0);
       if (this.nextTestNorthWestCorner.getX() > this.maxX) {

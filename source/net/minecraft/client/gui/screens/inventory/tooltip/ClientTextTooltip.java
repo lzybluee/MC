@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens.inventory.tooltip;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.FormattedCharSequence;
 
 public class ClientTextTooltip implements ClientTooltipComponent {
@@ -22,7 +22,7 @@ public class ClientTextTooltip implements ClientTooltipComponent {
    }
 
    @Override
-   public void renderText(final GuiGraphics guiGraphics, final Font font, final int x, final int y) {
-      guiGraphics.drawString(font, this.text, x, y, -1, true);
+   public void extractText(final GuiGraphicsExtractor graphics, final Font font, final int x, final int y) {
+      graphics.text(font, this.text, x, y, -1, true);
    }
 }

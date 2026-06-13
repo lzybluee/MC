@@ -396,7 +396,7 @@ public class HopperBlockEntity extends RandomizableContainerBlockEntity implemen
       List<Entity> entities = level.getEntities(
          (Entity)null, new AABB(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5), EntitySelector.CONTAINER_ENTITY_SELECTOR
       );
-      return !entities.isEmpty() ? (Container)entities.get(level.random.nextInt(entities.size())) : null;
+      return !entities.isEmpty() ? (Container)entities.get(level.getRandom().nextInt(entities.size())) : null;
    }
 
    private static boolean canMergeItems(final ItemStack a, final ItemStack b) {

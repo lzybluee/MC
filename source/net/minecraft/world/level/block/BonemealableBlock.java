@@ -22,7 +22,7 @@ public interface BonemealableBlock {
    }
 
    static Optional<BlockPos> findSpreadableNeighbourPos(final Level level, final BlockPos pos, final BlockState blockToPlace) {
-      return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.shuffledCopy(level.random), level, pos, blockToPlace);
+      return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.shuffledCopy(level.getRandom()), level, pos, blockToPlace);
    }
 
    private static Optional<BlockPos> getSpreadableNeighbourPos(

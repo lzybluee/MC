@@ -211,7 +211,7 @@ public abstract class BaseFireBlock extends Block {
 
       Direction.Axis preferredAxis = forwardDirection.getAxis().isHorizontal()
          ? forwardDirection.getCounterClockWise().getAxis()
-         : Direction.Plane.HORIZONTAL.getRandomAxis(level.random);
+         : Direction.Plane.HORIZONTAL.getRandomAxis(level.getRandom());
       return PortalShape.findEmptyPortalShape(level, pos, preferredAxis).isPresent();
    }
 }

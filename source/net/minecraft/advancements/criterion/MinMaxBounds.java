@@ -1,5 +1,6 @@
 package net.minecraft.advancements.criterion;
 
+import com.google.common.collect.Range;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
@@ -35,6 +36,16 @@ public interface MinMaxBounds<T extends Number & Comparable<T>> {
       return this.bounds().isAny();
    }
 
+   static <V extends Number & Comparable<V>, B extends MinMaxBounds<V>> Function<B, DataResult<B>> validateContainedInRange(final MinMaxBounds<V> allowed) {
+      Range<V> allowedRange = allowed.bounds().asRange();
+      return target -> {
+         Range<V> selfAsRange = target.bounds().asRange();
+         return !allowedRange.encloses(selfAsRange)
+            ? DataResult.error(() -> "Range must be within " + allowedRange + ", but was " + selfAsRange)
+            : DataResult.success(target);
+      };
+   }
+
    record Bounds<T extends Number & Comparable<T>>(Optional<T> min, Optional<T> max) {
       public boolean isAny() {
          return this.min().isEmpty() && this.max().isEmpty();
@@ -48,6 +59,14 @@ public interface MinMaxBounds<T extends Number & Comparable<T>> {
 
       public boolean areSwapped() {
          return this.min.isPresent() && this.max.isPresent() && this.min.get().compareTo(this.max.get()) > 0;
+      }
+
+      public Range<T> asRange() {
+         if (this.min.isPresent()) {
+            return this.max.isPresent() ? Range.closed(this.min.get(), this.max.get()) : Range.atLeast(this.min.get());
+         } else {
+            return this.max.isPresent() ? Range.atMost(this.max.get()) : Range.all();
+         }
       }
 
       public Optional<T> asPoint() {

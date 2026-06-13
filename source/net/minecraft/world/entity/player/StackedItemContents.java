@@ -24,7 +24,7 @@ public class StackedItemContents {
    public void accountStack(final ItemStack itemStack, final int maxCount) {
       if (!itemStack.isEmpty()) {
          int count = Math.min(maxCount, itemStack.getCount());
-         this.raw.account(itemStack.getItemHolder(), count);
+         this.raw.account(itemStack.typeHolder(), count);
       }
    }
 

@@ -119,6 +119,7 @@ import net.minecraft.server.commands.StopCommand;
 import net.minecraft.server.commands.StopSoundCommand;
 import net.minecraft.server.commands.StopwatchCommand;
 import net.minecraft.server.commands.SummonCommand;
+import net.minecraft.server.commands.SwingCommand;
 import net.minecraft.server.commands.TagCommand;
 import net.minecraft.server.commands.TeamCommand;
 import net.minecraft.server.commands.TeamMsgCommand;
@@ -218,6 +219,7 @@ public class Commands {
       LocateCommand.register(this.dispatcher, context);
       LootCommand.register(this.dispatcher, context);
       MsgCommand.register(this.dispatcher);
+      SwingCommand.register(this.dispatcher);
       ParticleCommand.register(this.dispatcher, context);
       PlaceCommand.register(this.dispatcher);
       PlaySoundCommand.register(this.dispatcher);
@@ -248,7 +250,7 @@ public class Commands {
       TellRawCommand.register(this.dispatcher, context);
       TestCommand.register(this.dispatcher, context);
       TickCommand.register(this.dispatcher);
-      TimeCommand.register(this.dispatcher);
+      TimeCommand.register(this.dispatcher, context);
       TitleCommand.register(this.dispatcher, context);
       TriggerCommand.register(this.dispatcher);
       WaypointCommand.register(this.dispatcher, context);

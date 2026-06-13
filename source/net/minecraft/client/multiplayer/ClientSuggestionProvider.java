@@ -56,7 +56,7 @@ public class ClientSuggestionProvider implements SharedSuggestionProvider {
    }
 
    @Override
-   public Collection<String> getCustomTabSugggestions() {
+   public Collection<String> getCustomTabSuggestions() {
       if (this.customCompletionSuggestions.isEmpty()) {
          return this.getOnlinePlayerNames();
       }

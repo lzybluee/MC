@@ -2,10 +2,12 @@ package net.minecraft.core;
 
 import com.mojang.datafixers.util.Either;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -15,6 +17,8 @@ public interface Holder<T> {
    T value();
 
    boolean isBound();
+
+   boolean areComponentsBound();
 
    boolean is(Identifier key);
 
@@ -29,6 +33,8 @@ public interface Holder<T> {
 
    Stream<TagKey<T>> tags();
 
+   DataComponentMap components();
+
    Either<ResourceKey<T>, T> unwrap();
 
    Optional<ResourceKey<T>> unwrapKey();
@@ -42,12 +48,21 @@ public interface Holder<T> {
    }
 
    static <T> Holder<T> direct(final T value) {
-      return new Holder.Direct<>(value);
+      return new Holder.Direct<>(value, DataComponentMap.EMPTY);
    }
 
-   record Direct<T>(T value) implements Holder<T> {
+   static <T> Holder<T> direct(final T value, final DataComponentMap components) {
+      return new Holder.Direct<>(value, components);
+   }
+
+   record Direct<T>(T value, DataComponentMap components) implements Holder<T> {
       @Override
       public boolean isBound() {
+         return true;
+      }
+
+      @Override
+      public boolean areComponentsBound() {
          return true;
       }
 
@@ -115,6 +130,7 @@ public interface Holder<T> {
    class Reference<T> implements Holder<T> {
       private final HolderOwner<T> owner;
       private @Nullable Set<TagKey<T>> tags;
+      private @Nullable DataComponentMap components;
       private final Holder.Reference.Type type;
       private @Nullable ResourceKey<T> key;
       private @Nullable T value;
@@ -210,6 +226,11 @@ public interface Holder<T> {
          return this.key != null && this.value != null;
       }
 
+      @Override
+      public boolean areComponentsBound() {
+         return this.components != null;
+      }
+
       void bindKey(final ResourceKey<T> key) {
          if (this.key != null && key != this.key) {
             throw new IllegalStateException("Can't change holder key: existing=" + this.key + ", new=" + key);
@@ -230,9 +251,18 @@ public interface Holder<T> {
          this.tags = Set.copyOf(tags);
       }
 
+      public void bindComponents(final DataComponentMap components) {
+         this.components = components;
+      }
+
       @Override
       public Stream<TagKey<T>> tags() {
          return this.boundTags().stream();
+      }
+
+      @Override
+      public DataComponentMap components() {
+         return Objects.requireNonNull(this.components, "Components not bound yet");
       }
 
       @Override

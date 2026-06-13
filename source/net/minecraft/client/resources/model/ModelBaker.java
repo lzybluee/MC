@@ -1,27 +1,26 @@
 package net.minecraft.client.resources.model;
 
-import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.sprite.MaterialBaker;
 import net.minecraft.resources.Identifier;
-import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
 public interface ModelBaker {
    ResolvedModel getModel(Identifier location);
 
-   BlockModelPart missingBlockModelPart();
+   BlockStateModelPart missingBlockModelPart();
 
-   SpriteGetter sprites();
+   MaterialBaker materials();
 
-   ModelBaker.PartCache parts();
+   ModelBaker.Interner interner();
 
    <T> T compute(ModelBaker.SharedOperationKey<T> key);
 
-   interface PartCache {
-      default Vector3fc vector(final float x, final float y, final float z) {
-         return this.vector(new Vector3f(x, y, z));
-      }
-
+   interface Interner {
       Vector3fc vector(Vector3fc vector);
+
+      BakedQuad.MaterialInfo materialInfo(BakedQuad.MaterialInfo material);
    }
 
    @FunctionalInterface

@@ -90,13 +90,7 @@ public final class DataComponentExactPredicate implements Predicate<DataComponen
    }
 
    public DataComponentPatch asPatch() {
-      DataComponentPatch.Builder patch = DataComponentPatch.builder();
-
-      for (TypedDataComponent<?> component : this.expectedComponents) {
-         patch.set(component);
-      }
-
-      return patch.build();
+      return DataComponentPatch.builder().set(this.expectedComponents).build();
    }
 
    public static class Builder {

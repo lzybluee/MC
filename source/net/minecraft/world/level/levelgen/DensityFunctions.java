@@ -652,7 +652,7 @@ public final class DensityFunctions {
 
       @Override
       public DensityFunction mapAll(final DensityFunction.Visitor visitor) {
-         return visitor.apply(new DensityFunctions.HolderHolder(new Holder.Direct<>(this.function.value().mapAll(visitor))));
+         return visitor.apply(new DensityFunctions.HolderHolder(Holder.direct(this.function.value().mapAll(visitor))));
       }
 
       @Override
@@ -1201,7 +1201,7 @@ public final class DensityFunctions {
          }
 
          public DensityFunctions.Spline.Coordinate mapAll(final DensityFunction.Visitor visitor) {
-            return new DensityFunctions.Spline.Coordinate(new Holder.Direct<>(this.function.value().mapAll(visitor)));
+            return new DensityFunctions.Spline.Coordinate(Holder.direct(this.function.value().mapAll(visitor)));
          }
       }
 

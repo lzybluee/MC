@@ -95,7 +95,7 @@ public abstract class TagsProvider<T> implements DataProvider {
                            }
 
                            Path path = this.pathProvider.json(id);
-                           return DataProvider.saveStable(cache, c.contents, TagFile.CODEC, new TagFile(entries, false), path);
+                           return DataProvider.saveStable(cache, c.contents, TagFile.CODEC, new TagFile(entries, builder.shouldReplace()), path);
                         }
                      )
                      .toArray(CompletableFuture[]::new)

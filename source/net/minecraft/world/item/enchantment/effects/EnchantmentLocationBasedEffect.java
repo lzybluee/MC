@@ -18,7 +18,7 @@ public interface EnchantmentLocationBasedEffect {
    static MapCodec<? extends EnchantmentLocationBasedEffect> bootstrap(final Registry<MapCodec<? extends EnchantmentLocationBasedEffect>> registry) {
       Registry.register(registry, "all_of", AllOf.LocationBasedEffects.CODEC);
       Registry.register(registry, "apply_mob_effect", ApplyMobEffect.CODEC);
-      Registry.register(registry, "attribute", EnchantmentAttributeEffect.CODEC);
+      Registry.register(registry, "attribute", EnchantmentAttributeEffect.MAP_CODEC);
       Registry.register(registry, "change_item_damage", ChangeItemDamage.CODEC);
       Registry.register(registry, "damage_entity", DamageEntity.CODEC);
       Registry.register(registry, "explode", ExplodeEffect.CODEC);

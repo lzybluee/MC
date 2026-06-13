@@ -5,33 +5,33 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-public record VertexFormatElement(int id, int index, VertexFormatElement.Type type, VertexFormatElement.Usage usage, int count) {
+public record VertexFormatElement(int id, int index, VertexFormatElement.Type type, boolean normalized, int count) {
    public static final int MAX_COUNT = 32;
    private static final @Nullable VertexFormatElement[] BY_ID = new VertexFormatElement[32];
    private static final List<VertexFormatElement> ELEMENTS = new ArrayList<>(32);
-   public static final VertexFormatElement POSITION = register(0, 0, VertexFormatElement.Type.FLOAT, VertexFormatElement.Usage.POSITION, 3);
-   public static final VertexFormatElement COLOR = register(1, 0, VertexFormatElement.Type.UBYTE, VertexFormatElement.Usage.COLOR, 4);
-   public static final VertexFormatElement UV0 = register(2, 0, VertexFormatElement.Type.FLOAT, VertexFormatElement.Usage.UV, 2);
+   public static final VertexFormatElement POSITION = register(0, 0, VertexFormatElement.Type.FLOAT, false, 3);
+   public static final VertexFormatElement COLOR = register(1, 0, VertexFormatElement.Type.UBYTE, true, 4);
+   public static final VertexFormatElement UV0 = register(2, 0, VertexFormatElement.Type.FLOAT, false, 2);
    public static final VertexFormatElement UV = UV0;
-   public static final VertexFormatElement UV1 = register(3, 1, VertexFormatElement.Type.SHORT, VertexFormatElement.Usage.UV, 2);
-   public static final VertexFormatElement UV2 = register(4, 2, VertexFormatElement.Type.SHORT, VertexFormatElement.Usage.UV, 2);
-   public static final VertexFormatElement NORMAL = register(5, 0, VertexFormatElement.Type.BYTE, VertexFormatElement.Usage.NORMAL, 3);
-   public static final VertexFormatElement LINE_WIDTH = register(6, 0, VertexFormatElement.Type.FLOAT, VertexFormatElement.Usage.GENERIC, 1);
+   public static final VertexFormatElement UV1 = register(3, 1, VertexFormatElement.Type.SHORT, false, 2);
+   public static final VertexFormatElement UV2 = register(4, 2, VertexFormatElement.Type.SHORT, false, 2);
+   public static final VertexFormatElement NORMAL = register(5, 0, VertexFormatElement.Type.BYTE, true, 3);
+   public static final VertexFormatElement LINE_WIDTH = register(6, 0, VertexFormatElement.Type.FLOAT, false, 1);
 
-   public VertexFormatElement {
-      if (id < 0 || id >= BY_ID.length) {
+   public VertexFormatElement(int id, int index, VertexFormatElement.Type type, boolean normalized, int count) {
+      if (id >= 0 && id < BY_ID.length) {
+         this.id = id;
+         this.index = index;
+         this.type = type;
+         this.normalized = normalized;
+         this.count = count;
+      } else {
          throw new IllegalArgumentException("Element ID must be in range [0; " + BY_ID.length + ")");
-      }
-
-      if (!this.supportsUsage(index, usage)) {
-         throw new IllegalStateException("Multiple vertex elements of the same type other than UVs are not supported");
       }
    }
 
-   public static VertexFormatElement register(
-      final int id, final int index, final VertexFormatElement.Type type, final VertexFormatElement.Usage usage, final int count
-   ) {
-      VertexFormatElement element = new VertexFormatElement(id, index, type, usage, count);
+   public static VertexFormatElement register(final int id, final int index, final VertexFormatElement.Type type, final boolean normalized, final int count) {
+      VertexFormatElement element = new VertexFormatElement(id, index, type, normalized, count);
       if (BY_ID[id] != null) {
          throw new IllegalArgumentException("Duplicate element registration for: " + id);
       }
@@ -41,13 +41,10 @@ public record VertexFormatElement(int id, int index, VertexFormatElement.Type ty
       return element;
    }
 
-   private boolean supportsUsage(final int index, final VertexFormatElement.Usage usage) {
-      return index == 0 || usage == VertexFormatElement.Usage.UV;
-   }
-
    @Override
    public String toString() {
-      return this.count + "," + this.usage + "," + this.type + " (" + this.id + ")";
+      String string = this.count + "x" + this.type + " (" + this.id + ")";
+      return this.normalized ? "normalized " + string : string;
    }
 
    public int mask() {
@@ -85,25 +82,6 @@ public record VertexFormatElement(int id, int index, VertexFormatElement.Type ty
 
       public int size() {
          return this.size;
-      }
-
-      @Override
-      public String toString() {
-         return this.name;
-      }
-   }
-
-   public enum Usage {
-      POSITION("Position"),
-      NORMAL("Normal"),
-      COLOR("Vertex Color"),
-      UV("UV"),
-      GENERIC("Generic");
-
-      private final String name;
-
-      Usage(final String name) {
-         this.name = name;
       }
 
       @Override

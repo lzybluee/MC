@@ -231,7 +231,7 @@ public class JigsawPlacement {
          level.getChunkSource().randomState(),
          structureTemplateManager,
          level.getSeed(),
-         new ChunkPos(position),
+         ChunkPos.containing(position),
          level,
          b -> true
       );

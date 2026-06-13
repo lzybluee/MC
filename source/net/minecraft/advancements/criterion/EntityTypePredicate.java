@@ -1,6 +1,7 @@
 package net.minecraft.advancements.criterion;
 
 import com.mojang.serialization.Codec;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
@@ -20,7 +21,7 @@ public record EntityTypePredicate(HolderSet<EntityType<?>> types) {
       return new EntityTypePredicate(lookup.getOrThrow(type));
    }
 
-   public boolean matches(final EntityType<?> type) {
-      return type.is(this.types);
+   public boolean matches(final Holder<EntityType<?>> type) {
+      return this.types.contains(type);
    }
 }

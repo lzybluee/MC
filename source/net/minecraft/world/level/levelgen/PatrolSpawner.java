@@ -20,7 +20,7 @@ public class PatrolSpawner implements CustomSpawner {
    public void tick(final ServerLevel level, final boolean spawnEnemies) {
       if (spawnEnemies) {
          if (level.getGameRules().get(GameRules.SPAWN_PATROLS)) {
-            RandomSource random = level.random;
+            RandomSource random = level.getRandom();
             this.nextTick--;
             if (this.nextTick <= 0) {
                this.nextTick = this.nextTick + 12000 + random.nextInt(1200);

@@ -13,7 +13,7 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.jspecify.annotations.Nullable;
 
 public interface HoverEvent {
@@ -123,26 +123,12 @@ public interface HoverEvent {
       }
    }
 
-   record ShowItem(ItemStack item) implements HoverEvent {
-      public static final MapCodec<HoverEvent.ShowItem> CODEC = ItemStack.MAP_CODEC.xmap(HoverEvent.ShowItem::new, HoverEvent.ShowItem::item);
-
-      public ShowItem {
-         item = item.copy();
-      }
+   record ShowItem(ItemStackTemplate item) implements HoverEvent {
+      public static final MapCodec<HoverEvent.ShowItem> CODEC = ItemStackTemplate.MAP_CODEC.xmap(HoverEvent.ShowItem::new, HoverEvent.ShowItem::item);
 
       @Override
       public HoverEvent.Action action() {
          return HoverEvent.Action.SHOW_ITEM;
-      }
-
-      @Override
-      public boolean equals(final Object obj) {
-         return obj instanceof HoverEvent.ShowItem showItem && ItemStack.matches(this.item, showItem.item);
-      }
-
-      @Override
-      public int hashCode() {
-         return ItemStack.hashItemAndComponents(this.item);
       }
    }
 

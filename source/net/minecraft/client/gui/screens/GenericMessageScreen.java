@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.FocusableTextWidget;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
@@ -36,9 +36,9 @@ public class GenericMessageScreen extends Screen {
    }
 
    @Override
-   public void renderBackground(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
-      this.renderPanorama(graphics, a);
-      this.renderBlurredBackground(graphics);
-      this.renderMenuBackground(graphics);
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      this.extractPanorama(graphics, a);
+      this.extractBlurredBackground(graphics);
+      this.extractMenuBackground(graphics);
    }
 }

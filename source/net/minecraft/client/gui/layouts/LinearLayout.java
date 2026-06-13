@@ -106,8 +106,8 @@ public class LinearLayout implements Layout {
 
       public <T extends LayoutElement> T addChild(final GridLayout gridLayout, final T child, final int index, final LayoutSettings cellSettings) {
          return (T)(switch (this) {
-            case HORIZONTAL -> (LayoutElement)gridLayout.addChild(child, 0, index, cellSettings);
-            case VERTICAL -> (LayoutElement)gridLayout.addChild(child, index, 0, cellSettings);
+            case HORIZONTAL -> gridLayout.addChild(child, 0, index, cellSettings);
+            case VERTICAL -> gridLayout.addChild(child, index, 0, cellSettings);
          });
       }
    }

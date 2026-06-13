@@ -14,12 +14,12 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import org.jspecify.annotations.Nullable;
 
 public class CommandStorage {
-   private static final String ID_PREFIX = "command_storage_";
+   private static final String COMMAND_STORAGE = "command_storage";
    private final Map<String, CommandStorage.Container> namespaces = new HashMap<>();
-   private final DimensionDataStorage storage;
+   private final SavedDataStorage savedDataStorage;
 
-   public CommandStorage(final DimensionDataStorage storage) {
-      this.storage = storage;
+   public CommandStorage(final SavedDataStorage savedDataStorage) {
+      this.savedDataStorage = savedDataStorage;
    }
 
    public CompoundTag get(final Identifier id) {
@@ -33,7 +33,7 @@ public class CommandStorage {
          return container;
       }
 
-      CommandStorage.Container newContainer = this.storage.get(CommandStorage.Container.type(namespace));
+      CommandStorage.Container newContainer = this.savedDataStorage.get(CommandStorage.Container.type(namespace));
       if (newContainer != null) {
          this.namespaces.put(namespace, newContainer);
       }
@@ -47,7 +47,7 @@ public class CommandStorage {
          return container;
       }
 
-      CommandStorage.Container newContainer = this.storage.computeIfAbsent(CommandStorage.Container.type(namespace));
+      CommandStorage.Container newContainer = this.savedDataStorage.computeIfAbsent(CommandStorage.Container.type(namespace));
       this.namespaces.put(namespace, newContainer);
       return newContainer;
    }
@@ -58,10 +58,6 @@ public class CommandStorage {
 
    public Stream<Identifier> keys() {
       return this.namespaces.entrySet().stream().flatMap(e -> e.getValue().getKeys(e.getKey()));
-   }
-
-   private static String createId(final String namespace) {
-      return "command_storage_" + namespace;
    }
 
    private static class Container extends SavedData {
@@ -80,7 +76,9 @@ public class CommandStorage {
       }
 
       public static SavedDataType<CommandStorage.Container> type(final String namespace) {
-         return new SavedDataType<>(CommandStorage.createId(namespace), CommandStorage.Container::new, CODEC, DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
+         return new SavedDataType<>(
+            Identifier.fromNamespaceAndPath(namespace, "command_storage"), CommandStorage.Container::new, CODEC, DataFixTypes.SAVED_DATA_COMMAND_STORAGE
+         );
       }
 
       public CompoundTag get(final String id) {

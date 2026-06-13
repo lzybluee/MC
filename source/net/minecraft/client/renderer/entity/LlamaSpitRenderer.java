@@ -6,13 +6,13 @@ import net.minecraft.client.model.animal.llama.LlamaSpitModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.LlamaSpitRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.projectile.LlamaSpit;
 
 public class LlamaSpitRenderer extends EntityRenderer<LlamaSpit, LlamaSpitRenderState> {
-   private static final Identifier LLAMA_SPIT_LOCATION = Identifier.withDefaultNamespace("textures/entity/llama/spit.png");
+   private static final Identifier LLAMA_SPIT_LOCATION = Identifier.withDefaultNamespace("textures/entity/llama/llama_spit.png");
    private final LlamaSpitModel model;
 
    public LlamaSpitRenderer(final EntityRendererProvider.Context context) {
@@ -27,9 +27,7 @@ public class LlamaSpitRenderer extends EntityRenderer<LlamaSpit, LlamaSpitRender
       poseStack.translate(0.0F, 0.15F, 0.0F);
       poseStack.mulPose(Axis.YP.rotationDegrees(state.yRot - 90.0F));
       poseStack.mulPose(Axis.ZP.rotationDegrees(state.xRot));
-      submitNodeCollector.submitModel(
-         this.model, state, poseStack, this.model.renderType(LLAMA_SPIT_LOCATION), state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null
-      );
+      submitNodeCollector.submitModel(this.model, state, poseStack, LLAMA_SPIT_LOCATION, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
       poseStack.popPose();
       super.submit(state, poseStack, submitNodeCollector, camera);
    }

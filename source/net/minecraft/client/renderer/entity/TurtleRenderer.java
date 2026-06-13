@@ -1,5 +1,7 @@
 package net.minecraft.client.renderer.entity;
 
+import net.minecraft.client.model.animal.turtle.AdultTurtleModel;
+import net.minecraft.client.model.animal.turtle.BabyTurtleModel;
 import net.minecraft.client.model.animal.turtle.TurtleModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.state.TurtleRenderState;
@@ -7,10 +9,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.turtle.Turtle;
 
 public class TurtleRenderer extends AgeableMobRenderer<Turtle, TurtleRenderState, TurtleModel> {
-   private static final Identifier TURTLE_LOCATION = Identifier.withDefaultNamespace("textures/entity/turtle/big_sea_turtle.png");
+   private static final Identifier TURTLE_LOCATION = Identifier.withDefaultNamespace("textures/entity/turtle/turtle.png");
+   private static final Identifier BABY_TURTLE_LOCATION = Identifier.withDefaultNamespace("textures/entity/turtle/turtle_baby.png");
 
    public TurtleRenderer(final EntityRendererProvider.Context context) {
-      super(context, new TurtleModel(context.bakeLayer(ModelLayers.TURTLE)), new TurtleModel(context.bakeLayer(ModelLayers.TURTLE_BABY)), 0.7F);
+      super(context, new AdultTurtleModel(context.bakeLayer(ModelLayers.TURTLE)), new BabyTurtleModel(context.bakeLayer(ModelLayers.TURTLE_BABY)), 0.7F);
    }
 
    protected float getShadowRadius(final TurtleRenderState state) {
@@ -30,6 +33,6 @@ public class TurtleRenderer extends AgeableMobRenderer<Turtle, TurtleRenderState
    }
 
    public Identifier getTextureLocation(final TurtleRenderState state) {
-      return TURTLE_LOCATION;
+      return state.isBaby ? BABY_TURTLE_LOCATION : TURTLE_LOCATION;
    }
 }

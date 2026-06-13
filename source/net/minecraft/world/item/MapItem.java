@@ -277,7 +277,7 @@ public class MapItem extends Item {
       MapItemSavedData data = getSavedData(itemStack, level);
       if (data != null) {
          if (owner instanceof Player player) {
-            data.tickCarriedBy(player, itemStack);
+            data.tickCarriedBy(player, itemStack, null);
          }
 
          if (!data.locked && slot != null && slot.getType() == EquipmentSlot.Type.HAND) {

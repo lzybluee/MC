@@ -8,6 +8,8 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -18,7 +20,7 @@ public class RandomizedIntStateProvider extends BlockStateProvider {
       i -> i.group(
             BlockStateProvider.CODEC.fieldOf("source").forGetter(c -> c.source),
             Codec.STRING.fieldOf("property").forGetter(c -> c.propertyName),
-            IntProvider.CODEC.fieldOf("values").forGetter(c -> c.values)
+            IntProviders.CODEC.fieldOf("values").forGetter(c -> c.values)
          )
          .apply(i, RandomizedIntStateProvider::new)
    );
@@ -34,7 +36,7 @@ public class RandomizedIntStateProvider extends BlockStateProvider {
       this.values = values;
       Collection<Integer> possibleValues = property.getPossibleValues();
 
-      for (int i = values.getMinValue(); i <= values.getMaxValue(); i++) {
+      for (int i = values.minInclusive(); i <= values.maxInclusive(); i++) {
          if (!possibleValues.contains(i)) {
             throw new IllegalArgumentException("Property value out of range: " + property.getName() + ": " + i);
          }
@@ -53,8 +55,8 @@ public class RandomizedIntStateProvider extends BlockStateProvider {
    }
 
    @Override
-   public BlockState getState(final RandomSource random, final BlockPos pos) {
-      BlockState unmodifiedState = this.source.getState(random, pos);
+   public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
+      BlockState unmodifiedState = this.source.getState(level, random, pos);
       if (this.property == null || !unmodifiedState.hasProperty(this.property)) {
          IntegerProperty property = findProperty(unmodifiedState, this.propertyName);
          if (property == null) {

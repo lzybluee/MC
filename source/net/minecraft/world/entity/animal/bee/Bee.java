@@ -153,7 +153,7 @@ public class Bee extends Animal implements FlyingAnimal, NeutralMob {
       super(type, level);
       this.moveControl = new FlyingMoveControl(this, 20, true);
       this.lookControl = new Bee.BeeLookControl(this);
-      this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
+      this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, -1.0F);
       this.setPathfindingMalus(PathType.WATER, -1.0F);
       this.setPathfindingMalus(PathType.WATER_BORDER, 16.0F);
       this.setPathfindingMalus(PathType.COCOA, -1.0F);
@@ -267,7 +267,7 @@ public class Bee extends Animal implements FlyingAnimal, NeutralMob {
    private void spawnFluidParticle(
       final Level level, final double x1, final double x2, final double z1, final double z2, final double y, final ParticleOptions dripParticle
    ) {
-      level.addParticle(dripParticle, Mth.lerp(level.random.nextDouble(), x1, x2), y, Mth.lerp(level.random.nextDouble(), z1, z2), 0.0, 0.0, 0.0);
+      level.addParticle(dripParticle, Mth.lerp(level.getRandom().nextDouble(), x1, x2), y, Mth.lerp(level.getRandom().nextDouble(), z1, z2), 0.0, 0.0, 0.0);
    }
 
    private void pathfindRandomlyTowards(final BlockPos targetPos) {

@@ -12,7 +12,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetPotionFunction extends LootItemConditionalFunction {
-   public static final MapCodec<SetPotionFunction> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<SetPotionFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
       i -> commonFields(i).and(Potion.CODEC.fieldOf("id").forGetter(f -> f.potion)).apply(i, SetPotionFunction::new)
    );
    private final Holder<Potion> potion;
@@ -23,8 +23,8 @@ public class SetPotionFunction extends LootItemConditionalFunction {
    }
 
    @Override
-   public LootItemFunctionType<SetPotionFunction> getType() {
-      return LootItemFunctions.SET_POTION;
+   public MapCodec<SetPotionFunction> codec() {
+      return MAP_CODEC;
    }
 
    @Override

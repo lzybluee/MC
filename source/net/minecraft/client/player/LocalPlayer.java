@@ -20,8 +20,10 @@ import net.minecraft.client.gui.screens.inventory.SignEditScreen;
 import net.minecraft.client.gui.screens.inventory.StructureBlockEditScreen;
 import net.minecraft.client.gui.screens.inventory.TestBlockEditScreen;
 import net.minecraft.client.gui.screens.inventory.TestInstanceBlockEditScreen;
+import net.minecraft.client.gui.screens.options.HasGamemasterPermissionReaction;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.resources.sounds.AmbientSoundHandler;
 import net.minecraft.client.resources.sounds.BiomeAmbientSoundsHandler;
 import net.minecraft.client.resources.sounds.BubbleColumnAmbientSoundHandler;
@@ -51,6 +53,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -116,6 +119,7 @@ public class LocalPlayer extends AbstractClientPlayer {
    private final TickThrottler dropSpamThrottler = new TickThrottler(20, 1280);
    private final List<AmbientSoundHandler> ambientSoundHandlers = Lists.newArrayList();
    private PermissionSet permissions = PermissionSet.NO_PERMISSIONS;
+   private ChatAbilities chatAbilities;
    private double xLast;
    private double yLast;
    private double zLast;
@@ -159,7 +163,8 @@ public class LocalPlayer extends AbstractClientPlayer {
       final StatsCounter stats,
       final ClientRecipeBook recipeBook,
       final Input lastSentInput,
-      final boolean wasSprinting
+      final boolean wasSprinting,
+      final ChatAbilities chatAbilities
    ) {
       super(level, connection.getLocalGameProfile());
       this.minecraft = minecraft;
@@ -171,6 +176,7 @@ public class LocalPlayer extends AbstractClientPlayer {
       this.ambientSoundHandlers.add(new UnderwaterAmbientSoundHandler(this, minecraft.getSoundManager()));
       this.ambientSoundHandlers.add(new BubbleColumnAmbientSoundHandler(this));
       this.ambientSoundHandlers.add(new BiomeAmbientSoundsHandler(this, minecraft.getSoundManager()));
+      this.chatAbilities = chatAbilities;
    }
 
    @Override
@@ -410,13 +416,32 @@ public class LocalPlayer extends AbstractClientPlayer {
       return this.permissions;
    }
 
-   public void setPermissions(final PermissionSet permissions) {
-      this.permissions = permissions;
+   public void setPermissions(final PermissionSet newPermissions) {
+      boolean previousGamemasterPermission = this.permissions.hasPermission(Permissions.COMMANDS_GAMEMASTER);
+      boolean newGamemasterPermission = newPermissions.hasPermission(Permissions.COMMANDS_GAMEMASTER);
+      this.permissions = newPermissions;
+      if (previousGamemasterPermission != newGamemasterPermission && this.minecraft.screen instanceof HasGamemasterPermissionReaction screen) {
+         screen.onGamemasterPermissionChanged(newGamemasterPermission);
+      }
+   }
+
+   public ChatAbilities chatAbilities() {
+      return this.chatAbilities;
+   }
+
+   public void refreshChatAbilities() {
+      this.chatAbilities = this.minecraft.computeChatAbilities();
+      this.minecraft.gui.getChat().setVisibleMessageFilter(this.chatAbilities.visibleMessagesFilter());
    }
 
    @Override
-   public void displayClientMessage(final Component component, final boolean overlayMessage) {
-      this.minecraft.getChatListener().handleSystemMessage(component, overlayMessage);
+   public void sendSystemMessage(final Component message) {
+      this.minecraft.getChatListener().handleSystemMessage(message, true);
+   }
+
+   @Override
+   public void sendOverlayMessage(final Component message) {
+      this.minecraft.getChatListener().handleOverlay(message);
    }
 
    private void moveTowardsClosestSpace(final double x, final double z) {

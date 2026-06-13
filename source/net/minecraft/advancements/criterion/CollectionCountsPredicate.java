@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.function.Predicate;
 
-public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Predicate<Iterable<T>> {
+public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Predicate<Iterable<? extends T>> {
    List<CollectionCountsPredicate.Entry<T, P>> unpack();
 
    static <T, P extends Predicate<T>> Codec<CollectionCountsPredicate<T, P>> codec(final Codec<P> elementCodec) {
@@ -36,7 +36,7 @@ public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Pr
          );
       }
 
-      public boolean test(final Iterable<T> values) {
+      public boolean test(final Iterable<? extends T> values) {
          int count = 0;
 
          for (T value : values) {
@@ -50,7 +50,7 @@ public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Pr
    }
 
    record Multiple<T, P extends Predicate<T>>(List<CollectionCountsPredicate.Entry<T, P>> entries) implements CollectionCountsPredicate<T, P> {
-      public boolean test(final Iterable<T> values) {
+      public boolean test(final Iterable<? extends T> values) {
          for (CollectionCountsPredicate.Entry<T, P> entry : this.entries) {
             if (!entry.test(values)) {
                return false;
@@ -67,7 +67,7 @@ public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Pr
    }
 
    record Single<T, P extends Predicate<T>>(CollectionCountsPredicate.Entry<T, P> entry) implements CollectionCountsPredicate<T, P> {
-      public boolean test(final Iterable<T> values) {
+      public boolean test(final Iterable<? extends T> values) {
          return this.entry.test(values);
       }
 
@@ -78,7 +78,7 @@ public interface CollectionCountsPredicate<T, P extends Predicate<T>> extends Pr
    }
 
    class Zero<T, P extends Predicate<T>> implements CollectionCountsPredicate<T, P> {
-      public boolean test(final Iterable<T> values) {
+      public boolean test(final Iterable<? extends T> values) {
          return true;
       }
 

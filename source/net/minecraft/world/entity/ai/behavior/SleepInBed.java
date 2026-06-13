@@ -21,7 +21,20 @@ public class SleepInBed extends Behavior<LivingEntity> {
    private long nextOkStartTime;
 
    public SleepInBed() {
-      super(ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_PRESENT, MemoryModuleType.LAST_WOKEN, MemoryStatus.REGISTERED));
+      super(
+         ImmutableMap.of(
+            MemoryModuleType.HOME,
+            MemoryStatus.VALUE_PRESENT,
+            MemoryModuleType.LAST_WOKEN,
+            MemoryStatus.REGISTERED,
+            MemoryModuleType.LAST_SLEPT,
+            MemoryStatus.REGISTERED,
+            MemoryModuleType.WALK_TARGET,
+            MemoryStatus.REGISTERED,
+            MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
+            MemoryStatus.REGISTERED
+         )
+      );
    }
 
    @Override
@@ -76,6 +89,9 @@ public class SleepInBed extends Behavior<LivingEntity> {
          }
 
          body.startSleeping(body.getBrain().getMemory(MemoryModuleType.HOME).get().pos());
+         brain.setMemory(MemoryModuleType.LAST_SLEPT, timestamp);
+         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+         brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
       }
    }
 

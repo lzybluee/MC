@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.gui.ComponentPath;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.TabButton;
@@ -58,8 +58,9 @@ public class TabNavigationBar extends AbstractContainerEventHandler implements N
       return new TabNavigationBar.Builder(tabManager, width);
    }
 
-   public void setWidth(final int width) {
+   public void updateWidth(final int width) {
       this.width = width;
+      this.arrangeElements();
    }
 
    @Override
@@ -138,7 +139,7 @@ public class TabNavigationBar extends AbstractContainerEventHandler implements N
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float a) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
       graphics.blit(
          RenderPipelines.GUI_TEXTURED,
          Screen.HEADER_SEPARATOR,
@@ -168,7 +169,7 @@ public class TabNavigationBar extends AbstractContainerEventHandler implements N
 
       while (var6.hasNext()) {
          TabButton value = (TabButton)var6.next();
-         value.render(graphics, mouseX, mouseY, a);
+         value.extractRenderState(graphics, mouseX, mouseY, a);
       }
    }
 

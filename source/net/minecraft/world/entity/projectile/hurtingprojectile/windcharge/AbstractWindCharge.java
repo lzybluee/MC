@@ -69,7 +69,7 @@ public abstract class AbstractWindCharge extends AbstractHurtingProjectile imple
       if (entity instanceof AbstractWindCharge) {
          return false;
       } else {
-         return entity.getType() == EntityType.END_CRYSTAL ? false : super.canHitEntity(entity);
+         return entity.is(EntityType.END_CRYSTAL) ? false : super.canHitEntity(entity);
       }
    }
 

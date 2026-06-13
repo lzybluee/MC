@@ -259,8 +259,8 @@ public class PlaceCommand {
    public static int placeFeature(final CommandSourceStack source, final Holder.Reference<ConfiguredFeature<?, ?>> featureHolder, final BlockPos pos) throws CommandSyntaxException {
       ServerLevel level = source.getLevel();
       ConfiguredFeature<?, ?> feature = featureHolder.value();
-      ChunkPos chunkPos = new ChunkPos(pos);
-      checkLoaded(level, new ChunkPos(chunkPos.x - 1, chunkPos.z - 1), new ChunkPos(chunkPos.x + 1, chunkPos.z + 1));
+      ChunkPos chunkPos = ChunkPos.containing(pos);
+      checkLoaded(level, new ChunkPos(chunkPos.x() - 1, chunkPos.z() - 1), new ChunkPos(chunkPos.x() + 1, chunkPos.z() + 1));
       if (!feature.place(level, level.getChunkSource().getGenerator(), level.getRandom(), pos)) {
          throw ERROR_FEATURE_FAILED.create();
       }
@@ -274,7 +274,7 @@ public class PlaceCommand {
       final CommandSourceStack source, final Holder<StructureTemplatePool> pool, final Identifier target, final int maxDepth, final BlockPos pos
    ) throws CommandSyntaxException {
       ServerLevel level = source.getLevel();
-      ChunkPos chunk = new ChunkPos(pos);
+      ChunkPos chunk = ChunkPos.containing(pos);
       checkLoaded(level, chunk, chunk);
       if (!JigsawPlacement.generateJigsaw(level, pool, target, maxDepth, pos, false)) {
          throw ERROR_JIGSAW_FAILED.create();
@@ -297,7 +297,7 @@ public class PlaceCommand {
          level.getChunkSource().randomState(),
          level.getStructureManager(),
          level.getSeed(),
-         new ChunkPos(pos),
+         ChunkPos.containing(pos),
          0,
          level,
          b -> true
@@ -351,7 +351,7 @@ public class PlaceCommand {
       }
 
       StructureTemplate structureTemplate = maybeStructureTemplate.get();
-      checkLoaded(level, new ChunkPos(pos), new ChunkPos(pos.offset(structureTemplate.getSize())));
+      checkLoaded(level, ChunkPos.containing(pos), ChunkPos.containing(pos.offset(structureTemplate.getSize())));
       StructurePlaceSettings placeSettings = new StructurePlaceSettings().setMirror(mirror).setRotation(rotation).setKnownShape(strict);
       if (integrity < 1.0F) {
          placeSettings.clearProcessors().addProcessor(new BlockRotProcessor(integrity)).setRandom(StructureBlockEntity.createRandom(seed));

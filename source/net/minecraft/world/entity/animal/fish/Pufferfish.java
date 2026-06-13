@@ -33,7 +33,7 @@ public class Pufferfish extends AbstractFish {
    private int deflateTimer;
    private static final TargetingConditions.Selector SCARY_MOB = (target, level) -> target instanceof Player player && player.isCreative()
       ? false
-      : !target.getType().is(EntityTypeTags.NOT_SCARY_FOR_PUFFERFISH);
+      : !target.is(EntityTypeTags.NOT_SCARY_FOR_PUFFERFISH);
    private static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forNonCombat()
       .ignoreInvisibilityTesting()
       .ignoreLineOfSight()

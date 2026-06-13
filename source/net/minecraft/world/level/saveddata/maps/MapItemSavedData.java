@@ -3,7 +3,6 @@ package net.minecraft.world.level.saveddata.maps;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
@@ -23,6 +22,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundMapItemDataPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
@@ -39,10 +39,8 @@ import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
 
 public class MapItemSavedData extends SavedData {
-   private static final Logger LOGGER = LogUtils.getLogger();
    private static final int MAP_SIZE = 128;
    private static final int HALF_MAP_SIZE = 64;
    public static final int MAX_SCALE = 4;
@@ -79,7 +77,7 @@ public class MapItemSavedData extends SavedData {
    private int trackedDecorationCount;
 
    public static SavedDataType<MapItemSavedData> type(final MapId id) {
-      return new SavedDataType<>(id.key(), () -> {
+      return new SavedDataType<>(Identifier.withDefaultNamespace(id.key()), () -> {
          throw new IllegalStateException("Should never create an empty map saved data");
       }, CODEC, DataFixTypes.SAVED_DATA_MAP_DATA);
    }
@@ -170,7 +168,7 @@ public class MapItemSavedData extends SavedData {
       return stack -> stack == mapStack ? true : stack.is(mapStack.getItem()) && Objects.equals(mapId, stack.get(DataComponents.MAP_ID));
    }
 
-   public void tickCarriedBy(final Player tickingPlayer, final ItemStack itemStack) {
+   public void tickCarriedBy(final Player tickingPlayer, final ItemStack itemStack, final @Nullable ItemFrame placedInFrame) {
       if (!this.carriedByPlayers.containsKey(tickingPlayer)) {
          MapItemSavedData.HoldingPlayer holdingPlayer = new MapItemSavedData.HoldingPlayer(tickingPlayer);
          this.carriedByPlayers.put(tickingPlayer, holdingPlayer);
@@ -186,8 +184,8 @@ public class MapItemSavedData extends SavedData {
          MapItemSavedData.HoldingPlayer otherHoldingPlayer = this.carriedBy.get(i);
          Player otherPlayer = otherHoldingPlayer.player;
          String otherPlayerName = otherPlayer.getPlainTextName();
-         if (!otherPlayer.isRemoved() && (otherPlayer.getInventory().contains(mapMatcher) || itemStack.isFramed())) {
-            if (!itemStack.isFramed() && otherPlayer.level().dimension() == this.dimension && this.trackingPosition) {
+         if (!otherPlayer.isRemoved() && (placedInFrame != null || otherPlayer.getInventory().contains(mapMatcher))) {
+            if (placedInFrame == null && otherPlayer.level().dimension() == this.dimension && this.trackingPosition) {
                this.addDecoration(
                   MapDecorationTypes.PLAYER, otherPlayer.level(), otherPlayerName, otherPlayer.getX(), otherPlayer.getZ(), otherPlayer.getYRot(), null
                );
@@ -203,22 +201,21 @@ public class MapItemSavedData extends SavedData {
          }
       }
 
-      if (itemStack.isFramed() && this.trackingPosition) {
-         ItemFrame frame = itemStack.getFrame();
-         BlockPos pos = frame.getPos();
+      if (placedInFrame != null && this.trackingPosition) {
+         BlockPos pos = placedInFrame.getPos();
          MapFrame existingFrame = this.frameMarkers.get(MapFrame.frameId(pos));
-         if (existingFrame != null && frame.getId() != existingFrame.entityId() && this.frameMarkers.containsKey(existingFrame.getId())) {
+         if (existingFrame != null && placedInFrame.getId() != existingFrame.entityId() && this.frameMarkers.containsKey(existingFrame.getId())) {
             this.removeDecoration(getFrameKey(existingFrame.entityId()));
          }
 
-         MapFrame mapFrame = new MapFrame(pos, frame.getDirection().get2DDataValue() * 90, frame.getId());
+         MapFrame mapFrame = new MapFrame(pos, placedInFrame.getDirection().get2DDataValue() * 90, placedInFrame.getId());
          this.addDecoration(
             MapDecorationTypes.FRAME,
             tickingPlayer.level(),
-            getFrameKey(frame.getId()),
+            getFrameKey(placedInFrame.getId()),
             pos.getX(),
             pos.getZ(),
-            frame.getDirection().get2DDataValue() * 90,
+            placedInFrame.getDirection().get2DDataValue() * 90,
             null
          );
          MapFrame oldFrame = this.frameMarkers.put(mapFrame.getId(), mapFrame);
@@ -491,7 +488,7 @@ public class MapItemSavedData extends SavedData {
    }
 
    public boolean isTrackedCountOverLimit(final int limit) {
-      return this.trackedDecorationCount >= limit;
+      return this.trackedDecorationCount > limit;
    }
 
    private static String getFrameKey(final int id) {

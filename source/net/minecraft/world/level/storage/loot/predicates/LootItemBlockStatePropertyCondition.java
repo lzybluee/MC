@@ -15,7 +15,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record LootItemBlockStatePropertyCondition(Holder<Block> block, Optional<StatePropertiesPredicate> properties) implements LootItemCondition {
-   public static final MapCodec<LootItemBlockStatePropertyCondition> CODEC = RecordCodecBuilder.mapCodec(
+   public static final MapCodec<LootItemBlockStatePropertyCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
                BuiltInRegistries.BLOCK.holderByNameCodec().fieldOf("block").forGetter(LootItemBlockStatePropertyCondition::block),
                StatePropertiesPredicate.CODEC.optionalFieldOf("properties").forGetter(LootItemBlockStatePropertyCondition::properties)
@@ -32,8 +32,8 @@ public record LootItemBlockStatePropertyCondition(Holder<Block> block, Optional<
    }
 
    @Override
-   public LootItemConditionType getType() {
-      return LootItemConditions.BLOCK_STATE_PROPERTY;
+   public MapCodec<LootItemBlockStatePropertyCondition> codec() {
+      return MAP_CODEC;
    }
 
    @Override

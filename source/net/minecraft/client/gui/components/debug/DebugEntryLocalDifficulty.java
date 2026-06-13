@@ -25,15 +25,11 @@ public class DebugEntryLocalDifficulty implements DebugScreenEntry {
          if (serverLevel.isInsideBuildHeight(feetPos.getY())) {
             float moonBrightness = serverLevel.getMoonBrightness(feetPos);
             long localTime = serverChunk.getInhabitedTime();
-            DifficultyInstance localDifficulty = new DifficultyInstance(serverLevel.getDifficulty(), serverLevel.getDayTime(), localTime, moonBrightness);
+            DifficultyInstance localDifficulty = new DifficultyInstance(
+               serverLevel.getDifficulty(), serverLevel.getOverworldClockTime(), localTime, moonBrightness
+            );
             displayer.addLine(
-               String.format(
-                  Locale.ROOT,
-                  "Local Difficulty: %.2f // %.2f (Day %d)",
-                  localDifficulty.getEffectiveDifficulty(),
-                  localDifficulty.getSpecialMultiplier(),
-                  serverLevel.getDayCount()
-               )
+               String.format(Locale.ROOT, "Local Difficulty: %.2f // %.2f", localDifficulty.getEffectiveDifficulty(), localDifficulty.getSpecialMultiplier())
             );
          }
       }

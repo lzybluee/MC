@@ -12,6 +12,7 @@ import net.minecraft.world.item.DyeColor;
 
 public class WolfCollarLayer extends RenderLayer<WolfRenderState, WolfModel> {
    private static final Identifier WOLF_COLLAR_LOCATION = Identifier.withDefaultNamespace("textures/entity/wolf/wolf_collar.png");
+   private static final Identifier WOLF_BABY_COLLAR_LOCATION = Identifier.withDefaultNamespace("textures/entity/wolf/wolf_collar_baby.png");
 
    public WolfCollarLayer(final RenderLayerParent<WolfRenderState, WolfModel> renderer) {
       super(renderer);
@@ -28,12 +29,13 @@ public class WolfCollarLayer extends RenderLayer<WolfRenderState, WolfModel> {
       DyeColor collarColor = state.collarColor;
       if (collarColor != null && !state.isInvisible) {
          int color = collarColor.getTextureDiffuseColor();
+         Identifier collarLocation = state.isBaby ? WOLF_BABY_COLLAR_LOCATION : WOLF_COLLAR_LOCATION;
          submitNodeCollector.order(1)
             .submitModel(
                this.getParentModel(),
                state,
                poseStack,
-               RenderTypes.entityCutoutNoCull(WOLF_COLLAR_LOCATION),
+               RenderTypes.entityCutout(collarLocation),
                lightCoords,
                OverlayTexture.NO_OVERLAY,
                color,

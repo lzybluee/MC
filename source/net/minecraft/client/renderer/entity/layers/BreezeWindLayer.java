@@ -30,8 +30,7 @@ public class BreezeWindLayer extends RenderLayer<BreezeRenderState, BreezeModel>
       final float xRot
    ) {
       RenderType renderType = RenderTypes.breezeWind(TEXTURE_LOCATION, this.xOffset(state.ageInTicks) % 1.0F, 0.0F);
-      submitNodeCollector.order(1)
-         .submitModel(this.model, state, poseStack, renderType, lightCoords, OverlayTexture.NO_OVERLAY, -1, null, state.outlineColor, null);
+      submitNodeCollector.order(1).submitModel(this.model, state, poseStack, renderType, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
    }
 
    private float xOffset(final float t) {

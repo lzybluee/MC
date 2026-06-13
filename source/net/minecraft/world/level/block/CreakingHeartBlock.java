@@ -182,7 +182,7 @@ public class CreakingHeartBlock extends BaseEntityBlock {
 
    private void tryAwardExperience(final Player player, final BlockState state, final Level level, final BlockPos pos) {
       if (!player.preventsBlockDrops() && !player.isSpectator() && state.getValue(NATURAL) && level instanceof ServerLevel serverLevel) {
-         this.popExperience(serverLevel, pos, level.random.nextIntBetweenInclusive(20, 24));
+         this.popExperience(serverLevel, pos, level.getRandom().nextIntBetweenInclusive(20, 24));
       }
    }
 

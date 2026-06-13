@@ -15,6 +15,7 @@ import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.advancements.Criterion;
+import net.minecraft.advancements.criterion.BredAnimalsTrigger;
 import net.minecraft.advancements.criterion.EnterBlockTrigger;
 import net.minecraft.advancements.criterion.ImpossibleTrigger;
 import net.minecraft.advancements.criterion.InventoryChangeTrigger;
@@ -39,13 +40,15 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.item.HoneycombItem;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
+import net.minecraft.world.item.crafting.BannerDuplicateRecipe;
 import net.minecraft.world.item.crafting.BlastingRecipe;
+import net.minecraft.world.item.crafting.CookingBookCategory;
+import net.minecraft.world.item.crafting.DyeRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.item.equipment.trim.TrimPattern;
 import net.minecraft.world.level.ItemLike;
@@ -58,44 +61,131 @@ public abstract class RecipeProvider {
    protected final HolderLookup.Provider registries;
    private final HolderGetter<Item> items;
    protected final RecipeOutput output;
-   private static final Map<BlockFamily.Variant, RecipeProvider.FamilyRecipeProvider> SHAPE_BUILDERS = ImmutableMap.builder()
-      .put(BlockFamily.Variant.BUTTON, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.buttonBuilder(result, Ingredient.of(base)))
+   private static final Map<BlockFamily.Variant, RecipeProvider.FamilyCraftingRecipeProvider> SHAPE_BUILDERS = ImmutableMap.builder()
+      .put(
+         BlockFamily.Variant.BUTTON, (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.buttonBuilder(result, Ingredient.of(base))
+      )
       .put(
          BlockFamily.Variant.CHISELED,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.chiseledBuilder(RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.chiseledBuilder(
+            RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base)
+         )
       )
       .put(
          BlockFamily.Variant.CUT,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.cutBuilder(RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.cutBuilder(RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base))
       )
-      .put(BlockFamily.Variant.DOOR, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.doorBuilder(result, Ingredient.of(base)))
-      .put(BlockFamily.Variant.CUSTOM_FENCE, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.fenceBuilder(result, Ingredient.of(base)))
-      .put(BlockFamily.Variant.FENCE, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.fenceBuilder(result, Ingredient.of(base)))
+      .put(BlockFamily.Variant.DOOR, (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.doorBuilder(result, Ingredient.of(base)))
+      .put(
+         BlockFamily.Variant.CUSTOM_FENCE,
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.fenceBuilder(result, Ingredient.of(base))
+      )
+      .put(BlockFamily.Variant.FENCE, (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.fenceBuilder(result, Ingredient.of(base)))
       .put(
          BlockFamily.Variant.CUSTOM_FENCE_GATE,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.fenceGateBuilder(result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.fenceGateBuilder(result, Ingredient.of(base))
       )
       .put(
-         BlockFamily.Variant.FENCE_GATE, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.fenceGateBuilder(result, Ingredient.of(base))
+         BlockFamily.Variant.FENCE_GATE,
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.fenceGateBuilder(result, Ingredient.of(base))
       )
-      .put(BlockFamily.Variant.SIGN, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.signBuilder(result, Ingredient.of(base)))
+      .put(BlockFamily.Variant.SIGN, (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.signBuilder(result, Ingredient.of(base)))
       .put(
          BlockFamily.Variant.SLAB,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.slabBuilder(RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.slabBuilder(
+            RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base)
+         )
       )
-      .put(BlockFamily.Variant.STAIRS, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.stairBuilder(result, Ingredient.of(base)))
+      .put(
+         BlockFamily.Variant.STAIRS, (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.stairBuilder(result, Ingredient.of(base))
+      )
       .put(
          BlockFamily.Variant.PRESSURE_PLATE,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.pressurePlateBuilder(RecipeCategory.REDSTONE, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.pressurePlateBuilder(
+            RecipeCategory.REDSTONE, result, Ingredient.of(base)
+         )
       )
       .put(
          BlockFamily.Variant.POLISHED,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.polishedBuilder(RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.polishedBuilder(
+            RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base)
+         )
       )
-      .put(BlockFamily.Variant.TRAPDOOR, (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.trapdoorBuilder(result, Ingredient.of(base)))
+      .put(
+         BlockFamily.Variant.TRAPDOOR,
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.trapdoorBuilder(result, Ingredient.of(base))
+      )
       .put(
          BlockFamily.Variant.WALL,
-         (RecipeProvider.FamilyRecipeProvider)(context, result, base) -> context.wallBuilder(RecipeCategory.DECORATIONS, result, Ingredient.of(base))
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.wallBuilder(RecipeCategory.DECORATIONS, result, Ingredient.of(base))
+      )
+      .put(
+         BlockFamily.Variant.BRICKS,
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.bricksBuilder(
+            RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base)
+         )
+      )
+      .put(
+         BlockFamily.Variant.TILES,
+         (RecipeProvider.FamilyCraftingRecipeProvider)(context, result, base) -> context.tilesBuilder(
+            RecipeCategory.BUILDING_BLOCKS, result, Ingredient.of(base)
+         )
+      )
+      .build();
+   private static final Map<BlockFamily.Variant, RecipeProvider.FamilyStonecutterRecipeProvider> STONECUTTER_RECIPE_BUILDERS = ImmutableMap.builder()
+      .put(
+         BlockFamily.Variant.SLAB,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 2
+         )
+      )
+      .put(
+         BlockFamily.Variant.STAIRS,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.BRICKS,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.WALL,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.DECORATIONS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.CHISELED,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.POLISHED,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.CUT,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.TILES,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
+      )
+      .put(
+         BlockFamily.Variant.COBBLED,
+         (RecipeProvider.FamilyStonecutterRecipeProvider)(context, result, base) -> context.stonecutterResultFromBase(
+            RecipeCategory.BUILDING_BLOCKS, result, base, 1
+         )
       )
       .build();
 
@@ -108,7 +198,7 @@ public abstract class RecipeProvider {
    protected abstract void buildRecipes();
 
    protected void generateForEnabledBlockFamilies(final FeatureFlagSet flagSet) {
-      BlockFamilies.getAllFamilies().filter(BlockFamily::shouldGenerateRecipe).forEach(family -> this.generateRecipes(family, flagSet));
+      BlockFamilies.getAllFamilies().forEach(family -> this.generateRecipes(family, flagSet));
    }
 
    protected void oneToOneConversionRecipe(final ItemLike product, final ItemLike resource, final @Nullable String group) {
@@ -124,22 +214,34 @@ public abstract class RecipeProvider {
    }
 
    protected void oreSmelting(
-      final List<ItemLike> smeltables, final RecipeCategory category, final ItemLike result, final float experience, final int cookingTime, final String group
+      final List<ItemLike> smeltables,
+      final RecipeCategory craftingCategory,
+      final CookingBookCategory cookingCategory,
+      final ItemLike result,
+      final float experience,
+      final int cookingTime,
+      final String group
    ) {
-      this.oreCooking(RecipeSerializer.SMELTING_RECIPE, SmeltingRecipe::new, smeltables, category, result, experience, cookingTime, group, "_from_smelting");
+      this.oreCooking(SmeltingRecipe::new, smeltables, craftingCategory, cookingCategory, result, experience, cookingTime, group, "_from_smelting");
    }
 
    protected void oreBlasting(
-      final List<ItemLike> smeltables, final RecipeCategory category, final ItemLike result, final float experience, final int cookingTime, final String group
+      final List<ItemLike> smeltables,
+      final RecipeCategory craftingCategory,
+      final CookingBookCategory cookingCategory,
+      final ItemLike result,
+      final float experience,
+      final int cookingTime,
+      final String group
    ) {
-      this.oreCooking(RecipeSerializer.BLASTING_RECIPE, BlastingRecipe::new, smeltables, category, result, experience, cookingTime, group, "_from_blasting");
+      this.oreCooking(BlastingRecipe::new, smeltables, craftingCategory, cookingCategory, result, experience, cookingTime, group, "_from_blasting");
    }
 
    private <T extends AbstractCookingRecipe> void oreCooking(
-      final RecipeSerializer<T> serializer,
       final AbstractCookingRecipe.Factory<T> factory,
       final List<ItemLike> smeltables,
-      final RecipeCategory category,
+      final RecipeCategory craftingCategory,
+      final CookingBookCategory cookingCategory,
       final ItemLike result,
       final float experience,
       final int cookingTime,
@@ -147,7 +249,7 @@ public abstract class RecipeProvider {
       final String fromDesc
    ) {
       for (ItemLike item : smeltables) {
-         SimpleCookingRecipeBuilder.generic(Ingredient.of(item), category, result, experience, cookingTime, serializer, factory)
+         SimpleCookingRecipeBuilder.generic(Ingredient.of(item), craftingCategory, cookingCategory, result, experience, cookingTime, factory)
             .group(group)
             .unlockedBy(getHasName(item), this.has(item))
             .save(this.output, getItemName(result) + fromDesc + "_" + getItemName(item));
@@ -354,6 +456,8 @@ public abstract class RecipeProvider {
          .group("banner")
          .unlockedBy(getHasName(wool), this.has(wool))
          .save(this.output);
+      SpecialRecipeBuilder.special(() -> new BannerDuplicateRecipe(Ingredient.of(result), new ItemStackTemplate(result.asItem())))
+         .save(this.output, getItemName(result) + "_duplicate");
    }
 
    protected void stainedGlassFromGlassAndDye(final ItemLike result, final ItemLike dye) {
@@ -455,6 +559,14 @@ public abstract class RecipeProvider {
       return this.shaped(category, result, 6).define('#', base).pattern("###").pattern("###");
    }
 
+   private RecipeBuilder bricksBuilder(final RecipeCategory category, final ItemLike result, final Ingredient base) {
+      return this.shaped(category, result, 4).define('#', base).pattern("##").pattern("##");
+   }
+
+   private RecipeBuilder tilesBuilder(final RecipeCategory category, final ItemLike result, final Ingredient base) {
+      return this.shaped(category, result, 4).define('#', base).pattern("##").pattern("##");
+   }
+
    protected void polished(final RecipeCategory category, final ItemLike result, final ItemLike base) {
       this.polishedBuilder(category, result, Ingredient.of(base)).unlockedBy(getHasName(base), this.has(base)).save(this.output);
    }
@@ -494,7 +606,7 @@ public abstract class RecipeProvider {
    }
 
    private void smeltingResultFromBase(final ItemLike result, final ItemLike base) {
-      SimpleCookingRecipeBuilder.smelting(Ingredient.of(base), RecipeCategory.BUILDING_BLOCKS, result, 0.1F, 200)
+      SimpleCookingRecipeBuilder.smelting(Ingredient.of(base), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, result, 0.1F, 200)
          .unlockedBy(getHasName(base), this.has(base))
          .save(this.output);
    }
@@ -582,30 +694,27 @@ public abstract class RecipeProvider {
          .save(this.output);
    }
 
-   protected <T extends AbstractCookingRecipe> void cookRecipes(
-      final String source, final RecipeSerializer<T> type, final AbstractCookingRecipe.Factory<T> factory, final int cookingTime
-   ) {
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.BEEF, Items.COOKED_BEEF, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.CHICKEN, Items.COOKED_CHICKEN, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.COD, Items.COOKED_COD, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.KELP, Items.DRIED_KELP, 0.1F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.SALMON, Items.COOKED_SALMON, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.MUTTON, Items.COOKED_MUTTON, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.PORKCHOP, Items.COOKED_PORKCHOP, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.POTATO, Items.BAKED_POTATO, 0.35F);
-      this.simpleCookingRecipe(source, type, factory, cookingTime, Items.RABBIT, Items.COOKED_RABBIT, 0.35F);
+   protected <T extends AbstractCookingRecipe> void cookRecipes(final String source, final AbstractCookingRecipe.Factory<T> factory, final int cookingTime) {
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.BEEF, Items.COOKED_BEEF, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.CHICKEN, Items.COOKED_CHICKEN, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.COD, Items.COOKED_COD, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.KELP, Items.DRIED_KELP, 0.1F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.SALMON, Items.COOKED_SALMON, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.MUTTON, Items.COOKED_MUTTON, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.PORKCHOP, Items.COOKED_PORKCHOP, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.POTATO, Items.BAKED_POTATO, 0.35F);
+      this.simpleCookingRecipe(source, factory, cookingTime, Items.RABBIT, Items.COOKED_RABBIT, 0.35F);
    }
 
    private <T extends AbstractCookingRecipe> void simpleCookingRecipe(
       final String source,
-      final RecipeSerializer<T> type,
       final AbstractCookingRecipe.Factory<T> factory,
       final int cookingTime,
       final ItemLike base,
       final ItemLike result,
       final float experience
    ) {
-      SimpleCookingRecipeBuilder.generic(Ingredient.of(base), RecipeCategory.FOOD, result, experience, cookingTime, type, factory)
+      SimpleCookingRecipeBuilder.generic(Ingredient.of(base), RecipeCategory.FOOD, CookingBookCategory.FOOD, result, experience, cookingTime, factory)
          .unlockedBy(getHasName(base), this.has(base))
          .save(this.output, getItemName(result) + "_from_" + source);
    }
@@ -666,10 +775,8 @@ public abstract class RecipeProvider {
    }
 
    protected void suspiciousStew(final Item item, final SuspiciousEffectHolder effectHolder) {
-      ItemStack stew = new ItemStack(
-         Items.SUSPICIOUS_STEW.builtInRegistryHolder(),
-         1,
-         DataComponentPatch.builder().set(DataComponents.SUSPICIOUS_STEW_EFFECTS, effectHolder.getSuspiciousEffects()).build()
+      ItemStackTemplate stew = new ItemStackTemplate(
+         Items.SUSPICIOUS_STEW, DataComponentPatch.builder().set(DataComponents.SUSPICIOUS_STEW_EFFECTS, effectHolder.getSuspiciousEffects()).build()
       );
       this.shapeless(RecipeCategory.FOOD, stew)
          .requires(Items.BOWL)
@@ -678,33 +785,81 @@ public abstract class RecipeProvider {
          .requires(item)
          .group("suspicious_stew")
          .unlockedBy(getHasName(item), this.has(item))
-         .save(this.output, getItemName(stew.getItem()) + "_from_" + getItemName(item));
+         .save(this.output, getItemName(stew.item().value()) + "_from_" + getItemName(item));
+   }
+
+   protected void dyedItem(final Item target, final String group) {
+      CustomCraftingRecipeBuilder.customCrafting(
+            RecipeCategory.MISC,
+            (commonInfo, bookInfo) -> new DyeRecipe(commonInfo, bookInfo, Ingredient.of(target), this.tag(ItemTags.DYES), new ItemStackTemplate(target))
+         )
+         .unlockedBy(getHasName(target), this.has(target))
+         .group(group)
+         .save(this.output, getItemName(target) + "_dyed");
+   }
+
+   protected void dyedShulkerBoxRecipe(final Item dye, final Item dyedResult) {
+      TransmuteRecipeBuilder.transmute(RecipeCategory.DECORATIONS, this.tag(ItemTags.SHULKER_BOXES), Ingredient.of(dye), dyedResult)
+         .group("shulker_box_dye")
+         .unlockedBy("has_shulker_box", this.has(ItemTags.SHULKER_BOXES))
+         .save(this.output);
+   }
+
+   protected void dyedBundleRecipe(final Item dye, final Item dyedResult) {
+      TransmuteRecipeBuilder.transmute(RecipeCategory.TOOLS, this.tag(ItemTags.BUNDLES), Ingredient.of(dye), dyedResult)
+         .group("bundle_dye")
+         .unlockedBy(getHasName(dye), this.has(dye))
+         .save(this.output);
    }
 
    protected void generateRecipes(final BlockFamily family, final FeatureFlagSet flagSet) {
-      family.getVariants()
-         .forEach(
-            (variant, result) -> {
-               if (result.requiredFeatures().isSubsetOf(flagSet)) {
-                  RecipeProvider.FamilyRecipeProvider recipeFunction = SHAPE_BUILDERS.get(variant);
-                  ItemLike base = this.getBaseBlock(family, variant);
-                  if (recipeFunction != null) {
-                     RecipeBuilder builder = recipeFunction.create(this, result, base);
-                     family.getRecipeGroupPrefix()
-                        .ifPresent(prefix -> builder.group(prefix + (variant == BlockFamily.Variant.CUT ? "" : "_" + variant.getRecipeGroup())));
-                     builder.unlockedBy(family.getRecipeUnlockedBy().orElseGet(() -> getHasName(base)), this.has(base));
-                     builder.save(this.output);
-                  }
-
-                  if (variant == BlockFamily.Variant.CRACKED) {
-                     this.smeltingResultFromBase(result, base);
-                  }
+      family.getVariants().forEach((variant, result) -> {
+         if (result.requiredFeatures().isSubsetOf(flagSet)) {
+            if (family.shouldGenerateCraftingRecipe()) {
+               ItemLike base = this.getBaseBlockForCrafting(family, variant);
+               this.generateCraftingRecipe(family, variant, result, base);
+               if (variant == BlockFamily.Variant.CRACKED) {
+                  this.smeltingResultFromBase(result, base);
                }
             }
-         );
+
+            if (family.shouldGenerateStonecutterRecipe()) {
+               Block base = family.getBaseBlock();
+               this.generateStonecutterRecipe(family, variant, base);
+            }
+         }
+      });
    }
 
-   private Block getBaseBlock(final BlockFamily family, final BlockFamily.Variant variant) {
+   private void generateCraftingRecipe(final BlockFamily family, final BlockFamily.Variant variant, final Block result, final ItemLike base) {
+      RecipeProvider.FamilyCraftingRecipeProvider recipeFunction = SHAPE_BUILDERS.get(variant);
+      if (recipeFunction != null) {
+         RecipeBuilder builder = recipeFunction.create(this, result, base);
+         family.getRecipeGroupPrefix().ifPresent(prefix -> builder.group(prefix + (variant == BlockFamily.Variant.CUT ? "" : "_" + variant.getRecipeGroup())));
+         builder.unlockedBy(family.getRecipeUnlockedBy().orElseGet(() -> getHasName(base)), this.has(base));
+         builder.save(this.output);
+      }
+   }
+
+   private void generateStonecutterRecipe(final BlockFamily family, final BlockFamily.Variant variant, final Block base) {
+      RecipeProvider.FamilyStonecutterRecipeProvider recipeFunction = STONECUTTER_RECIPE_BUILDERS.get(variant);
+      if (recipeFunction != null) {
+         recipeFunction.create(this, family.get(variant), base);
+      }
+
+      if (variant == BlockFamily.Variant.POLISHED
+         || variant == BlockFamily.Variant.CUT
+         || variant == BlockFamily.Variant.BRICKS
+         || variant == BlockFamily.Variant.TILES
+         || variant == BlockFamily.Variant.COBBLED) {
+         BlockFamily childVariantFamily = BlockFamilies.getFamily(family.get(variant));
+         if (childVariantFamily != null) {
+            childVariantFamily.getVariants().forEach((childVariant, r) -> this.generateStonecutterRecipe(childVariantFamily, childVariant, base));
+         }
+      }
+   }
+
+   private Block getBaseBlockForCrafting(final BlockFamily family, final BlockFamily.Variant variant) {
       if (variant == BlockFamily.Variant.CHISELED) {
          if (!family.getVariants().containsKey(BlockFamily.Variant.SLAB)) {
             throw new IllegalStateException("Slab is not defined for the family.");
@@ -719,6 +874,11 @@ public abstract class RecipeProvider {
    private static Criterion<EnterBlockTrigger.TriggerInstance> insideOf(final Block block) {
       return CriteriaTriggers.ENTER_BLOCK
          .createCriterion(new EnterBlockTrigger.TriggerInstance(Optional.empty(), Optional.of(block.builtInRegistryHolder()), Optional.empty()));
+   }
+
+   protected Criterion<BredAnimalsTrigger.TriggerInstance> bredAnimal() {
+      return CriteriaTriggers.BRED_ANIMALS
+         .createCriterion(new BredAnimalsTrigger.TriggerInstance(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
    }
 
    private Criterion<InventoryChangeTrigger.TriggerInstance> has(final MinMaxBounds.Ints count, final ItemLike item) {
@@ -778,7 +938,7 @@ public abstract class RecipeProvider {
       return ShapedRecipeBuilder.shaped(this.items, category, item, count);
    }
 
-   protected ShapelessRecipeBuilder shapeless(final RecipeCategory category, final ItemStack result) {
+   protected ShapelessRecipeBuilder shapeless(final RecipeCategory category, final ItemStackTemplate result) {
       return ShapelessRecipeBuilder.shapeless(this.items, category, result);
    }
 
@@ -791,8 +951,13 @@ public abstract class RecipeProvider {
    }
 
    @FunctionalInterface
-   private interface FamilyRecipeProvider {
+   private interface FamilyCraftingRecipeProvider {
       RecipeBuilder create(RecipeProvider context, ItemLike result, ItemLike base);
+   }
+
+   @FunctionalInterface
+   private interface FamilyStonecutterRecipeProvider {
+      void create(RecipeProvider context, ItemLike result, ItemLike base);
    }
 
    protected abstract static class Runner implements DataProvider {

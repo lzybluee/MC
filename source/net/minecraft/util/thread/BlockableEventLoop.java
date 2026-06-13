@@ -13,22 +13,27 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.annotation.CheckReturnValue;
+import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.profiling.metrics.MetricCategory;
 import net.minecraft.util.profiling.metrics.MetricSampler;
 import net.minecraft.util.profiling.metrics.MetricsRegistry;
 import net.minecraft.util.profiling.metrics.ProfilerMeasured;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public abstract class BlockableEventLoop<R extends Runnable> implements Executor, TaskScheduler<R>, ProfilerMeasured {
    public static final long BLOCK_TIME_NANOS = 100000L;
+   private static volatile @Nullable Supplier<CrashReport> delayedCrash;
+   private final boolean propagatesCrashes;
    private final String name;
    private static final Logger LOGGER = LogUtils.getLogger();
    private final Queue<R> pendingRunnables = Queues.newConcurrentLinkedQueue();
    private int blockingCount;
 
-   protected BlockableEventLoop(final String name) {
+   protected BlockableEventLoop(final String name, final boolean propagatesCrashes) {
+      this.propagatesCrashes = propagatesCrashes;
       this.name = name;
       MetricsRegistry.INSTANCE.add(this);
    }
@@ -117,6 +122,7 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Executor
    }
 
    protected boolean pollTask() {
+      this.throwDelayedException();
       R task = this.pendingRunnables.peek();
       if (task == null) {
          return false;
@@ -185,5 +191,31 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Executor
 
    public static boolean isNonRecoverable(final Throwable t) {
       return t instanceof ReportedException r ? isNonRecoverable(r.getCause()) : t instanceof OutOfMemoryError || t instanceof StackOverflowError;
+   }
+
+   private void throwDelayedException() {
+      if (this.propagatesCrashes) {
+         Supplier<CrashReport> delayedCrash = BlockableEventLoop.delayedCrash;
+         if (delayedCrash != null) {
+            throw new ReportedException(delayedCrash.get());
+         }
+      }
+   }
+
+   protected boolean hasDelayedCrash() {
+      return delayedCrash != null;
+   }
+
+   public void delayCrash(final CrashReport crashReport) {
+      delayedCrash = () -> crashReport;
+   }
+
+   public static synchronized void relayDelayCrash(final CrashReport crashReport) {
+      Supplier<CrashReport> delayedCrash = BlockableEventLoop.delayedCrash;
+      if (delayedCrash == null) {
+         BlockableEventLoop.delayedCrash = () -> crashReport;
+      } else {
+         delayedCrash.get().getException().addSuppressed(crashReport.getException());
+      }
    }
 }

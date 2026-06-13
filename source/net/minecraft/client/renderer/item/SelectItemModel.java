@@ -1,5 +1,6 @@
 package net.minecraft.client.renderer.item;
 
+import com.mojang.math.Transformation;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -17,6 +18,7 @@ import net.minecraft.util.RegistryContextSwapper;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 
 public class SelectItemModel<T> implements ItemModel {
@@ -40,15 +42,12 @@ public class SelectItemModel<T> implements ItemModel {
    ) {
       output.appendModelIdentityElement(this);
       T value = this.property.get(item, level, owner == null ? null : owner.asLivingEntity(), seed, displayContext);
-      ItemModel model = this.models.get(value, level);
-      if (model != null) {
-         model.update(output, item, resolver, displayContext, level, owner, seed);
-      }
+      this.models.get(value, level).update(output, item, resolver, displayContext, level, owner, seed);
    }
 
    @FunctionalInterface
    public interface ModelSelector<T> {
-      @Nullable ItemModel get(@Nullable T value, @Nullable ClientLevel context);
+      ItemModel get(@Nullable T value, @Nullable ClientLevel context);
    }
 
    public record SwitchCase<T>(List<T> values, ItemModel.Unbaked model) {
@@ -63,9 +62,11 @@ public class SelectItemModel<T> implements ItemModel {
       }
    }
 
-   public record Unbaked(SelectItemModel.UnbakedSwitch<?, ?> unbakedSwitch, Optional<ItemModel.Unbaked> fallback) implements ItemModel.Unbaked {
+   public record Unbaked(Optional<Transformation> transformation, SelectItemModel.UnbakedSwitch<?, ?> unbakedSwitch, Optional<ItemModel.Unbaked> fallback)
+      implements ItemModel.Unbaked {
       public static final MapCodec<SelectItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
          i -> i.group(
+               Transformation.EXTENDED_CODEC.optionalFieldOf("transformation").forGetter(SelectItemModel.Unbaked::transformation),
                SelectItemModel.UnbakedSwitch.MAP_CODEC.forGetter(SelectItemModel.Unbaked::unbakedSwitch),
                ItemModels.CODEC.optionalFieldOf("fallback").forGetter(SelectItemModel.Unbaked::fallback)
             )
@@ -78,9 +79,10 @@ public class SelectItemModel<T> implements ItemModel {
       }
 
       @Override
-      public ItemModel bake(final ItemModel.BakingContext context) {
-         ItemModel bakedFallback = this.fallback.<ItemModel>map(m -> m.bake(context)).orElse(context.missingItemModel());
-         return this.unbakedSwitch.bake(context, bakedFallback);
+      public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation) {
+         Matrix4fc childTransform = Transformation.compose(transformation, this.transformation);
+         ItemModel bakedFallback = this.fallback.<ItemModel>map(m -> m.bake(context, childTransform)).orElseGet(() -> context.missingItemModel(childTransform));
+         return this.unbakedSwitch.bake(context, childTransform, bakedFallback);
       }
 
       @Override
@@ -94,12 +96,12 @@ public class SelectItemModel<T> implements ItemModel {
       public static final MapCodec<SelectItemModel.UnbakedSwitch<?, ?>> MAP_CODEC = SelectItemModelProperties.CODEC
          .dispatchMap("property", unbaked -> unbaked.property().type(), SelectItemModelProperty.Type::switchCodec);
 
-      public ItemModel bake(final ItemModel.BakingContext context, final ItemModel fallback) {
+      public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation, final ItemModel fallback) {
          Object2ObjectMap<T, ItemModel> bakedModels = new Object2ObjectOpenHashMap();
 
          for (SelectItemModel.SwitchCase<T> c : this.cases) {
             ItemModel.Unbaked caseModel = c.model;
-            ItemModel bakedCaseModel = caseModel.bake(context);
+            ItemModel bakedCaseModel = caseModel.bake(context, transformation);
 
             for (T value : c.values) {
                bakedModels.put(value, bakedCaseModel);
@@ -114,7 +116,7 @@ public class SelectItemModel<T> implements ItemModel {
          final Object2ObjectMap<T, ItemModel> originalModels, final @Nullable RegistryContextSwapper registrySwapper
       ) {
          if (registrySwapper == null) {
-            return (value, context) -> (ItemModel)originalModels.get(value);
+            return (value, var2) -> (ItemModel)originalModels.get(value);
          }
 
          ItemModel defaultModel = (ItemModel)originalModels.defaultReturnValue();

@@ -1,9 +1,8 @@
 package net.minecraft.world.entity.monster;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -21,7 +20,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -65,20 +66,8 @@ public class Zoglin extends Monster implements HoglinBase {
    private static final float SPEED_MULTIPLIER_WHEN_IDLING = 0.4F;
    private static final boolean DEFAULT_BABY = false;
    private int attackAnimationRemainingTicks;
-   protected static final ImmutableList<? extends SensorType<? extends Sensor<? super Zoglin>>> SENSOR_TYPES = ImmutableList.of(
-      SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS
-   );
-   protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-      MemoryModuleType.NEAREST_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-      MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-      MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-      MemoryModuleType.LOOK_TARGET,
-      MemoryModuleType.WALK_TARGET,
-      MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-      MemoryModuleType.PATH,
-      MemoryModuleType.ATTACK_TARGET,
-      MemoryModuleType.ATTACK_COOLING_DOWN
+   private static final Brain.Provider<Zoglin> BRAIN_PROVIDER = Brain.provider(
+      List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS), var0 -> getActivities()
    );
 
    public Zoglin(final EntityType<? extends Zoglin> type, final Level level) {
@@ -87,32 +76,24 @@ public class Zoglin extends Monster implements HoglinBase {
    }
 
    @Override
-   protected Brain.Provider<Zoglin> brainProvider() {
-      return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
+   protected Brain<Zoglin> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
-   @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      Brain<Zoglin> brain = this.brainProvider().makeBrain(input);
-      initCoreActivity(brain);
-      initIdleActivity(brain);
-      initFightActivity(brain);
-      brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-      brain.setDefaultActivity(Activity.IDLE);
-      brain.useDefaultActivity();
-      return brain;
+   protected static List<ActivityData<Zoglin>> getActivities() {
+      return List.of(initCoreActivity(), initIdleActivity(), initFightActivity());
    }
 
-   private static void initCoreActivity(final Brain<Zoglin> brain) {
-      brain.addActivity(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
+   private static ActivityData<Zoglin> initCoreActivity() {
+      return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
    }
 
-   private static void initIdleActivity(final Brain<Zoglin> brain) {
-      brain.addActivity(
+   private static ActivityData<Zoglin> initIdleActivity() {
+      return ActivityData.create(
          Activity.IDLE,
          10,
          ImmutableList.of(
-            StartAttacking.create((level, zoglin) -> zoglin.findNearestValidAttackTarget(level)),
+            StartAttacking.create(Zoglin::findNearestValidAttackTarget),
             SetEntityLookTargetSometimes.create(8.0F, UniformInt.of(30, 60)),
             new RunOne(
                ImmutableList.of(
@@ -123,8 +104,8 @@ public class Zoglin extends Monster implements HoglinBase {
       );
    }
 
-   private static void initFightActivity(final Brain<Zoglin> brain) {
-      brain.addActivityAndRemoveMemoryWhenStopped(
+   private static ActivityData<Zoglin> initFightActivity() {
+      return ActivityData.create(
          Activity.FIGHT,
          10,
          ImmutableList.of(
@@ -137,16 +118,11 @@ public class Zoglin extends Monster implements HoglinBase {
       );
    }
 
-   private Optional<? extends LivingEntity> findNearestValidAttackTarget(final ServerLevel level) {
-      return this.getBrain()
+   private static Optional<? extends LivingEntity> findNearestValidAttackTarget(final ServerLevel level, final Mob mob) {
+      return mob.getBrain()
          .getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
          .orElse(NearestVisibleLivingEntities.empty())
-         .findClosest(target -> this.isTargetable(level, target));
-   }
-
-   private boolean isTargetable(final ServerLevel level, final LivingEntity livingEntity) {
-      EntityType<?> type = livingEntity.getType();
-      return type != EntityType.ZOGLIN && type != EntityType.CREEPER && Sensor.isEntityAttackable(level, this, livingEntity);
+         .findClosest(target -> !target.is(EntityType.ZOGLIN) && !target.is(EntityType.CREEPER) && Sensor.isEntityAttackable(level, mob, target));
    }
 
    @Override
@@ -232,7 +208,7 @@ public class Zoglin extends Monster implements HoglinBase {
 
    @Override
    public Brain<Zoglin> getBrain() {
-      return (Brain<Zoglin>)super.getBrain();
+      return super.getBrain();
    }
 
    protected void updateActivity() {

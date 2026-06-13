@@ -154,7 +154,7 @@ public class CrafterBlock extends BaseEntityBlock {
             level.levelEvent(1050, pos, 0);
          } else {
             RecipeHolder<CraftingRecipe> pickedRecipe = recipe.get();
-            ItemStack results = pickedRecipe.value().assemble(var11, level.registryAccess());
+            ItemStack results = pickedRecipe.value().assemble(var11);
             if (results.isEmpty()) {
                level.levelEvent(1050, pos, 0);
             } else {

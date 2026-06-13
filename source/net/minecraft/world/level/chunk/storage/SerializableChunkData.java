@@ -332,7 +332,7 @@ public record SerializableChunkData(
    }
 
    private static void logErrors(final ChunkPos pos, final int sectionY, final String message) {
-      LOGGER.error("Recoverable errors when loading section [{}, {}, {}]: {}", new Object[]{pos.x, sectionY, pos.z, message});
+      LOGGER.error("Recoverable errors when loading section [{}, {}, {}]: {}", new Object[]{pos.x(), sectionY, pos.z(), message});
    }
 
    public static SerializableChunkData copyOf(final ServerLevel level, final ChunkAccess chunk) {
@@ -416,9 +416,9 @@ public record SerializableChunkData(
 
    public CompoundTag write() {
       CompoundTag tag = NbtUtils.addCurrentDataVersion(new CompoundTag());
-      tag.putInt("xPos", this.chunkPos.x);
+      tag.putInt("xPos", this.chunkPos.x());
       tag.putInt("yPos", this.minSectionY);
-      tag.putInt("zPos", this.chunkPos.z);
+      tag.putInt("zPos", this.chunkPos.z());
       tag.putLong("LastUpdate", this.lastUpdateTime);
       tag.putLong("InhabitedTime", this.inhabitedTime);
       tag.putString("Status", BuiltInRegistries.CHUNK_STATUS.getKey(this.chunkStatus).toString());
@@ -581,7 +581,7 @@ public record SerializableChunkData(
             Optional<long[]> longArray = entry.asLongArray();
             if (!longArray.isEmpty()) {
                outmap.put(structureType, new LongOpenHashSet(Arrays.stream(longArray.get()).filter(chunkLongPos -> {
-                  ChunkPos refPos = new ChunkPos(chunkLongPos);
+                  ChunkPos refPos = ChunkPos.unpack(chunkLongPos);
                   if (refPos.getChessboardDistance(pos) > 8) {
                      LOGGER.warn("Found invalid structure reference [ {} @ {} ] for chunk {}.", new Object[]{structureId, refPos, pos});
                      return false;

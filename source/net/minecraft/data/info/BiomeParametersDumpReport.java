@@ -58,7 +58,7 @@ public class BiomeParametersDumpReport implements DataProvider {
    }
 
    private Path createPath(final Identifier element) {
-      return this.topPath.resolve(element.getNamespace()).resolve(element.getPath() + ".json");
+      return element.withSuffix(".json").resolveAgainst(this.topPath);
    }
 
    @Override

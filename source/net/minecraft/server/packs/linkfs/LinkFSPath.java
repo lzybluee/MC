@@ -22,31 +22,10 @@ import java.nio.file.attribute.FileTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import net.minecraft.util.DummyFileAttributes;
 import org.jspecify.annotations.Nullable;
 
 class LinkFSPath implements Path {
-   private static final BasicFileAttributes DIRECTORY_ATTRIBUTES = new DummyFileAttributes() {
-      @Override
-      public boolean isRegularFile() {
-         return false;
-      }
-
-      @Override
-      public boolean isDirectory() {
-         return true;
-      }
-   };
-   private static final BasicFileAttributes FILE_ATTRIBUTES = new DummyFileAttributes() {
-      @Override
-      public boolean isRegularFile() {
-         return true;
-      }
-
-      @Override
-      public boolean isDirectory() {
-         return false;
-      }
-   };
    private static final Comparator<LinkFSPath> PATH_COMPARATOR = Comparator.comparing(LinkFSPath::pathToString);
    private final String name;
    private final LinkFileSystem fileSystem;
@@ -384,9 +363,9 @@ class LinkFSPath implements Path {
 
    public BasicFileAttributes getBasicAttributes() throws IOException {
       if (this.pathContents instanceof PathContents.DirectoryContents) {
-         return DIRECTORY_ATTRIBUTES;
+         return DummyFileAttributes.DIRECTORY;
       } else if (this.pathContents instanceof PathContents.FileContents) {
-         return FILE_ATTRIBUTES;
+         return DummyFileAttributes.FILE;
       } else {
          throw new NoSuchFileException(this.pathToString());
       }

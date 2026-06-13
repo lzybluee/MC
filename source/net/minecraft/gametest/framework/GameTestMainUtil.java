@@ -45,6 +45,10 @@ public class GameTestMainUtil {
       .withRequiredArg()
       .ofType(Boolean.class)
       .defaultsTo(false, new Boolean[0]);
+   private static final OptionSpec<Integer> repeatCount = parser.accepts("repeatCount", "Runs each of the specified tests this many times")
+      .withRequiredArg()
+      .ofType(Integer.class)
+      .defaultsTo(1, new Integer[0]);
    private static final OptionSpec<String> packs = parser.accepts("packs", "A folder of datapacks to include in the world").withRequiredArg();
    private static final OptionSpec<Void> help = parser.accepts("help").forHelp();
 
@@ -58,6 +62,10 @@ public class GameTestMainUtil {
          if ((Boolean)options.valueOf(verify) && !options.has(tests)) {
             LOGGER.error("Please specify a test selection to run the verify option. For example: --verify --tests example:test_something_*");
             System.exit(-1);
+         }
+
+         if ((Boolean)options.valueOf(verify) && options.has(repeatCount)) {
+            LOGGER.info("Flag --verify is true, the --repeatCount value will be ignored");
          }
 
          LOGGER.info("Running GameTestMain with cwd '{}', universe path '{}'", System.getProperty("user.dir"), options.valueOf(universe));
@@ -78,7 +86,14 @@ public class GameTestMainUtil {
          LevelStorageSource.LevelStorageAccess levelStorageSource = LevelStorageSource.createDefault(Paths.get(universePath)).createAccess("gametestworld");
          PackRepository packRepository = ServerPacksSource.createPackRepository(levelStorageSource);
          MinecraftServer.spin(
-            thread -> GameTestServer.create(thread, levelStorageSource, packRepository, optionalFromOption(options, tests), options.has(verify))
+            thread -> GameTestServer.create(
+               thread,
+               levelStorageSource,
+               packRepository,
+               optionalFromOption(options, tests),
+               (Boolean)options.valueOf(verify),
+               (Integer)options.valueOf(repeatCount)
+            )
          );
       }
    }

@@ -13,7 +13,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.player.Player;
@@ -80,9 +79,8 @@ public interface ContainerEntity extends Container, MenuProvider {
    default void chestVehicleDestroyed(final DamageSource source, final ServerLevel level, final Entity entity) {
       if (level.getGameRules().get(GameRules.ENTITY_DROPS)) {
          Containers.dropContents(level, entity, this);
-         Entity directEntity = source.getDirectEntity();
-         if (directEntity != null && directEntity.getType() == EntityType.PLAYER) {
-            PiglinAi.angerNearbyPiglins(level, (Player)directEntity, true);
+         if (source.getDirectEntity() instanceof Player player) {
+            PiglinAi.angerNearbyPiglins(level, player, true);
          }
       }
    }

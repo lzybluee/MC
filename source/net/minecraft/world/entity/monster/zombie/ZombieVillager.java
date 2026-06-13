@@ -1,9 +1,7 @@
 package net.minecraft.world.entity.monster.zombie;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
@@ -27,9 +25,13 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ConversionParams;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.gossip.GossipContainer;
@@ -59,25 +61,23 @@ public class ZombieVillager extends Zombie implements VillagerDataHolder {
    private static final EntityDataAccessor<VillagerData> DATA_VILLAGER_DATA = SynchedEntityData.defineId(
       ZombieVillager.class, EntityDataSerializers.VILLAGER_DATA
    );
+   private static final EntityDataAccessor<Boolean> DATA_VILLAGER_DATA_FINALIZED = SynchedEntityData.defineId(
+      ZombieVillager.class, EntityDataSerializers.BOOLEAN
+   );
    private static final int VILLAGER_CONVERSION_WAIT_MIN = 3600;
    private static final int VILLAGER_CONVERSION_WAIT_MAX = 6000;
    private static final int MAX_SPECIAL_BLOCKS_COUNT = 14;
    private static final int SPECIAL_BLOCK_RADIUS = 4;
    private static final int NOT_CONVERTING = -1;
    private static final int DEFAULT_XP = 0;
-   private static final Set<EntitySpawnReason> REASONS_NOT_TO_SET_TYPE = EnumSet.of(
-      EntitySpawnReason.LOAD,
-      EntitySpawnReason.DIMENSION_TRAVEL,
-      EntitySpawnReason.CONVERSION,
-      EntitySpawnReason.SPAWN_ITEM_USE,
-      EntitySpawnReason.SPAWNER,
-      EntitySpawnReason.TRIAL_SPAWNER
-   );
    private int villagerConversionTime;
    private @Nullable UUID conversionStarter;
    private @Nullable GossipContainer gossips;
    private @Nullable MerchantOffers tradeOffers;
    private int villagerXp = 0;
+   private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.99F)
+      .withEyeHeight(0.67F)
+      .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, 0.0F, 0.125F, 0.0F));
 
    public ZombieVillager(final EntityType<? extends ZombieVillager> type, final Level level) {
       super(type, level);
@@ -88,12 +88,14 @@ public class ZombieVillager extends Zombie implements VillagerDataHolder {
       super.defineSynchedData(entityData);
       entityData.define(DATA_CONVERTING_ID, false);
       entityData.define(DATA_VILLAGER_DATA, this.initializeVillagerData());
+      entityData.define(DATA_VILLAGER_DATA_FINALIZED, false);
    }
 
    @Override
    protected void addAdditionalSaveData(final ValueOutput output) {
       super.addAdditionalSaveData(output);
       output.store("VillagerData", VillagerData.CODEC, this.getVillagerData());
+      output.putBoolean("VillagerDataFinalized", this.entityData.get(DATA_VILLAGER_DATA_FINALIZED));
       output.storeNullable("Offers", MerchantOffers.CODEC, this.tradeOffers);
       output.storeNullable("Gossips", GossipContainer.CODEC, this.gossips);
       output.putInt("ConversionTime", this.isConverting() ? this.villagerConversionTime : -1);
@@ -104,7 +106,13 @@ public class ZombieVillager extends Zombie implements VillagerDataHolder {
    @Override
    protected void readAdditionalSaveData(final ValueInput input) {
       super.readAdditionalSaveData(input);
-      this.entityData.set(DATA_VILLAGER_DATA, input.<VillagerData>read("VillagerData", VillagerData.CODEC).orElseGet(this::initializeVillagerData));
+      Optional<VillagerData> villagerDataOptional = input.read("VillagerData", VillagerData.CODEC);
+      if (input.getBooleanOr("VillagerDataFinalized", false) || villagerDataOptional.isPresent()) {
+         this.entityData.set(DATA_VILLAGER_DATA_FINALIZED, true);
+         VillagerData villagerData = villagerDataOptional.orElseGet(this::initializeVillagerData);
+         this.entityData.set(DATA_VILLAGER_DATA, villagerData);
+      }
+
       this.tradeOffers = input.<MerchantOffers>read("Offers", MerchantOffers.CODEC).orElse(null);
       this.gossips = input.<GossipContainer>read("Gossips", GossipContainer.CODEC).orElse(null);
       int conversionTime = input.getIntOr("ConversionTime", -1);
@@ -123,16 +131,19 @@ public class ZombieVillager extends Zombie implements VillagerDataHolder {
    public @Nullable SpawnGroupData finalizeSpawn(
       final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
    ) {
-      if (!REASONS_NOT_TO_SET_TYPE.contains(spawnReason)) {
+      if (!this.entityData.get(DATA_VILLAGER_DATA_FINALIZED)) {
          this.setVillagerData(this.getVillagerData().withType(level.registryAccess(), VillagerType.byBiome(level.getBiome(this.blockPosition()))));
+         this.entityData.set(DATA_VILLAGER_DATA_FINALIZED, true);
       }
 
       return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
    }
 
    private VillagerData initializeVillagerData() {
+      Level level = this.level();
       Optional<Holder.Reference<VillagerProfession>> profession = BuiltInRegistries.VILLAGER_PROFESSION.getRandom(this.random);
-      VillagerData villagerData = Villager.createDefaultVillagerData();
+      VillagerData villagerData = Villager.createDefaultVillagerData()
+         .withType(level.registryAccess(), VillagerType.byBiome(level.getBiome(this.blockPosition())));
       if (profession.isPresent()) {
          villagerData = villagerData.withProfession(profession.get());
       }
@@ -193,6 +204,11 @@ public class ZombieVillager extends Zombie implements VillagerDataHolder {
       this.removeEffect(MobEffects.WEAKNESS);
       this.addEffect(new MobEffectInstance(MobEffects.STRENGTH, time, Math.min(this.level().getDifficulty().getId() - 1, 0)));
       this.level().broadcastEntityEvent(this, (byte)16);
+   }
+
+   @Override
+   public EntityDimensions getDefaultDimensions(final Pose pose) {
+      return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
    }
 
    @Override

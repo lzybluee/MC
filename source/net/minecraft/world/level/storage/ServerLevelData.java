@@ -1,29 +1,12 @@
 package net.minecraft.world.level.storage;
 
 import java.util.Locale;
-import java.util.Optional;
-import java.util.UUID;
 import net.minecraft.CrashReportCategory;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelHeightAccessor;
-import net.minecraft.world.level.border.WorldBorder;
-import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.level.timers.TimerQueue;
-import org.jspecify.annotations.Nullable;
 
 public interface ServerLevelData extends WritableLevelData {
    String getLevelName();
-
-   void setThundering(boolean thundering);
-
-   int getRainTime();
-
-   void setRainTime(int rainTime);
-
-   void setThunderTime(int thunderTime);
-
-   int getThunderTime();
 
    @Override
    default void fillCrashReportCategory(final CrashReportCategory category, final LevelHeightAccessor levelHeightAccessor) {
@@ -40,42 +23,9 @@ public interface ServerLevelData extends WritableLevelData {
             this.isAllowCommands()
          )
       );
-      category.setDetail(
-         "Level weather",
-         () -> String.format(
-            Locale.ROOT,
-            "Rain time: %d (now: %b), thunder time: %d (now: %b)",
-            this.getRainTime(),
-            this.isRaining(),
-            this.getThunderTime(),
-            this.isThundering()
-         )
-      );
    }
 
-   int getClearWeatherTime();
-
-   void setClearWeatherTime(int clearWeatherTime);
-
-   int getWanderingTraderSpawnDelay();
-
-   void setWanderingTraderSpawnDelay(int wanderingTraderSpawnDelay);
-
-   int getWanderingTraderSpawnChance();
-
-   void setWanderingTraderSpawnChance(int wanderingTraderSpawnChance);
-
-   @Nullable UUID getWanderingTraderId();
-
-   void setWanderingTraderId(final UUID wanderingTraderId);
-
    GameType getGameType();
-
-   @Deprecated
-   Optional<WorldBorder.Settings> getLegacyWorldBorderSettings();
-
-   @Deprecated
-   void setLegacyWorldBorderSettings(final Optional<WorldBorder.Settings> settings);
 
    boolean isInitialized();
 
@@ -85,11 +35,5 @@ public interface ServerLevelData extends WritableLevelData {
 
    void setGameType(GameType gameType);
 
-   TimerQueue<MinecraftServer> getScheduledEvents();
-
    void setGameTime(final long time);
-
-   void setDayTime(final long time);
-
-   GameRules getGameRules();
 }

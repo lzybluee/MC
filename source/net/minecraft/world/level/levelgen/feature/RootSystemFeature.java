@@ -112,7 +112,7 @@ public class RootSystemFeature extends Feature<RootSystemConfiguration> {
             workingPos, random.nextInt(rootRadius) - random.nextInt(rootRadius), 0, random.nextInt(rootRadius) - random.nextInt(rootRadius)
          );
          if (stateTest.test(level.getBlockState(workingPos))) {
-            level.setBlock(workingPos, config.rootStateProvider.getState(random, workingPos), 2);
+            level.setBlock(workingPos, config.rootStateProvider.getState(level, random, workingPos), 2);
          }
 
          workingPos.setX(originX);
@@ -134,7 +134,7 @@ public class RootSystemFeature extends Feature<RootSystemConfiguration> {
             random.nextInt(rootRadius) - random.nextInt(rootRadius)
          );
          if (level.isEmptyBlock(workingPos)) {
-            BlockState targetState = config.hangingRootStateProvider.getState(random, workingPos);
+            BlockState targetState = config.hangingRootStateProvider.getState(level, random, workingPos);
             if (targetState.canSurvive(level, workingPos) && level.getBlockState(workingPos.above()).isFaceSturdy(level, workingPos, Direction.DOWN)) {
                level.setBlock(workingPos, targetState, 2);
             }

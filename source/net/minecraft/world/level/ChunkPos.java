@@ -17,7 +17,7 @@ import net.minecraft.world.level.chunk.status.ChunkPyramid;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.jspecify.annotations.Nullable;
 
-public class ChunkPos {
+public record ChunkPos(int x, int z) {
    public static final Codec<ChunkPos> CODEC = Codec.INT_STREAM
       .comapFlatMap(input -> Util.fixedSize(input, 2).map(ints -> new ChunkPos(ints[0], ints[1])), pos -> IntStream.of(pos.x, pos.z))
       .stable();
@@ -31,7 +31,7 @@ public class ChunkPos {
       }
    };
    private static final int SAFETY_MARGIN = 1056;
-   public static final long INVALID_CHUNK_POS = asLong(1875066, 1875066);
+   public static final long INVALID_CHUNK_POS = pack(1875066, 1875066);
    private static final int SAFETY_MARGIN_CHUNKS = (32 + ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FULL).accumulatedDependencies().size() + 1) * 2;
    public static final int MAX_COORDINATE_VALUE = SectionPos.blockToSectionCoord(BlockPos.MAX_HORIZONTAL_COORDINATE) - SAFETY_MARGIN_CHUNKS;
    public static final ChunkPos ZERO = new ChunkPos(0, 0);
@@ -41,25 +41,16 @@ public class ChunkPos {
    public static final int REGION_SIZE = 32;
    private static final int REGION_MASK = 31;
    public static final int REGION_MAX_INDEX = 31;
-   public final int x;
-   public final int z;
    private static final int HASH_A = 1664525;
    private static final int HASH_C = 1013904223;
    private static final int HASH_Z_XOR = -559038737;
 
-   public ChunkPos(final int x, final int z) {
-      this.x = x;
-      this.z = z;
+   public static ChunkPos containing(final BlockPos pos) {
+      return new ChunkPos(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
    }
 
-   public ChunkPos(final BlockPos pos) {
-      this.x = SectionPos.blockToSectionCoord(pos.getX());
-      this.z = SectionPos.blockToSectionCoord(pos.getZ());
-   }
-
-   public ChunkPos(final long key) {
-      this.x = (int)key;
-      this.z = (int)(key >> 32);
+   public static ChunkPos unpack(final long key) {
+      return new ChunkPos((int)key, (int)(key >> 32));
    }
 
    public static ChunkPos minFromRegion(final int regionX, final int regionZ) {
@@ -78,16 +69,16 @@ public class ChunkPos {
       return Mth.absMax(x, z) <= MAX_COORDINATE_VALUE;
    }
 
-   public long toLong() {
-      return asLong(this.x, this.z);
+   public long pack() {
+      return pack(this.x, this.z);
    }
 
-   public static long asLong(final int x, final int z) {
+   public static long pack(final int x, final int z) {
       return x & 4294967295L | (z & 4294967295L) << 32;
    }
 
-   public static long asLong(final BlockPos pos) {
-      return asLong(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
+   public static long pack(final BlockPos pos) {
+      return pack(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
    }
 
    public static int getX(final long pos) {
@@ -107,15 +98,6 @@ public class ChunkPos {
       int xTransform = 1664525 * x + 1013904223;
       int zTransform = 1664525 * (z ^ -559038737) + 1013904223;
       return xTransform ^ zTransform;
-   }
-
-   @Override
-   public boolean equals(final Object o) {
-      if (this == o) {
-         return true;
-      } else {
-         return !(o instanceof ChunkPos chunkPos) ? false : this.x == chunkPos.x && this.z == chunkPos.z;
-      }
    }
 
    public int getMiddleBlockX() {
@@ -148,6 +130,14 @@ public class ChunkPos {
 
    public int getRegionZ() {
       return this.z >> 5;
+   }
+
+   public static int getRegionX(final long pos) {
+      return getX(pos) >> 5;
+   }
+
+   public static int getRegionZ(final long pos) {
+      return getZ(pos) >> 5;
    }
 
    public int getRegionLocalX() {

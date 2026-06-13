@@ -40,7 +40,7 @@ public class ThrownExperienceBottle extends ThrowableItemProjectile {
       super.onHit(hitResult);
       if (this.level() instanceof ServerLevel level) {
          level.levelEvent(2002, this.blockPosition(), -13083194);
-         int xpCount = 3 + level.random.nextInt(5) + level.random.nextInt(5);
+         int xpCount = 3 + this.random.nextInt(5) + this.random.nextInt(5);
          if (hitResult instanceof BlockHitResult blockHitResult) {
             Vec3 blockNormalHit = blockHitResult.getDirection().getUnitVec3();
             ExperienceOrb.awardWithDirection(level, hitResult.getLocation(), blockNormalHit, xpCount);

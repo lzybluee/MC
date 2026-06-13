@@ -19,7 +19,7 @@ public class FunctionGameTestInstance extends GameTestInstance {
    );
    private final ResourceKey<Consumer<GameTestHelper>> function;
 
-   public FunctionGameTestInstance(final ResourceKey<Consumer<GameTestHelper>> function, final TestData<Holder<TestEnvironmentDefinition>> info) {
+   public FunctionGameTestInstance(final ResourceKey<Consumer<GameTestHelper>> function, final TestData<Holder<TestEnvironmentDefinition<?>>> info) {
       super(info);
       this.function = function;
    }

@@ -24,6 +24,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.network.HashedStack;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerGamePacketListener;
+import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerButtonClickPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.network.protocol.game.ServerboundContainerSlotStateChangedPacket;
@@ -34,6 +35,7 @@ import net.minecraft.network.protocol.game.ServerboundPlaceRecipePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
+import net.minecraft.network.protocol.game.ServerboundSpectateEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.sounds.SoundSource;
@@ -46,7 +48,7 @@ import net.minecraft.world.entity.HasCustomInventoryScreen;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.PiercingWeapon;
@@ -416,32 +418,28 @@ public class MultiPlayerGameMode {
    public LocalPlayer createPlayer(
       final ClientLevel level, final StatsCounter stats, final ClientRecipeBook recipeBook, final Input lastSentInput, final boolean wasSprinting
    ) {
-      return new LocalPlayer(this.minecraft, level, this.connection, stats, recipeBook, lastSentInput, wasSprinting);
+      return new LocalPlayer(this.minecraft, level, this.connection, stats, recipeBook, lastSentInput, wasSprinting, this.minecraft.computeChatAbilities());
    }
 
    public void attack(final Player player, final Entity entity) {
       this.ensureHasSentCarriedItem();
-      this.connection.send(ServerboundInteractPacket.createAttackPacket(entity, player.isShiftKeyDown()));
-      if (this.localPlayerMode != GameType.SPECTATOR) {
-         player.attack(entity);
-         player.resetAttackStrengthTicker();
-      }
+      this.connection.send(new ServerboundAttackPacket(entity.getId()));
+      player.attack(entity);
+      player.resetAttackStrengthTicker();
    }
 
-   public InteractionResult interact(final Player player, final Entity entity, final InteractionHand hand) {
-      this.ensureHasSentCarriedItem();
-      this.connection.send(ServerboundInteractPacket.createInteractionPacket(entity, player.isShiftKeyDown(), hand));
-      return this.localPlayerMode == GameType.SPECTATOR ? InteractionResult.PASS : player.interactOn(entity, hand);
+   public void spectate(final Entity entity) {
+      this.connection.send(new ServerboundSpectateEntityPacket(entity.getId()));
    }
 
-   public InteractionResult interactAt(final Player player, final Entity entity, final EntityHitResult hitResult, final InteractionHand hand) {
+   public InteractionResult interact(final Player player, final Entity entity, final EntityHitResult hitResult, final InteractionHand hand) {
       this.ensureHasSentCarriedItem();
       Vec3 location = hitResult.getLocation().subtract(entity.getX(), entity.getY(), entity.getZ());
-      this.connection.send(ServerboundInteractPacket.createInteractionPacket(entity, player.isShiftKeyDown(), hand, location));
-      return this.localPlayerMode == GameType.SPECTATOR ? InteractionResult.PASS : entity.interactAt(player, location, hand);
+      this.connection.send(new ServerboundInteractPacket(entity.getId(), hand, location, player.isShiftKeyDown()));
+      return this.localPlayerMode == GameType.SPECTATOR ? InteractionResult.PASS : player.interactOn(entity, hand, location);
    }
 
-   public void handleInventoryMouseClick(final int containerId, final int slotNum, final int buttonNum, final ClickType clickType, final Player player) {
+   public void handleContainerInput(final int containerId, final int slotNum, final int buttonNum, final ContainerInput containerInput, final Player player) {
       AbstractContainerMenu containerMenu = player.containerMenu;
       if (containerId != containerMenu.containerId) {
          LOGGER.warn("Ignoring click in mismatching container. Click in {}, player has {}.", containerId, containerMenu.containerId);
@@ -454,7 +452,7 @@ public class MultiPlayerGameMode {
             itemsBeforeClick.add(slot.getItem().copy());
          }
 
-         containerMenu.clicked(slotNum, buttonNum, clickType, player);
+         containerMenu.clicked(slotNum, buttonNum, containerInput, player);
          Int2ObjectMap<HashedStack> changedSlots = new Int2ObjectOpenHashMap();
 
          for (int i = 0; i < slotCount; i++) {
@@ -473,7 +471,7 @@ public class MultiPlayerGameMode {
                   containerMenu.getStateId(),
                   Shorts.checkedCast(slotNum),
                   SignedBytes.checkedCast(buttonNum),
-                  clickType,
+                  containerInput,
                   changedSlots,
                   carriedItem
                )
@@ -517,7 +515,7 @@ public class MultiPlayerGameMode {
       this.ensureHasSentCarriedItem();
       this.connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.STAB, BlockPos.ZERO, Direction.DOWN));
       this.minecraft.player.onAttack();
-      this.minecraft.player.lungeForwardMaybe();
+      this.minecraft.player.postPiercingAttack();
       weapon.makeSound(this.minecraft.player);
    }
 

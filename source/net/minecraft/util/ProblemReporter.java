@@ -199,6 +199,13 @@ public interface ProblemReporter {
       }
    }
 
+   record MapEntryPathElement(String name, String key) implements ProblemReporter.PathElement {
+      @Override
+      public String get() {
+         return "." + this.name + "[" + this.key + "]";
+      }
+   }
+
    @FunctionalInterface
    interface PathElement {
       String get();

@@ -38,7 +38,7 @@ public class AttachedToLogsDecorator extends TreeDecorator {
          Direction direction = Util.getRandom(this.directions, random);
          BlockPos placementPos = logsPos.relative(direction);
          if (random.nextFloat() <= this.probability && context.isAir(placementPos)) {
-            context.setBlock(placementPos, this.blockProvider.getState(random, placementPos));
+            context.setBlock(placementPos, this.blockProvider.getState(context.level(), random, placementPos));
          }
       }
    }

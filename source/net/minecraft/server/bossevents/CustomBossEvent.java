@@ -19,67 +19,74 @@ import net.minecraft.world.BossEvent;
 
 public class CustomBossEvent extends ServerBossEvent {
    private static final int DEFAULT_MAX = 100;
-   private final Identifier id;
+   private final Identifier customId;
    private final Set<UUID> players = Sets.newHashSet();
    private int value;
    private int max = 100;
+   private final Runnable dirtyCallback;
 
-   public CustomBossEvent(final Identifier id, final Component name) {
-      super(name, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
-      this.id = id;
+   public CustomBossEvent(final UUID id, final Identifier customId, final Component name, final Runnable dirtyCallback) {
+      super(id, name, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
+      this.dirtyCallback = dirtyCallback;
+      this.customId = customId;
       this.setProgress(0.0F);
    }
 
-   public Identifier getTextId() {
-      return this.id;
+   public Identifier customId() {
+      return this.customId;
    }
 
    @Override
    public void addPlayer(final ServerPlayer player) {
       super.addPlayer(player);
-      this.players.add(player.getUUID());
-   }
-
-   public void addOfflinePlayer(final UUID player) {
-      this.players.add(player);
+      if (this.players.add(player.getUUID())) {
+         this.setDirty();
+      }
    }
 
    @Override
    public void removePlayer(final ServerPlayer player) {
       super.removePlayer(player);
-      this.players.remove(player.getUUID());
+      if (this.players.remove(player.getUUID())) {
+         this.setDirty();
+      }
    }
 
    @Override
    public void removeAllPlayers() {
       super.removeAllPlayers();
-      this.players.clear();
+      if (!this.players.isEmpty()) {
+         this.players.clear();
+         this.setDirty();
+      }
    }
 
-   public int getValue() {
+   public int value() {
       return this.value;
    }
 
-   public int getMax() {
+   public int max() {
       return this.max;
    }
 
    public void setValue(final int value) {
       this.value = value;
       this.setProgress(Mth.clamp((float)value / this.max, 0.0F, 1.0F));
+      this.setDirty();
    }
 
    public void setMax(final int max) {
       this.max = max;
       this.setProgress(Mth.clamp((float)this.value / max, 0.0F, 1.0F));
+      this.setDirty();
    }
 
    public final Component getDisplayName() {
       return ComponentUtils.wrapInSquareBrackets(this.getName())
          .withStyle(
             s -> s.withColor(this.getColor().getFormatting())
-               .withHoverEvent(new HoverEvent.ShowText(Component.literal(this.getTextId().toString())))
-               .withInsertion(this.getTextId().toString())
+               .withHoverEvent(new HoverEvent.ShowText(Component.literal(this.customId().toString())))
+               .withInsertion(this.customId().toString())
          );
    }
 
@@ -132,11 +139,16 @@ public class CustomBossEvent extends ServerBossEvent {
          this.addPlayer(player);
       }
 
-      return !toRemove.isEmpty() || !toAdd.isEmpty();
+      boolean playersChanged = !toRemove.isEmpty() || !toAdd.isEmpty();
+      if (playersChanged) {
+         this.setDirty();
+      }
+
+      return playersChanged;
    }
 
-   public static CustomBossEvent load(final Identifier id, final CustomBossEvent.Packed packed) {
-      CustomBossEvent event = new CustomBossEvent(id, packed.name);
+   public static CustomBossEvent load(final UUID id, final Identifier customId, final CustomBossEvent.Packed packed, final Runnable setDirty) {
+      CustomBossEvent event = new CustomBossEvent(id, customId, packed.name, setDirty);
       event.setVisible(packed.visible);
       event.setValue(packed.value);
       event.setMax(packed.max);
@@ -145,7 +157,7 @@ public class CustomBossEvent extends ServerBossEvent {
       event.setDarkenScreen(packed.darkenScreen);
       event.setPlayBossMusic(packed.playBossMusic);
       event.setCreateWorldFog(packed.createWorldFog);
-      packed.players.forEach(event::addOfflinePlayer);
+      event.players.addAll(packed.players);
       return event;
    }
 
@@ -153,8 +165,8 @@ public class CustomBossEvent extends ServerBossEvent {
       return new CustomBossEvent.Packed(
          this.getName(),
          this.isVisible(),
-         this.getValue(),
-         this.getMax(),
+         this.value(),
+         this.max(),
          this.getColor(),
          this.getOverlay(),
          this.shouldDarkenScreen(),
@@ -172,6 +184,11 @@ public class CustomBossEvent extends ServerBossEvent {
 
    public void onPlayerDisconnect(final ServerPlayer player) {
       super.removePlayer(player);
+   }
+
+   @Override
+   public void setDirty() {
+      this.dirtyCallback.run();
    }
 
    public record Packed(

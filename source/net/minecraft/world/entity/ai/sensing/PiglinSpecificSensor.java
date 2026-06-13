@@ -1,8 +1,7 @@
 package net.minecraft.world.entity.ai.sensing;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -59,8 +58,7 @@ public class PiglinSpecificSensor extends Sensor<LivingEntity> {
       Optional<Player> playerNotWearingGold = Optional.empty();
       Optional<Player> playerHoldingWantedItem = Optional.empty();
       int visibleAdultHoglinCount = 0;
-      List<AbstractPiglin> visibleAdultPiglins = Lists.newArrayList();
-      List<AbstractPiglin> adultPiglins = Lists.newArrayList();
+      List<AbstractPiglin> visibleAdultPiglins = new ArrayList<>();
       NearestVisibleLivingEntities visibleLivingEntities = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
          .orElse(NearestVisibleLivingEntities.empty());
 
@@ -91,7 +89,7 @@ public class PiglinSpecificSensor extends Sensor<LivingEntity> {
                playerHoldingWantedItem = Optional.of(player);
             }
          } else if (!nemesis.isEmpty() || !(entity instanceof WitherSkeleton) && !(entity instanceof WitherBoss)) {
-            if (zombified.isEmpty() && PiglinAi.isZombified(entity.getType())) {
+            if (zombified.isEmpty() && PiglinAi.isZombified(entity)) {
                zombified = Optional.of(entity);
             }
          } else {
@@ -99,12 +97,7 @@ public class PiglinSpecificSensor extends Sensor<LivingEntity> {
          }
       }
 
-      for (LivingEntity entity : brain.getMemory(MemoryModuleType.NEAREST_LIVING_ENTITIES).orElse(ImmutableList.of())) {
-         if (entity instanceof AbstractPiglin piglin && piglin.isAdult()) {
-            adultPiglins.add(piglin);
-         }
-      }
-
+      List<AbstractPiglin> adultPiglins = PiglinAi.findNearbyAdultPiglins(brain);
       brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_NEMESIS, nemesis);
       brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_HUNTABLE_HOGLIN, huntableHoglin);
       brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_BABY_HOGLIN, babyHoglin);

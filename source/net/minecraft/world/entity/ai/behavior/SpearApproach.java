@@ -12,8 +12,8 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import org.jspecify.annotations.Nullable;
 
 public class SpearApproach extends Behavior<PathfinderMob> {
-   double speedModifierWhenRepositioning;
-   float approachDistanceSq;
+   private final double speedModifierWhenRepositioning;
+   private final float approachDistanceSq;
 
    public SpearApproach(final double speedModifierWhenRepositioning, final float approachDistance) {
       super(Map.of(MemoryModuleType.SPEAR_STATUS, MemoryStatus.VALUE_ABSENT));

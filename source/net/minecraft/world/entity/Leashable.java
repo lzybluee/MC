@@ -402,7 +402,7 @@ public interface Leashable {
    }
 
    record Wrench(Vec3 force, double torque) {
-      static Leashable.Wrench ZERO = new Leashable.Wrench(Vec3.ZERO, 0.0);
+      static final Leashable.Wrench ZERO = new Leashable.Wrench(Vec3.ZERO, 0.0);
 
       static double torqueFromForce(final Vec3 leverArm, final Vec3 force) {
          return leverArm.z * force.x - leverArm.x * force.z;

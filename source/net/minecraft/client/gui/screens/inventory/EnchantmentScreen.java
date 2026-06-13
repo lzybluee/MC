@@ -5,7 +5,7 @@ import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.object.book.BookModel;
@@ -42,7 +42,7 @@ public class EnchantmentScreen extends AbstractContainerScreen<EnchantmentMenu> 
    );
    private static final Identifier ENCHANTMENT_SLOT_SPRITE = Identifier.withDefaultNamespace("container/enchanting_table/enchantment_slot");
    private static final Identifier ENCHANTING_TABLE_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/enchanting_table.png");
-   private static final Identifier ENCHANTING_BOOK_LOCATION = Identifier.withDefaultNamespace("textures/entity/enchanting_table_book.png");
+   private static final Identifier ENCHANTING_BOOK_LOCATION = Identifier.withDefaultNamespace("textures/entity/enchantment/enchanting_table_book.png");
    private final RandomSource random = RandomSource.create();
    private BookModel bookModel;
    public float flip;
@@ -88,11 +88,12 @@ public class EnchantmentScreen extends AbstractContainerScreen<EnchantmentMenu> 
    }
 
    @Override
-   protected void renderBg(final GuiGraphics graphics, final float ignored, final int xm, final int ym) {
+   public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+      super.extractBackground(graphics, mouseX, mouseY, a);
       int xo = (this.width - this.imageWidth) / 2;
       int yo = (this.height - this.imageHeight) / 2;
       graphics.blit(RenderPipelines.GUI_TEXTURED, ENCHANTING_TABLE_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-      this.renderBook(graphics, xo, yo);
+      this.extractBook(graphics, xo, yo);
       EnchantmentNames.getInstance().initSeed(this.menu.getEnchantmentSeed());
       int goldCount = this.menu.getGoldCount();
 
@@ -110,11 +111,11 @@ public class EnchantmentScreen extends AbstractContainerScreen<EnchantmentMenu> 
             if ((goldCount < i + 1 || this.minecraft.player.experienceLevel < cost) && !this.minecraft.player.hasInfiniteMaterials()) {
                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANTMENT_SLOT_DISABLED_SPRITE, leftPos, yo + 14 + 19 * i, 108, 19);
                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, DISABLED_LEVEL_SPRITES[i], leftPos + 1, yo + 15 + 19 * i, 16, 16);
-               graphics.drawWordWrap(this.font, message, leftPosText, yo + 16 + 19 * i, textWidth, ARGB.opaque((col & 16711422) >> 1), false);
+               graphics.textWithWordWrap(this.font, message, leftPosText, yo + 16 + 19 * i, textWidth, ARGB.opaque((col & 16711422) >> 1), false);
                col = -12550384;
             } else {
-               int xx = xm - (xo + 60);
-               int yy = ym - (yo + 14 + 19 * i);
+               int xx = mouseX - (xo + 60);
+               int yy = mouseY - (yo + 14 + 19 * i);
                if (xx >= 0 && yy >= 0 && xx < 108 && yy < 19) {
                   graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENCHANTMENT_SLOT_HIGHLIGHTED_SPRITE, leftPos, yo + 14 + 19 * i, 108, 19);
                   graphics.requestCursor(CursorTypes.POINTING_HAND);
@@ -124,16 +125,16 @@ public class EnchantmentScreen extends AbstractContainerScreen<EnchantmentMenu> 
                }
 
                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ENABLED_LEVEL_SPRITES[i], leftPos + 1, yo + 15 + 19 * i, 16, 16);
-               graphics.drawWordWrap(this.font, message, leftPosText, yo + 16 + 19 * i, textWidth, col, false);
+               graphics.textWithWordWrap(this.font, message, leftPosText, yo + 16 + 19 * i, textWidth, col, false);
                col = -8323296;
             }
 
-            graphics.drawString(this.font, costText, leftPosText + 86 - this.font.width(costText), yo + 16 + 19 * i + 7, col);
+            graphics.text(this.font, costText, leftPosText + 86 - this.font.width(costText), yo + 16 + 19 * i + 7, col);
          }
       }
    }
 
-   private void renderBook(final GuiGraphics graphics, final int left, final int top) {
+   private void extractBook(final GuiGraphicsExtractor graphics, final int left, final int top) {
       float a = this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
       float open = Mth.lerp(a, this.oOpen, this.open);
       float flip = Mth.lerp(a, this.oFlip, this.flip);
@@ -141,14 +142,13 @@ public class EnchantmentScreen extends AbstractContainerScreen<EnchantmentMenu> 
       int y0 = top + 14;
       int x1 = x0 + 38;
       int y1 = y0 + 31;
-      graphics.submitBookModelRenderState(this.bookModel, ENCHANTING_BOOK_LOCATION, 40.0F, open, flip, x0, y0, x1, y1);
+      graphics.book(this.bookModel, ENCHANTING_BOOK_LOCATION, 40.0F, open, flip, x0, y0, x1, y1);
    }
 
    @Override
-   public void render(final GuiGraphics graphics, final int mouseX, final int mouseY, final float ignored) {
+   public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float ignored) {
       float a = this.minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-      super.render(graphics, mouseX, mouseY, a);
-      this.renderTooltip(graphics, mouseX, mouseY);
+      super.extractRenderState(graphics, mouseX, mouseY, a);
       boolean infiniteMaterials = this.minecraft.player.hasInfiniteMaterials();
       int gold = this.menu.getGoldCount();
 

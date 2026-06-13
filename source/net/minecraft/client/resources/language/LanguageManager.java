@@ -3,7 +3,6 @@ package net.minecraft.client.resources.language;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.logging.LogUtils;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,7 @@ public class LanguageManager implements ResourceManagerReloadListener {
             if (languageMetadataSection != null) {
                languageMetadataSection.languages().forEach(result::putIfAbsent);
             }
-         } catch (RuntimeException | IOException e) {
+         } catch (Exception e) {
             LOGGER.warn("Unable to parse language metadata section of resourcepack: {}", resourcePack.packId(), e);
          }
       });

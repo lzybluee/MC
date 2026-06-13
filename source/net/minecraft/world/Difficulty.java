@@ -47,10 +47,6 @@ public enum Difficulty implements StringRepresentable {
       return CODEC.byName(name);
    }
 
-   public String getKey() {
-      return this.key;
-   }
-
    @Override
    public String getSerializedName() {
       return this.key;

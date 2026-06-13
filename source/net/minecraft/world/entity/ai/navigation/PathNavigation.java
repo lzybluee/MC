@@ -99,15 +99,13 @@ public abstract class PathNavigation {
    }
 
    public void recomputePath() {
-      if (this.level.getGameTime() - this.timeLastRecompute > 20L) {
-         if (this.targetPos != null) {
-            this.path = null;
-            this.path = this.createPath(this.targetPos, this.reachRange);
-            this.timeLastRecompute = this.level.getGameTime();
-            this.hasDelayedRecomputation = false;
-         }
-      } else {
+      if (this.level.getGameTime() - this.timeLastRecompute <= 20L || !this.canUpdatePath()) {
          this.hasDelayedRecomputation = true;
+      } else if (this.targetPos != null) {
+         this.path = null;
+         this.path = this.createPath(this.targetPos, this.reachRange);
+         this.timeLastRecompute = this.level.getGameTime();
+         this.hasDelayedRecomputation = false;
       }
    }
 
@@ -374,7 +372,7 @@ public abstract class PathNavigation {
    }
 
    public boolean canCutCorner(final PathType pathType) {
-      return pathType != PathType.DANGER_FIRE && pathType != PathType.DANGER_OTHER && pathType != PathType.WALKABLE_DOOR;
+      return pathType != PathType.FIRE_IN_NEIGHBOR && pathType != PathType.DAMAGING_IN_NEIGHBOR && pathType != PathType.WALKABLE_DOOR;
    }
 
    protected static boolean isClearForMovementBetween(final Mob mob, final Vec3 startPos, final Vec3 stopPos, final boolean blockedByFluids) {

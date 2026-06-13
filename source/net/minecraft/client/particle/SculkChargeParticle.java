@@ -2,6 +2,7 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SculkChargeParticleOptions;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 public class SculkChargeParticle extends SingleQuadParticle {
@@ -19,8 +20,8 @@ public class SculkChargeParticle extends SingleQuadParticle {
    }
 
    @Override
-   public int getLightColor(final float a) {
-      return 240;
+   public int getLightCoords(final float a) {
+      return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
    }
 
    @Override

@@ -7,7 +7,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.monster.piglin.PiglinArmPose;
 
-public class PiglinModel extends AbstractPiglinModel<PiglinRenderState> {
+public abstract class PiglinModel extends AbstractPiglinModel<PiglinRenderState> {
    public PiglinModel(final ModelPart root) {
       super(root);
    }
@@ -64,15 +64,5 @@ public class PiglinModel extends AbstractPiglinModel<PiglinRenderState> {
       } else {
          this.rightArm.xRot = -1.8F;
       }
-   }
-
-   @Override
-   public void setAllVisible(final boolean visible) {
-      super.setAllVisible(visible);
-      this.leftSleeve.visible = visible;
-      this.rightSleeve.visible = visible;
-      this.leftPants.visible = visible;
-      this.rightPants.visible = visible;
-      this.jacket.visible = visible;
    }
 }

@@ -127,7 +127,7 @@ public class RealmsNotification {
 
          PopupScreen.Builder builder = new PopupScreen.Builder(parentScreen, title)
             .setImage(this.image)
-            .setMessage(this.message.createComponent(CommonComponents.EMPTY));
+            .addMessage(this.message.createComponent(CommonComponents.EMPTY));
          if (this.urlButton != null) {
             builder.addButton(this.urlButton.urlText.createComponent(RealmsNotification.BUTTON_TEXT_FALLBACK), popup -> {
                Minecraft minecraft = Minecraft.getInstance();

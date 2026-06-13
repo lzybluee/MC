@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.animal.happyghast;
 
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -34,6 +34,7 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.player.Player;
@@ -60,6 +61,12 @@ public class HappyGhast extends Animal {
    public static final int MAX_PASSANGERS = 4;
    private static final int STILL_TIMEOUT_ON_LOAD_GRACE_PERIOD = 60;
    private static final int MAX_STILL_TIMEOUT = 10;
+   private static final Brain.Provider<HappyGhast> BRAIN_PROVIDER = Brain.provider(
+      List.of(
+         SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT_ANY_TYPE, SensorType.NEAREST_PLAYERS
+      ),
+      var0 -> HappyGhastAi.getActivities()
+   );
    public static final float SPEED_MULTIPLIER_WHEN_PANICKING = 2.0F;
    private int leashHolderTime = 0;
    private int serverStillTimeout;
@@ -113,7 +120,7 @@ public class HappyGhast extends Animal {
       if (this.level() instanceof ServerLevel serverLevel) {
          this.removeAllGoals(goal -> true);
          this.registerGoals();
-         ((Brain<HappyGhast>)this.brain).stopAll(serverLevel, this);
+         this.getBrain().stopAll(serverLevel, this);
          this.brain.clearMemories();
       }
    }
@@ -371,13 +378,13 @@ public class HappyGhast extends Animal {
    }
 
    @Override
-   protected Brain.Provider<HappyGhast> brainProvider() {
-      return HappyGhastAi.brainProvider();
+   protected Brain<HappyGhast> makeBrain(final Brain.Packed packedBrain) {
+      return BRAIN_PROVIDER.makeBrain(this, packedBrain);
    }
 
    @Override
-   protected Brain<?> makeBrain(final Dynamic<?> input) {
-      return HappyGhastAi.makeBrain(this.brainProvider().makeBrain(input));
+   public Brain<HappyGhast> getBrain() {
+      return super.getBrain();
    }
 
    @Override
@@ -385,7 +392,7 @@ public class HappyGhast extends Animal {
       if (this.isBaby()) {
          ProfilerFiller profiler = Profiler.get();
          profiler.push("happyGhastBrain");
-         ((Brain<HappyGhast>)this.brain).tick(level, this);
+         this.getBrain().tick(level, this);
          profiler.pop();
          profiler.push("happyGhastActivityUpdate");
          HappyGhastAi.updateActivity(this);

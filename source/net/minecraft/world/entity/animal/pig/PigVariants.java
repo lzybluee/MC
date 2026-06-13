@@ -1,5 +1,6 @@
 package net.minecraft.world.entity.animal.pig;
 
+import net.minecraft.core.ClientAsset;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
@@ -24,9 +25,9 @@ public class PigVariants {
    }
 
    public static void bootstrap(final BootstrapContext<PigVariant> context) {
-      register(context, TEMPERATE, PigVariant.ModelType.NORMAL, "temperate_pig", SpawnPrioritySelectors.fallback(0));
-      register(context, WARM, PigVariant.ModelType.NORMAL, "warm_pig", BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS);
-      register(context, COLD, PigVariant.ModelType.COLD, "cold_pig", BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS);
+      register(context, TEMPERATE, PigVariant.ModelType.NORMAL, "pig_temperate", "pig_temperate_baby", SpawnPrioritySelectors.fallback(0));
+      register(context, WARM, PigVariant.ModelType.NORMAL, "pig_warm", "pig_warm_baby", BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS);
+      register(context, COLD, PigVariant.ModelType.COLD, "pig_cold", "pig_cold_baby", BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS);
    }
 
    private static void register(
@@ -34,10 +35,11 @@ public class PigVariants {
       final ResourceKey<PigVariant> name,
       final PigVariant.ModelType modelType,
       final String textureName,
+      final String babyTextureName,
       final TagKey<Biome> spawnBiome
    ) {
       HolderSet<Biome> biomes = context.lookup(Registries.BIOME).getOrThrow(spawnBiome);
-      register(context, name, modelType, textureName, SpawnPrioritySelectors.single(new BiomeCheck(biomes), 1));
+      register(context, name, modelType, textureName, babyTextureName, SpawnPrioritySelectors.single(new BiomeCheck(biomes), 1));
    }
 
    private static void register(
@@ -45,9 +47,11 @@ public class PigVariants {
       final ResourceKey<PigVariant> name,
       final PigVariant.ModelType modelType,
       final String textureName,
+      final String babyTextureName,
       final SpawnPrioritySelectors selectors
    ) {
       Identifier textureId = Identifier.withDefaultNamespace("entity/pig/" + textureName);
-      context.register(name, new PigVariant(new ModelAndTexture<>(modelType, textureId), selectors));
+      Identifier babyTextureId = Identifier.withDefaultNamespace("entity/pig/" + babyTextureName);
+      context.register(name, new PigVariant(new ModelAndTexture<>(modelType, textureId), new ClientAsset.ResourceTexture(babyTextureId), selectors));
    }
 }
