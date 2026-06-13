@@ -1,0 +1,6 @@
+[submodule "lithium"]
+	path = lithium
+	url = https://github.com/lzybluee/lithium.git
+[submodule "sodium"]
+	path = sodium
+	url = https://github.com/lzybluee/sodium.git
